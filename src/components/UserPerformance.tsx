@@ -339,12 +339,24 @@ export const UserPerformance = () => {
                   </div>
                   <div className="text-right">
                     <div className="flex items-center gap-2">
-                      <Trophy className="w-5 h-5 text-accent" />
-                      <span className="text-2xl font-bold">{stat.completion_percentage}%</span>
+                      <Trophy className={`w-5 h-5 ${stat.completion_percentage > 100 ? 'text-red-500' : 'text-accent'}`} />
+                      <span className={`text-2xl font-bold ${stat.completion_percentage > 100 ? 'text-red-500' : ''}`}>
+                        {stat.completion_percentage}%
+                      </span>
                     </div>
                     <p className="text-xs text-muted-foreground">Conclusão</p>
+                    {stat.completion_percentage > 100 && (
+                      <p className="text-xs text-red-500 font-medium mt-1">⚠️ Erro detectado</p>
+                    )}
                   </div>
                 </div>
+                {stat.completion_percentage > 100 && (
+                  <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    <p className="text-sm text-red-500 font-medium">
+                      ⚠️ Atenção: Este usuário tem mais aprovações do que posts disponíveis. Verifique as aprovações.
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Eventos</p>
@@ -364,10 +376,10 @@ export const UserPerformance = () => {
                   </div>
                 </div>
                 <div className="mt-4">
-                  <div className="w-full bg-muted rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                     <div 
-                      className="bg-gradient-primary h-2 rounded-full transition-all" 
-                      style={{ width: `${stat.completion_percentage}%` }}
+                      className={`h-2 rounded-full transition-all ${stat.completion_percentage > 100 ? 'bg-red-500' : 'bg-gradient-primary'}`}
+                      style={{ width: `${Math.min(stat.completion_percentage, 100)}%` }}
                     ></div>
                   </div>
                 </div>

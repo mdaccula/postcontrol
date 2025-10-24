@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { sb } from "@/lib/supabaseSafe";
-import { Trophy, Users, Target, TrendingUp } from "lucide-react";
+import { Trophy, Users, Target, TrendingUp, FileSpreadsheet, FileText } from "lucide-react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "sonner";
 
 interface EventStats {
   event_id: string;
@@ -64,6 +69,55 @@ export const DashboardStats = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportEventStatsToExcel = () => {
+    const eventName = selectedEventId === "all" 
+      ? "Todos os Eventos" 
+      : events.find(e => e.id === selectedEventId)?.title || "Evento";
+
+    const worksheet = XLSX.utils.json_to_sheet(
+      eventStats.map(stat => ({
+        'Evento': stat.event_title,
+        'Participantes': stat.total_users,
+        'Submissões': stat.total_submissions,
+        'Posts Disponíveis': stat.total_posts_available
+      }))
+    );
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Estatísticas por Evento');
+    XLSX.writeFile(workbook, `Estatisticas_Evento_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("Relatório Excel exportado com sucesso!");
+  };
+
+  const exportEventStatsToPDF = () => {
+    const eventName = selectedEventId === "all" 
+      ? "Todos os Eventos" 
+      : events.find(e => e.id === selectedEventId)?.title || "Evento";
+
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text(`Estatísticas por Evento - ${eventName}`, 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Evento', 'Participantes', 'Submissões', 'Posts Disponíveis']],
+      body: eventStats.map(stat => [
+        stat.event_title,
+        stat.total_users.toString(),
+        stat.total_submissions.toString(),
+        stat.total_posts_available.toString()
+      ]),
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [168, 85, 247] }
+    });
+
+    doc.save(`Estatisticas_Evento_${eventName}_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Relatório PDF exportado com sucesso!");
   };
 
   const loadAllStats = async () => {
@@ -235,9 +289,17 @@ export const DashboardStats = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold">Dashboard de Desempenho</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={exportEventStatsToExcel} variant="outline" className="flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4" />
+            Excel
+          </Button>
+          <Button onClick={exportEventStatsToPDF} variant="outline" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            PDF
+          </Button>
           <Select value={activeFilter} onValueChange={setActiveFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar status" />

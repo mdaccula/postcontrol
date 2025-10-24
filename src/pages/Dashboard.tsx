@@ -102,35 +102,56 @@ const Dashboard = () => {
 
     setSubmissions(submissionsData || []);
 
-    // Calcular estatísticas por evento - contar apenas aprovadas
+    // Calcular estatísticas por evento - posts aprovados / total de posts do evento
     if (submissionsData) {
-      const eventMap = new Map<string, { title: string; required: number; count: number }>();
+      const eventMap = new Map<string, { title: string; totalPosts: number; approvedCount: number }>();
 
+      // Primeiro, coletar todos os eventos únicos das submissões
+      const uniqueEventIds = new Set<string>();
       submissionsData.forEach((sub) => {
-        // Só contar posts aprovados
-        if (sub.status === 'approved' && sub.posts?.events) {
-          const event = sub.posts.events;
-          const eventId = (event as any).id;
-          const existing = eventMap.get(eventId);
-          
-          if (existing) {
-            existing.count++;
-          } else {
-            eventMap.set(eventId, {
-              title: event.title,
-              required: event.required_posts || 0,
-              count: 1
-            });
-          }
+        if (sub.posts?.events) {
+          const eventId = (sub.posts.events as any).id;
+          uniqueEventIds.add(eventId);
         }
       });
+
+      // Para cada evento, buscar o total de posts criados
+      for (const eventId of Array.from(uniqueEventIds)) {
+        const eventData = submissionsData.find(
+          (sub) => sub.posts?.events && (sub.posts.events as any).id === eventId
+        )?.posts?.events;
+
+        if (eventData) {
+          // Contar total de posts do evento
+          const { count } = await sb
+            .from('posts')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', eventId);
+
+          const totalPosts = count || 0;
+
+          // Contar posts aprovados do usuário neste evento
+          const approvedCount = submissionsData.filter(
+            (sub) => 
+              sub.status === 'approved' && 
+              sub.posts?.events && 
+              (sub.posts.events as any).id === eventId
+          ).length;
+
+          eventMap.set(eventId, {
+            title: eventData.title,
+            totalPosts: totalPosts,
+            approvedCount: approvedCount
+          });
+        }
+      }
 
       const stats: EventStats[] = Array.from(eventMap.entries()).map(([eventId, data]) => ({
         eventId,
         eventTitle: data.title,
-        totalRequired: data.required,
-        submitted: data.count,
-        percentage: data.required > 0 ? (data.count / data.required) * 100 : 0
+        totalRequired: data.totalPosts,
+        submitted: data.approvedCount,
+        percentage: data.totalPosts > 0 ? (data.approvedCount / data.totalPosts) * 100 : 0
       }));
 
       setEventStats(stats);

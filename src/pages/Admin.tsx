@@ -171,6 +171,34 @@ const Admin = () => {
     }
   };
 
+  const handleStatusChange = async (submissionId: string, newStatus: string) => {
+    try {
+      console.log('Alterando status:', submissionId, newStatus);
+      const { data, error } = await supabase
+        .from('submissions')
+        .update({
+          status: newStatus,
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        })
+        .eq('id', submissionId)
+        .select();
+
+      console.log('Resultado da alteração:', { data, error });
+
+      if (error) {
+        toast.error("Erro ao alterar status");
+        console.error('Erro detalhado:', error);
+      } else {
+        toast.success(`Status alterado para ${newStatus === 'approved' ? 'aprovado' : newStatus === 'rejected' ? 'rejeitado' : 'pendente'}`);
+        await loadData();
+      }
+    } catch (error) {
+      toast.error("Erro ao alterar status");
+      console.error('Exception:', error);
+    }
+  };
+
   const handleBulkApprove = async () => {
     const ids = Array.from(selectedSubmissions);
     if (ids.length === 0) {
@@ -631,6 +659,25 @@ const Admin = () => {
                                     {submission.total_submissions} postagem{submission.total_submissions !== 1 ? 's' : ''}
                                   </p>
                                 </div>
+                              </div>
+                            </div>
+
+                            <div className="border-t pt-3 flex flex-col sm:flex-row gap-2">
+                              <div className="flex-1">
+                                <label className="text-sm text-muted-foreground mb-1 block">Status da Submissão:</label>
+                                <Select 
+                                  value={submission.status} 
+                                  onValueChange={(newStatus) => handleStatusChange(submission.id, newStatus)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">Aguardando aprovação</SelectItem>
+                                    <SelectItem value="approved">Aprovado</SelectItem>
+                                    <SelectItem value="rejected">Rejeitado</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
 
