@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { sb } from "@/lib/supabaseSafe";
 import { toast } from "sonner";
 import { Pencil, Save, X } from "lucide-react";
+import { z } from "zod";
 
 interface Profile {
   id: string;
@@ -15,6 +16,14 @@ interface Profile {
   phone: string | null;
   created_at: string;
 }
+
+// Validation schema
+const profileUpdateSchema = z.object({
+  full_name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100, "Nome muito longo"),
+  email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
+  instagram: z.string().trim().min(1, "Instagram é obrigatório").max(50, "Instagram muito longo"),
+  phone: z.string().trim().regex(/^\(?(\d{2})\)?\s?(\d{4,5})-?(\d{4})$/, "Formato de telefone inválido. Use: (00) 00000-0000").optional().or(z.literal('')),
+});
 
 export const UserManagement = () => {
   const [users, setUsers] = useState<Profile[]>([]);
@@ -59,6 +68,21 @@ export const UserManagement = () => {
   };
 
   const saveEdit = async (userId: string) => {
+    // Validate inputs before saving
+    try {
+      profileUpdateSchema.parse({
+        full_name: editForm.full_name,
+        email: editForm.email,
+        instagram: editForm.instagram,
+        phone: editForm.phone || '',
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
+    }
+
     const { error } = await sb
       .from('profiles')
       .update({

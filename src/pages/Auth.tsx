@@ -8,6 +8,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { z } from "zod";
+
+// Validation schemas
+const loginSchema = z.object({
+  email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+});
+
+const signupSchema = loginSchema.extend({
+  fullName: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100, "Nome muito longo"),
+});
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -34,7 +45,22 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate inputs
       if (isLogin) {
+        try {
+          loginSchema.parse({ email, password });
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            toast({
+              title: "Dados inválidos",
+              description: error.errors[0].message,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
         const { error } = await signIn(email, password);
         
         if (error) {
@@ -59,14 +85,18 @@ const Auth = () => {
           // O redirecionamento será feito pelo useEffect
         }
       } else {
-        if (!fullName.trim()) {
-          toast({
-            title: "Nome obrigatório",
-            description: "Por favor, informe seu nome completo.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
+        try {
+          signupSchema.parse({ email, password, fullName });
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            toast({
+              title: "Dados inválidos",
+              description: error.errors[0].message,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
         }
 
         const { error } = await signUp(email, password, fullName);

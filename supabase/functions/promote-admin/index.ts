@@ -11,10 +11,60 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create client with service role for admin operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create client with user's JWT to verify their identity
+    const supabaseUser = createClient(
+      supabaseUrl,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      }
+    );
+
+    // Verify the requesting user is authenticated and is an admin
+    const { data: { user: requestingUser }, error: authError } = await supabaseUser.auth.getUser();
+    
+    if (authError || !requestingUser) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if the requesting user has admin role
+    const { data: adminRole, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', requestingUser.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (roleError || !adminRole) {
+      console.error('Role check error:', roleError);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { email } = await req.json();
 
@@ -25,47 +75,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Promoting user with email: ${email} to admin`);
+    console.log(`Admin ${requestingUser.email} promoting user with email: ${email} to admin`);
 
     // Find user by email
-    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (listError) {
       console.error('Error listing users:', listError);
       throw listError;
     }
 
-    const user = users?.find(u => u.email === email);
+    const targetUser = users?.find(u => u.email === email);
 
-    if (!user) {
+    if (!targetUser) {
       return new Response(
         JSON.stringify({ error: 'User not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log(`Found user: ${user.id}`);
+    console.log(`Found user: ${targetUser.id}`);
 
     // Check if user already has admin role
-    const { data: existingRole } = await supabase
+    const { data: existingRole } = await supabaseAdmin
       .from('user_roles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUser.id)
       .eq('role', 'admin')
       .maybeSingle();
 
     if (existingRole) {
       return new Response(
-        JSON.stringify({ message: 'User is already an admin', user_id: user.id }),
+        JSON.stringify({ message: 'User is already an admin', user_id: targetUser.id }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Insert admin role
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
       .from('user_roles')
       .insert({
-        user_id: user.id,
+        user_id: targetUser.id,
         role: 'admin'
       });
 
@@ -74,13 +123,13 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
-    console.log(`Successfully promoted user ${user.id} to admin`);
+    console.log(`Successfully promoted user ${targetUser.id} to admin`);
 
     return new Response(
       JSON.stringify({ 
         message: 'User promoted to admin successfully',
-        user_id: user.id,
-        email: user.email
+        user_id: targetUser.id,
+        email: targetUser.email
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

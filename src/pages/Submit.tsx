@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
+import { z } from "zod";
 
 interface Post {
   id: string;
@@ -37,6 +38,14 @@ interface EventRequirement {
   description: string;
   display_order: number;
 }
+
+// Validation schemas
+const submitFormSchema = z.object({
+  name: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100, "Nome muito longo"),
+  email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
+  instagram: z.string().trim().min(1, "Instagram é obrigatório").max(50, "Instagram muito longo"),
+  phone: z.string().trim().regex(/^\(?(\d{2})\)?\s?(\d{4,5})-?(\d{4})$/, "Formato de telefone inválido. Use: (00) 00000-0000"),
+});
 
 const Submit = () => {
   const { toast } = useToast();
@@ -173,6 +182,20 @@ const Submit = () => {
       return;
     }
 
+    // Validate form inputs
+    try {
+      submitFormSchema.parse({ name, email, instagram, phone });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Dados inválidos",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (!selectedEvent) {
       toast({
         title: "Selecione um evento",
@@ -195,6 +218,16 @@ const Submit = () => {
       toast({
         title: "Adicione o print",
         description: "Por favor, adicione o print da sua postagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 10MB.",
         variant: "destructive",
       });
       return;
@@ -252,16 +285,20 @@ const Submit = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL instead of public URL (bucket is now private)
+      const { data: signedUrlData, error: urlError } = await supabase.storage
         .from('screenshots')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 31536000); // 1 year expiry
+
+      if (urlError) throw urlError;
+      const screenshotUrl = signedUrlData.signedUrl;
 
       const { error } = await sb
         .from('submissions')
         .insert({
           post_id: selectedPost,
           user_id: user.id,
-          screenshot_url: publicUrl,
+          screenshot_url: screenshotUrl,
         });
 
       if (error) throw error;
