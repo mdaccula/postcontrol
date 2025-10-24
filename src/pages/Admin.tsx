@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck } from "lucide-react";
+import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { EventDialog } from "@/components/EventDialog";
@@ -15,6 +15,7 @@ import { sb } from "@/lib/supabaseSafe";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const Admin = () => {
@@ -32,6 +33,7 @@ const Admin = () => {
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>("all");
   const [postEventFilter, setPostEventFilter] = useState<string>("all");
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -179,6 +181,24 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await sb
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      toast.success("Evento excluído com sucesso");
+      await loadData();
+      setEventToDelete(null);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error("Erro ao excluir evento");
+    }
+  };
+
   const getFilteredSubmissions = () => {
     return submissions.filter((s: any) => {
       const eventMatch = submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter;
@@ -275,12 +295,12 @@ const Admin = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="events" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            <TabsTrigger value="events">Eventos</TabsTrigger>
-            <TabsTrigger value="posts">Postagens</TabsTrigger>
-            <TabsTrigger value="submissions">Submissões</TabsTrigger>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto">
+            <TabsTrigger value="events" className="text-xs sm:text-sm py-2">Eventos</TabsTrigger>
+            <TabsTrigger value="posts" className="text-xs sm:text-sm py-2">Postagens</TabsTrigger>
+            <TabsTrigger value="submissions" className="text-xs sm:text-sm py-2">Submissões</TabsTrigger>
+            <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Usuários</TabsTrigger>
+            <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2">Dashboard</TabsTrigger>
           </TabsList>
 
           <TabsContent value="events" className="space-y-6">
@@ -304,8 +324,8 @@ const Admin = () => {
                 <div className="space-y-4">
                   {events.map((event) => (
                     <Card key={event.id} className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div className="flex-1 w-full">
                           <h3 className="font-bold text-lg">{event.title}</h3>
                           {event.event_date && (
                             <p className="text-sm text-muted-foreground mt-1">
@@ -322,16 +342,27 @@ const Admin = () => {
                             <p className="text-muted-foreground mt-2">{event.description}</p>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedEvent(event);
-                            setEventDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setEventDialogOpen(true);
+                            }}
+                            className="flex-1 sm:flex-initial"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEventToDelete(event.id)}
+                            className="text-destructive hover:text-destructive flex-1 sm:flex-initial"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -606,9 +637,9 @@ const Admin = () => {
 
           <TabsContent value="dashboard" className="space-y-6">
             <Tabs defaultValue="events-stats" className="space-y-6">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="events-stats">Estatísticas por Evento</TabsTrigger>
-                <TabsTrigger value="user-performance">Desempenho por Usuário</TabsTrigger>
+              <TabsList className="grid w-full max-w-md grid-cols-1 sm:grid-cols-2 gap-1 h-auto">
+                <TabsTrigger value="events-stats" className="text-xs sm:text-sm whitespace-normal py-2">Estatísticas por Evento</TabsTrigger>
+                <TabsTrigger value="user-performance" className="text-xs sm:text-sm whitespace-normal py-2">Desempenho por Usuário</TabsTrigger>
               </TabsList>
 
               <TabsContent value="events-stats">
@@ -641,6 +672,26 @@ const Admin = () => {
         onPostCreated={loadData}
         post={selectedPost}
       />
+
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O evento e todos os seus dados relacionados serão permanentemente excluídos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => eventToDelete && handleDeleteEvent(eventToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

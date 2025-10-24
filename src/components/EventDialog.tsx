@@ -117,11 +117,17 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           throw new Error(`Erro ao fazer upload da imagem: ${uploadError.message}`);
         }
 
-        const { data: { publicUrl } } = supabase.storage
+        // Get signed URL with 10 years expiry for permanent event images
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('screenshots')
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 315360000); // 10 years in seconds
 
-        imageUrl = publicUrl;
+        if (signedUrlError) {
+          console.error('Signed URL error:', signedUrlError);
+          throw new Error(`Erro ao gerar URL da imagem: ${signedUrlError.message}`);
+        }
+
+        imageUrl = signedUrlData.signedUrl;
       }
 
       let eventId = event?.id;
