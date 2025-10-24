@@ -39,12 +39,19 @@ const Home = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             {user ? (
-              <Link to="/dashboard">
-                <Button size="lg" variant="secondary" className="group text-lg px-8 py-6 shadow-xl">
-                  Acessar Dashboard
-                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
+              <>
+                <Link to="/dashboard">
+                  <Button size="lg" variant="secondary" className="group text-lg px-8 py-6 shadow-xl">
+                    Acessar Dashboard
+                    <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                <Link to="/submit">
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+                    Enviar Postagem
+                  </Button>
+                </Link>
+              </>
             ) : (
               <>
                 <Link to="/auth">
@@ -53,7 +60,7 @@ const Home = () => {
                     <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
-                <Link to="/submit">
+                <Link to="/auth">
                   <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
                     Enviar Postagem
                   </Button>

@@ -87,53 +87,79 @@ const Admin = () => {
       countsById[uid as string] = count || 0;
     }));
 
-    const submissionsWithExtras = (submissionsData || []).map((s: any) => ({
-      ...s,
-      profiles: profilesById[s.user_id] || null,
-      total_submissions: countsById[s.user_id] || 0,
+    // Gerar signed URLs para os screenshots
+    const submissionsWithSignedUrls = await Promise.all((submissionsData || []).map(async (s: any) => {
+      let signedUrl = s.screenshot_url;
+      if (s.screenshot_url) {
+        const path = s.screenshot_url.split('/screenshots/')[1];
+        if (path) {
+          const { data } = await supabase.storage
+            .from('screenshots')
+            .createSignedUrl(path, 31536000); // 1 year
+          if (data?.signedUrl) {
+            signedUrl = data.signedUrl;
+          }
+        }
+      }
+      return {
+        ...s,
+        screenshot_url: signedUrl,
+        profiles: profilesById[s.user_id] || null,
+        total_submissions: countsById[s.user_id] || 0,
+      };
     }));
 
     setEvents(eventsData || []);
     setPosts(postsData || []);
-    setSubmissions(submissionsWithExtras);
+    setSubmissions(submissionsWithSignedUrls);
     setSelectedSubmissions(new Set());
   };
 
   const handleApproveSubmission = async (submissionId: string) => {
-    const { error } = await sb
-      .from('submissions')
-      .update({
-        status: 'approved',
-        approved_at: new Date().toISOString(),
-        approved_by: user?.id
-      })
-      .eq('id', submissionId);
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        })
+        .eq('id', submissionId);
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao aprovar submissão");
+        console.error(error);
+      } else {
+        toast.success("Submissão aprovada com sucesso");
+        await loadData();
+      }
+    } catch (error) {
       toast.error("Erro ao aprovar submissão");
       console.error(error);
-    } else {
-      toast.success("Submissão aprovada com sucesso");
-      await loadData();
     }
   };
 
   const handleRejectSubmission = async (submissionId: string) => {
-    const { error } = await sb
-      .from('submissions')
-      .update({
-        status: 'rejected',
-        approved_at: new Date().toISOString(),
-        approved_by: user?.id
-      })
-      .eq('id', submissionId);
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .update({
+          status: 'rejected',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        })
+        .eq('id', submissionId);
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao rejeitar submissão");
+        console.error(error);
+      } else {
+        toast.success("Submissão rejeitada");
+        await loadData();
+      }
+    } catch (error) {
       toast.error("Erro ao rejeitar submissão");
       console.error(error);
-    } else {
-      toast.success("Submissão rejeitada");
-      await loadData();
     }
   };
 
