@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, TrendingUp, Award, Calendar, LogOut } from "lucide-react";
+import { ArrowLeft, TrendingUp, Award, Calendar, LogOut, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ interface Submission {
   submitted_at: string;
   screenshot_url: string;
   status: string;
+  rejection_reason?: string;
   posts: {
     post_number: number;
     deadline: string;
@@ -44,6 +45,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<{ full_name: string; email: string; instagram: string } | null>(null);
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
   const [events, setEvents] = useState<any[]>([]);
+  const [whatsappNumber, setWhatsappNumber] = useState<string>("");
 
   useEffect(() => {
     if (!user) {
@@ -67,6 +69,17 @@ const Dashboard = () => {
 
     setProfile(profileData);
 
+    // Carregar configuração do WhatsApp
+    const { data: whatsappData } = await sb
+      .from('admin_settings')
+      .select('setting_value')
+      .eq('setting_key', 'whatsapp_number')
+      .maybeSingle();
+    
+    if (whatsappData?.setting_value) {
+      setWhatsappNumber(whatsappData.setting_value);
+    }
+
     // Carregar eventos ativos
     const { data: eventsData } = await sb
       .from('events')
@@ -84,6 +97,7 @@ const Dashboard = () => {
         submitted_at,
         screenshot_url,
         status,
+        rejection_reason,
         posts!inner (
           post_number,
           deadline,
@@ -379,10 +393,17 @@ const Dashboard = () => {
                           Aprovado
                         </Badge>
                       )}
-                      {submission.status === 'rejected' && (
-                        <Badge variant="outline" className="w-full justify-center bg-red-500/20 text-red-500 border-red-500">
-                          Rejeitado
-                        </Badge>
+                       {submission.status === 'rejected' && (
+                        <div className="space-y-2">
+                          <Badge variant="outline" className="w-full justify-center bg-red-500/20 text-red-500 border-red-500">
+                            Rejeitado
+                          </Badge>
+                          {submission.rejection_reason && (
+                            <div className="bg-red-500/10 border border-red-500/30 rounded p-2 text-xs text-red-500">
+                              <strong>Motivo:</strong> {submission.rejection_reason}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </Card>
@@ -392,6 +413,26 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Botão flutuante do WhatsApp */}
+      {whatsappNumber && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            size="lg"
+            className="rounded-full shadow-lg h-14 w-14 bg-green-500 hover:bg-green-600"
+            asChild
+          >
+            <a
+              href={`https://wa.me/55${whatsappNumber.replace(/\D/g, '')}?text=Olá, tenho uma dúvida sobre os eventos`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Falar com o Admin no WhatsApp"
+            >
+              <MessageCircle className="h-6 w-6" />
+            </a>
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

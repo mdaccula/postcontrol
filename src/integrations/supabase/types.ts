@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      event_faqs: {
+        Row: {
+          answer: string
+          created_at: string
+          display_order: number
+          event_id: string
+          id: string
+          is_visible: boolean
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          display_order?: number
+          event_id: string
+          id?: string
+          is_visible?: boolean
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          display_order?: number
+          event_id?: string
+          id?: string
+          is_visible?: boolean
+          question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_faqs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_requirements: {
         Row: {
           created_at: string
@@ -115,6 +180,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          deadline_24h: boolean
+          deadline_3days: boolean
+          deadline_7days: boolean
+          email_notifications: boolean
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline_24h?: boolean
+          deadline_3days?: boolean
+          deadline_7days?: boolean
+          email_notifications?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deadline_24h?: boolean
+          deadline_3days?: boolean
+          deadline_7days?: boolean
+          email_notifications?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           created_at: string
@@ -183,6 +281,44 @@ export type Database = {
         }
         Relationships: []
       }
+      submission_logs: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_status: string
+          old_status: string | null
+          reason: string | null
+          submission_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status: string
+          old_status?: string | null
+          reason?: string | null
+          submission_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status?: string
+          old_status?: string | null
+          reason?: string | null
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_logs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           approved_at: string | null
@@ -190,6 +326,7 @@ export type Database = {
           created_at: string
           id: string
           post_id: string
+          rejection_reason: string | null
           screenshot_url: string
           status: string
           submitted_at: string
@@ -201,6 +338,7 @@ export type Database = {
           created_at?: string
           id?: string
           post_id: string
+          rejection_reason?: string | null
           screenshot_url: string
           status?: string
           submitted_at?: string
@@ -212,6 +350,7 @@ export type Database = {
           created_at?: string
           id?: string
           post_id?: string
+          rejection_reason?: string | null
           screenshot_url?: string
           status?: string
           submitted_at?: string

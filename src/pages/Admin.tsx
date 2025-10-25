@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Trash2 } from "lucide-react";
+import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Trash2, Copy, Columns3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { EventDialog } from "@/components/EventDialog";
@@ -10,12 +10,18 @@ import { PostDialog } from "@/components/PostDialog";
 import { DashboardStats } from "@/components/DashboardStats";
 import { UserPerformance } from "@/components/UserPerformance";
 import { UserManagement } from "@/components/UserManagement";
+import { AdminSettings } from "@/components/AdminSettings";
+import { SubmissionKanban } from "@/components/SubmissionKanban";
+import { SubmissionAuditLog } from "@/components/SubmissionAuditLog";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const Admin = () => {
@@ -34,6 +40,12 @@ const Admin = () => {
   const [postEventFilter, setPostEventFilter] = useState<string>("all");
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
+  const [selectedSubmissionForRejection, setSelectedSubmissionForRejection] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionTemplate, setRejectionTemplate] = useState("");
+  const [kanbanView, setKanbanView] = useState(false);
+  const [auditLogSubmissionId, setAuditLogSubmissionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -144,19 +156,26 @@ const Admin = () => {
   };
 
   const handleRejectSubmission = async (submissionId: string) => {
+    setSelectedSubmissionForRejection(submissionId);
+    setRejectionReason("");
+    setRejectionTemplate("");
+    setRejectionDialogOpen(true);
+  };
+
+  const confirmRejection = async () => {
+    if (!selectedSubmissionForRejection) return;
+    
     try {
-      console.log('Rejeitando submissão:', submissionId);
       const { data, error } = await supabase
         .from('submissions')
         .update({
           status: 'rejected',
+          rejection_reason: rejectionReason || undefined,
           approved_at: new Date().toISOString(),
           approved_by: user?.id
         })
-        .eq('id', submissionId)
+        .eq('id', selectedSubmissionForRejection)
         .select();
-
-      console.log('Resultado da rejeição:', { data, error });
 
       if (error) {
         toast.error("Erro ao rejeitar submissão");
@@ -164,12 +183,23 @@ const Admin = () => {
       } else {
         toast.success("Submissão rejeitada");
         await loadData();
+        setRejectionDialogOpen(false);
+        setSelectedSubmissionForRejection(null);
+        setRejectionReason("");
       }
     } catch (error) {
       toast.error("Erro ao rejeitar submissão");
       console.error('Exception:', error);
     }
   };
+
+  const rejectionTemplates = [
+    { value: "formato", label: "Imagem fora do padrão" },
+    { value: "conteudo", label: "Post não relacionado ao evento" },
+    { value: "prazo", label: "Prazo expirado" },
+    { value: "qualidade", label: "Qualidade da imagem inadequada" },
+    { value: "outro", label: "Outro (especificar abaixo)" },
+  ];
 
   const handleStatusChange = async (submissionId: string, newStatus: string) => {
     try {
@@ -258,6 +288,54 @@ const Admin = () => {
     } catch (error) {
       console.error('Error deleting event:', error);
       toast.error("Erro ao excluir evento");
+    }
+  };
+
+  const handleDuplicateEvent = async (event: any) => {
+    try {
+      const { data: newEvent, error } = await sb
+        .from('events')
+        .insert({
+          title: `${event.title} - Cópia`,
+          description: event.description,
+          event_date: event.event_date,
+          location: event.location,
+          setor: event.setor,
+          numero_de_vagas: event.numero_de_vagas,
+          required_posts: event.required_posts,
+          required_sales: event.required_sales,
+          is_active: false, // Criar inativo por padrão
+          require_instagram_link: event.require_instagram_link,
+          event_image_url: event.event_image_url,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Duplicar requisitos também
+      const { data: requirements } = await sb
+        .from('event_requirements')
+        .select('*')
+        .eq('event_id', event.id);
+
+      if (requirements && requirements.length > 0) {
+        const newRequirements = requirements.map((req: any) => ({
+          event_id: newEvent.id,
+          required_posts: req.required_posts,
+          required_sales: req.required_sales,
+          description: req.description,
+          display_order: req.display_order,
+        }));
+
+        await sb.from('event_requirements').insert(newRequirements);
+      }
+
+      toast.success("Evento duplicado com sucesso! Você pode editá-lo agora.");
+      await loadData();
+    } catch (error) {
+      console.error('Error duplicating event:', error);
+      toast.error("Erro ao duplicar evento");
     }
   };
 
@@ -357,12 +435,13 @@ const Admin = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="events" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 h-auto">
             <TabsTrigger value="events" className="text-xs sm:text-sm py-2">Eventos</TabsTrigger>
             <TabsTrigger value="posts" className="text-xs sm:text-sm py-2">Postagens</TabsTrigger>
             <TabsTrigger value="submissions" className="text-xs sm:text-sm py-2">Submissões</TabsTrigger>
             <TabsTrigger value="users" className="text-xs sm:text-sm py-2">Usuários</TabsTrigger>
             <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2">Dashboard</TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm py-2">Configurações</TabsTrigger>
           </TabsList>
 
           <TabsContent value="events" className="space-y-6">
@@ -415,6 +494,15 @@ const Admin = () => {
                             className="flex-1 sm:flex-initial"
                           >
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDuplicateEvent(event)}
+                            className="flex-1 sm:flex-initial"
+                            title="Duplicar evento"
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -501,10 +589,28 @@ const Admin = () => {
 
           <TabsContent value="submissions" className="space-y-6">
             <div className="flex flex-col gap-4">
-              <h2 className="text-2xl font-bold">Submissões de Usuários</h2>
-              
-              {/* Filtros e ações */}
-              <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Submissões de Usuários</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setKanbanView(!kanbanView)}
+                >
+                  <Columns3 className="mr-2 h-4 w-4" />
+                  {kanbanView ? "Ver Lista" : "Ver Kanban"}
+                </Button>
+              </div>
+
+              {kanbanView ? (
+                <SubmissionKanban 
+                  submissions={getFilteredSubmissions()} 
+                  onUpdate={loadData}
+                  userId={user?.id}
+                />
+              ) : (
+                <>
+                  {/* Filtros e ações */}
+                  <div className="flex flex-col gap-3">
                 {selectedSubmissions.size > 0 && (
                   <Button onClick={handleBulkApprove} className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
                     <CheckCheck className="mr-2 h-4 w-4" />
@@ -679,6 +785,15 @@ const Admin = () => {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              <div className="flex items-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setAuditLogSubmissionId(submission.id)}
+                                >
+                                  Ver Histórico
+                                </Button>
+                              </div>
                             </div>
 
                             {submission.status === 'pending' && (
@@ -710,6 +825,8 @@ const Admin = () => {
                 </div>
               )}
             </Card>
+            </>
+            )}
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
@@ -732,6 +849,10 @@ const Admin = () => {
               </TabsContent>
             </Tabs>
           </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <AdminSettings />
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -753,6 +874,89 @@ const Admin = () => {
         onPostCreated={loadData}
         post={selectedPost}
       />
+
+      {/* Rejection Dialog */}
+      <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeitar Submissão</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da rejeição para que o usuário possa corrigir
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="template">Template de Resposta</Label>
+              <Select 
+                value={rejectionTemplate} 
+                onValueChange={(value) => {
+                  setRejectionTemplate(value);
+                  const template = rejectionTemplates.find(t => t.value === value);
+                  if (template && value !== "outro") {
+                    setRejectionReason(template.label);
+                  } else {
+                    setRejectionReason("");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um motivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rejectionTemplates.map((template) => (
+                    <SelectItem key={template.value} value={template.value}>
+                      {template.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Motivo Detalhado (opcional)</Label>
+              <Textarea
+                id="reason"
+                placeholder="Descreva o motivo da rejeição..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectionDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmRejection}>
+              Confirmar Rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Audit Log Dialog */}
+      <Dialog open={!!auditLogSubmissionId} onOpenChange={(open) => !open && setAuditLogSubmissionId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Histórico de Alterações</DialogTitle>
+            <DialogDescription>
+              Visualize todas as mudanças de status desta submissão
+            </DialogDescription>
+          </DialogHeader>
+          
+          {auditLogSubmissionId && (
+            <SubmissionAuditLog submissionId={auditLogSubmissionId} />
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setAuditLogSubmissionId(null)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
         <AlertDialogContent>
