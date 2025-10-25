@@ -7,6 +7,7 @@ import { sb } from "@/lib/supabaseSafe";
 import { toast } from "sonner";
 import { Pencil, Save, X } from "lucide-react";
 import { z } from "zod";
+import { CSVImportExport } from "@/components/CSVImportExport";
 
 interface Profile {
   id: string;
@@ -120,8 +121,9 @@ export const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4">
         <h2 className="text-2xl font-bold">Gerenciador de Usuários</h2>
+        <CSVImportExport onImportComplete={loadUsers} />
         <div className="w-64">
           <Input
             placeholder="Buscar usuário..."

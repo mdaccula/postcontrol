@@ -122,6 +122,8 @@ export type Database = {
       }
       events: {
         Row: {
+          auto_activate_at: string | null
+          auto_deactivate_at: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -141,6 +143,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_activate_at?: string | null
+          auto_deactivate_at?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -160,6 +164,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_activate_at?: string | null
+          auto_deactivate_at?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -259,6 +265,8 @@ export type Database = {
           id: string
           instagram: string | null
           phone: string | null
+          theme_preference: string | null
+          tutorial_completed: boolean | null
           updated_at: string
         }
         Insert: {
@@ -268,6 +276,8 @@ export type Database = {
           id: string
           instagram?: string | null
           phone?: string | null
+          theme_preference?: string | null
+          tutorial_completed?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -277,7 +287,36 @@ export type Database = {
           id?: string
           instagram?: string | null
           phone?: string | null
+          theme_preference?: string | null
+          tutorial_completed?: boolean | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          action_type: string
+          count: number
+          created_at: string
+          id: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          count?: number
+          created_at?: string
+          id?: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          count?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+          window_start?: string
         }
         Relationships: []
       }
@@ -312,6 +351,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "submission_logs_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submission_tags: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          submission_id: string
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          submission_id: string
+          tag_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          submission_id?: string
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_tags_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "submissions"
@@ -366,6 +437,41 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          badge_type: string
+          created_at: string
+          earned_at: string
+          event_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_type: string
+          created_at?: string
+          earned_at?: string
+          event_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_type?: string
+          created_at?: string
+          earned_at?: string
+          event_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -387,11 +493,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_segments: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          filters: Json
+          id: string
+          segment_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          segment_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          segment_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          p_action_type: string
+          p_max_count: number
+          p_user_id: string
+          p_window_minutes: number
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

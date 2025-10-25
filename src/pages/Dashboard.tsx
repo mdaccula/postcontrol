@@ -10,6 +10,10 @@ import { sb } from "@/lib/supabaseSafe";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TutorialGuide } from "@/components/TutorialGuide";
+import { BadgeDisplay } from "@/components/BadgeDisplay";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { motion } from "framer-motion";
 
 interface Submission {
   id: string;
@@ -192,6 +196,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-8 px-4">
+      <TutorialGuide />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -204,6 +209,7 @@ const Dashboard = () => {
             </Link>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {isAdmin && (
               <Link to="/admin">
                 <Button variant="outline">
@@ -219,7 +225,7 @@ const Dashboard = () => {
         </div>
 
         {/* Perfil do Usuário */}
-        <Card className="p-4 md:p-6 mb-8 border-2">
+        <Card id="welcome-card" className="p-4 md:p-6 mb-8 border-2">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent break-words">
@@ -228,7 +234,7 @@ const Dashboard = () => {
               <p className="text-sm md:text-base text-muted-foreground mb-2 break-words">{profile?.email}</p>
               <p className="text-sm text-muted-foreground break-words">Instagram: {profile?.instagram}</p>
             </div>
-            <Link to="/submit" className="w-full sm:w-auto">
+            <Link to="/submit" className="w-full sm:w-auto" id="submit-button">
               <Button className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap">
                 Enviar Nova Postagem
               </Button>
@@ -236,8 +242,11 @@ const Dashboard = () => {
           </div>
         </Card>
 
+        {/* Badges */}
+        <BadgeDisplay />
+
         {/* Estatísticas Gerais */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div id="stats-section" className="grid md:grid-cols-3 gap-6 mb-8 mt-8">
           <Card className="p-6 hover:shadow-glow transition-all">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
