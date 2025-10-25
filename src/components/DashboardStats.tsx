@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { sb } from "@/lib/supabaseSafe";
 import { Trophy, Users, Target, TrendingUp, FileSpreadsheet, FileText, AlertTriangle, CheckCircle, Clock, Award, BarChart3, PieChart, Calendar } from "lucide-react";
 import { BarChart, Bar, PieChart as RePieChart, Pie, LineChart, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -66,6 +68,19 @@ export const DashboardStats = () => {
   const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
   const [genderData, setGenderData] = useState<GenderDistribution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel');
+  const [selectedSections, setSelectedSections] = useState({
+    essentialData: true,
+    participationMetrics: true,
+    overview: true,
+    statusChart: true,
+    genderChart: true,
+    top10Chart: true,
+    timeline: true,
+    ranking: true,
+    alerts: true
+  });
 
   const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
@@ -111,50 +126,63 @@ export const DashboardStats = () => {
 
     const workbook = XLSX.utils.book_new();
     
-    // Aba 1: Estatísticas Gerais do Evento
-    const eventSheet = XLSX.utils.json_to_sheet(
-      eventStats.map(stat => ({
-        'Evento': stat.event_title,
-        'Data do Evento': stat.event_date ? format(parseISO(stat.event_date), "dd/MM/yyyy", { locale: ptBR }) : 'N/A',
-        'Local': stat.event_location || 'N/A',
-        'Setor': stat.event_sector || 'N/A',
-        'Vagas': stat.total_vacancies || 'N/A',
-        'Status': stat.is_active ? 'Ativo' : 'Inativo',
-        'Posts Requisitados': stat.required_posts || 'N/A',
-        'Vendas Requisitadas': stat.required_sales || 'N/A',
-        'Gênero Alvo': stat.target_gender.join(', ') || 'Todos',
-        'Participantes Únicos': stat.total_users,
-        'Total de Submissões': stat.total_submissions,
-        'Posts Aprovados': stat.approved_submissions,
-        'Posts Pendentes': stat.pending_submissions,
-        'Posts Rejeitados': stat.rejected_submissions,
-        'Posts Disponíveis': stat.total_posts_available,
-        'Taxa de Conversão (%)': stat.conversion_rate.toFixed(1),
-        'Taxa de Aprovação (%)': stat.approval_rate.toFixed(1),
-        'Média Posts/Usuário': stat.avg_posts_per_user.toFixed(1)
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, eventSheet, 'Estatísticas do Evento');
+    // Aba 1: Dados Essenciais do Evento (se selecionado)
+    if (selectedSections.essentialData || selectedSections.participationMetrics) {
+      const eventSheet = XLSX.utils.json_to_sheet(
+        eventStats.map(stat => {
+          const row: any = {};
+          
+          if (selectedSections.essentialData) {
+            row['Evento'] = stat.event_title;
+            row['Data do Evento'] = stat.event_date ? format(parseISO(stat.event_date), "dd/MM/yyyy", { locale: ptBR }) : 'N/A';
+            row['Local'] = stat.event_location || 'N/A';
+            row['Setor'] = stat.event_sector || 'N/A';
+            row['Vagas'] = stat.total_vacancies || 'N/A';
+            row['Status'] = stat.is_active ? 'Ativo' : 'Inativo';
+            row['Posts Requisitados'] = stat.required_posts || 'N/A';
+            row['Vendas Requisitadas'] = stat.required_sales || 'N/A';
+            row['Gênero Alvo'] = stat.target_gender.join(', ') || 'Todos';
+          }
+          
+          if (selectedSections.participationMetrics) {
+            row['Participantes Únicos'] = stat.total_users;
+            row['Total de Submissões'] = stat.total_submissions;
+            row['Posts Aprovados'] = stat.approved_submissions;
+            row['Posts Pendentes'] = stat.pending_submissions;
+            row['Posts Rejeitados'] = stat.rejected_submissions;
+            row['Posts Disponíveis'] = stat.total_posts_available;
+            row['Taxa de Conversão (%)'] = stat.conversion_rate.toFixed(1);
+            row['Taxa de Aprovação (%)'] = stat.approval_rate.toFixed(1);
+            row['Média Posts/Usuário'] = stat.avg_posts_per_user.toFixed(1);
+          }
+          
+          return row;
+        })
+      );
+      XLSX.utils.book_append_sheet(workbook, eventSheet, 'Estatísticas do Evento');
+    }
 
-    // Aba 2: Ranking de Usuários
-    const top10 = [...userStats].sort((a, b) => b.approved_submissions - a.approved_submissions).slice(0, 10);
-    const userSheet = XLSX.utils.json_to_sheet(
-      top10.map((stat, index) => ({
-        'Posição': index + 1,
-        'Nome': stat.user_name,
-        'Email': stat.user_email,
-        'Instagram': stat.user_instagram,
-        'Eventos': stat.events_participated,
-        'Posts Aprovados': stat.approved_submissions,
-        'Total de Submissões': stat.total_submissions,
-        'Posts Disponíveis': stat.total_posts_available,
-        'Conclusão (%)': stat.completion_percentage
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, userSheet, 'Top 10 Usuários');
+    // Aba 2: Ranking de Usuários (se selecionado)
+    if (selectedSections.ranking) {
+      const top10 = [...userStats].sort((a, b) => b.approved_submissions - a.approved_submissions).slice(0, 10);
+      const userSheet = XLSX.utils.json_to_sheet(
+        top10.map((stat, index) => ({
+          'Posição': index + 1,
+          'Nome': stat.user_name,
+          'Email': stat.user_email,
+          'Instagram': stat.user_instagram,
+          'Eventos': stat.events_participated,
+          'Posts Aprovados': stat.approved_submissions,
+          'Total de Submissões': stat.total_submissions,
+          'Posts Disponíveis': stat.total_posts_available,
+          'Conclusão (%)': stat.completion_percentage
+        }))
+      );
+      XLSX.utils.book_append_sheet(workbook, userSheet, 'Top 10 Usuários');
+    }
 
-    // Aba 3: Linha do Tempo
-    if (timelineData.length > 0) {
+    // Aba 3: Linha do Tempo (se selecionado)
+    if (selectedSections.timeline && timelineData.length > 0) {
       const timelineSheet = XLSX.utils.json_to_sheet(
         timelineData.map(t => ({
           'Data': t.date,
@@ -164,8 +192,8 @@ export const DashboardStats = () => {
       XLSX.utils.book_append_sheet(workbook, timelineSheet, 'Linha do Tempo');
     }
 
-    // Aba 4: Distribuição por Gênero
-    if (genderData.length > 0) {
+    // Aba 4: Distribuição por Gênero (se selecionado)
+    if ((selectedSections.genderChart) && genderData.length > 0) {
       const genderSheet = XLSX.utils.json_to_sheet(
         genderData.map(g => ({
           'Gênero': g.gender,
@@ -175,8 +203,23 @@ export const DashboardStats = () => {
       XLSX.utils.book_append_sheet(workbook, genderSheet, 'Distribuição Gênero');
     }
 
+    // Aba 5: Alertas (se selecionado)
+    if (selectedSections.alerts) {
+      const alertUsers = userStats.filter(u => u.completion_percentage > 100);
+      const highRejectionEvents = eventStats.filter(e => e.approval_rate < 50);
+      
+      const alertsData = [
+        { 'Tipo de Alerta': 'Usuários com >100% conclusão', 'Quantidade': alertUsers.length },
+        { 'Tipo de Alerta': 'Eventos com alta taxa de rejeição', 'Quantidade': highRejectionEvents.length }
+      ];
+      
+      const alertSheet = XLSX.utils.json_to_sheet(alertsData);
+      XLSX.utils.book_append_sheet(workbook, alertSheet, 'Alertas');
+    }
+
     XLSX.writeFile(workbook, `Relatorio_Completo_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success("Relatório Excel completo exportado com sucesso!");
+    setShowExportDialog(false);
   };
 
   const exportEventStatsToPDF = () => {
@@ -198,110 +241,191 @@ export const DashboardStats = () => {
     doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, yPos);
     yPos += 15;
 
-    // Tabela 1: Dados Essenciais do Evento
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text('📋 Dados Essenciais do Evento', 14, yPos);
-    yPos += 5;
+    // Tabela 1: Dados Essenciais do Evento (se selecionado)
+    if (selectedSections.essentialData) {
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('📋 Dados Essenciais do Evento', 14, yPos);
+      yPos += 5;
 
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Evento', 'Data', 'Local', 'Vagas', 'Status', 'Gênero Alvo']],
-      body: eventStats.map(stat => [
-        stat.event_title,
-        stat.event_date ? format(parseISO(stat.event_date), "dd/MM/yyyy") : 'N/A',
-        stat.event_location || 'N/A',
-        stat.total_vacancies?.toString() || 'N/A',
-        stat.is_active ? 'Ativo' : 'Inativo',
-        stat.target_gender.join(', ') || 'Todos'
-      ]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [139, 92, 246] },
-      margin: { left: 14, right: 14 }
-    });
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Evento', 'Data', 'Local', 'Vagas', 'Status', 'Gênero Alvo']],
+        body: eventStats.map(stat => [
+          stat.event_title,
+          stat.event_date ? format(parseISO(stat.event_date), "dd/MM/yyyy") : 'N/A',
+          stat.event_location || 'N/A',
+          stat.total_vacancies?.toString() || 'N/A',
+          stat.is_active ? 'Ativo' : 'Inativo',
+          stat.target_gender.join(', ') || 'Todos'
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [139, 92, 246] },
+        margin: { left: 14, right: 14 }
+      });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
-
-    // Tabela 2: Métricas de Participação
-    doc.setFontSize(14);
-    doc.text('📊 Métricas de Participação', 14, yPos);
-    yPos += 5;
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Participantes', 'Submissões', 'Aprovados', 'Pendentes', 'Rejeitados', 'Taxa Aprovação']],
-      body: eventStats.map(stat => [
-        stat.total_users.toString(),
-        stat.total_submissions.toString(),
-        stat.approved_submissions.toString(),
-        stat.pending_submissions.toString(),
-        stat.rejected_submissions.toString(),
-        `${stat.approval_rate.toFixed(1)}%`
-      ]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [139, 92, 246] },
-      margin: { left: 14, right: 14 }
-    });
-
-    yPos = (doc as any).lastAutoTable.finalY + 15;
-
-    // Tabela 3: Top 10 Usuários
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
+      yPos = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    doc.setFontSize(14);
-    doc.text('🏆 Top 10 Usuários', 14, yPos);
-    yPos += 5;
-
-    const top10 = [...userStats].sort((a, b) => b.approved_submissions - a.approved_submissions).slice(0, 10);
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Pos', 'Nome', 'Email', 'Aprovados', 'Conclusão']],
-      body: top10.map((stat, index) => [
-        (index + 1).toString(),
-        stat.user_name,
-        stat.user_email,
-        stat.approved_submissions.toString(),
-        `${stat.completion_percentage}%`
-      ]),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [139, 92, 246] },
-      margin: { left: 14, right: 14 }
-    });
-
-    // Alertas
-    const alerts = userStats.filter(u => u.completion_percentage > 100);
-    if (alerts.length > 0) {
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+    // Tabela 2: Métricas de Participação (se selecionado)
+    if (selectedSections.participationMetrics) {
+      if (yPos > 220) {
+        doc.addPage();
+        yPos = 20;
+      }
       
-      if (yPos > 250) {
+      doc.setFontSize(14);
+      doc.text('📊 Métricas de Participação', 14, yPos);
+      yPos += 5;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Participantes', 'Submissões', 'Aprovados', 'Pendentes', 'Rejeitados', 'Taxa Aprovação']],
+        body: eventStats.map(stat => [
+          stat.total_users.toString(),
+          stat.total_submissions.toString(),
+          stat.approved_submissions.toString(),
+          stat.pending_submissions.toString(),
+          stat.rejected_submissions.toString(),
+          `${stat.approval_rate.toFixed(1)}%`
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [139, 92, 246] },
+        margin: { left: 14, right: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Tabela 3: Top 10 Usuários (se selecionado)
+    if (selectedSections.ranking) {
+      if (yPos > 220) {
         doc.addPage();
         yPos = 20;
       }
 
       doc.setFontSize(14);
-      doc.setTextColor(239, 68, 68);
-      doc.text('⚠️ Alertas de Atenção', 14, yPos);
-      doc.setTextColor(0, 0, 0);
+      doc.text('🏆 Top 10 Usuários', 14, yPos);
+      yPos += 5;
+
+      const top10 = [...userStats].sort((a, b) => b.approved_submissions - a.approved_submissions).slice(0, 10);
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Pos', 'Nome', 'Email', 'Aprovados', 'Conclusão']],
+        body: top10.map((stat, index) => [
+          (index + 1).toString(),
+          stat.user_name,
+          stat.user_email,
+          stat.approved_submissions.toString(),
+          `${stat.completion_percentage}%`
+        ]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [139, 92, 246] },
+        margin: { left: 14, right: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Timeline (se selecionado)
+    if (selectedSections.timeline && timelineData.length > 0) {
+      if (yPos > 220) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.text('📈 Linha do Tempo (Últimos 14 Dias)', 14, yPos);
       yPos += 5;
 
       autoTable(doc, {
         startY: yPos,
-        head: [['Alerta', 'Detalhes']],
-        body: [
-          ['Usuários com >100% conclusão', `${alerts.length} usuário(s) identificado(s)`]
-        ],
+        head: [['Data', 'Submissões']],
+        body: timelineData.map(t => [t.date, t.submissions.toString()]),
         styles: { fontSize: 9 },
-        headStyles: { fillColor: [239, 68, 68] },
+        headStyles: { fillColor: [139, 92, 246] },
         margin: { left: 14, right: 14 }
       });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Alertas (se selecionado)
+    if (selectedSections.alerts) {
+      const alerts = userStats.filter(u => u.completion_percentage > 100);
+      const highRejectionEvents = eventStats.filter(e => e.approval_rate < 50);
+      
+      if (alerts.length > 0 || highRejectionEvents.length > 0) {
+        if (yPos > 220) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setTextColor(239, 68, 68);
+        doc.text('⚠️ Alertas de Atenção', 14, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 5;
+
+        const alertsData = [];
+        if (alerts.length > 0) {
+          alertsData.push(['Usuários com >100% conclusão', `${alerts.length} usuário(s) identificado(s)`]);
+        }
+        if (highRejectionEvents.length > 0) {
+          alertsData.push(['Eventos com alta taxa de rejeição', `${highRejectionEvents.length} evento(s)`]);
+        }
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Alerta', 'Detalhes']],
+          body: alertsData,
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [239, 68, 68] },
+          margin: { left: 14, right: 14 }
+        });
+      }
     }
 
     doc.save(`Relatorio_Completo_${eventName}_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success("Relatório PDF completo exportado com sucesso!");
+    setShowExportDialog(false);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedSections({
+      essentialData: true,
+      participationMetrics: true,
+      overview: true,
+      statusChart: true,
+      genderChart: true,
+      top10Chart: true,
+      timeline: true,
+      ranking: true,
+      alerts: true
+    });
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedSections({
+      essentialData: false,
+      participationMetrics: false,
+      overview: false,
+      statusChart: false,
+      genderChart: false,
+      top10Chart: false,
+      timeline: false,
+      ranking: false,
+      alerts: false
+    });
+  };
+
+  const handleExport = () => {
+    if (exportType === 'excel') {
+      exportEventStatsToExcel();
+    } else {
+      exportEventStatsToPDF();
+    }
   };
 
   const loadAllStats = async () => {
@@ -612,14 +736,168 @@ export const DashboardStats = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold">📊 Dashboard de Desempenho Completo</h2>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={exportEventStatsToExcel} variant="outline" className="flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4" />
-            Excel Completo
-          </Button>
-          <Button onClick={exportEventStatsToPDF} variant="outline" className="flex items-center gap-2">
+          <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => {
+                  setExportType('excel');
+                  setShowExportDialog(true);
+                }}
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Excel Completo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Selecionar Seções do Relatório</DialogTitle>
+                <DialogDescription>
+                  Escolha quais métricas e dados incluir no relatório {exportType === 'excel' ? 'Excel' : 'PDF'}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                <div className="flex gap-2 mb-4">
+                  <Button size="sm" variant="secondary" onClick={handleSelectAll}>
+                    Selecionar Tudo
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleDeselectAll}>
+                    Desmarcar Tudo
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="essentialData" 
+                      checked={selectedSections.essentialData}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, essentialData: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="essentialData" className="text-sm font-medium cursor-pointer">
+                      📋 Dados Essenciais do Evento
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="participationMetrics" 
+                      checked={selectedSections.participationMetrics}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, participationMetrics: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="participationMetrics" className="text-sm font-medium cursor-pointer">
+                      📊 Métricas de Participação
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="statusChart" 
+                      checked={selectedSections.statusChart}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, statusChart: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="statusChart" className="text-sm font-medium cursor-pointer">
+                      📈 Gráfico de Posts por Status
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="genderChart" 
+                      checked={selectedSections.genderChart}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, genderChart: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="genderChart" className="text-sm font-medium cursor-pointer">
+                      👥 Gráfico de Distribuição por Gênero
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="top10Chart" 
+                      checked={selectedSections.top10Chart}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, top10Chart: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="top10Chart" className="text-sm font-medium cursor-pointer">
+                      🏆 Gráfico Top 10 Usuários
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="timeline" 
+                      checked={selectedSections.timeline}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, timeline: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="timeline" className="text-sm font-medium cursor-pointer">
+                      📉 Timeline de Submissões (Últimos 14 Dias)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="ranking" 
+                      checked={selectedSections.ranking}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, ranking: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="ranking" className="text-sm font-medium cursor-pointer">
+                      🥇 Ranking de Usuários (Top 10 + 100% Conclusão)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="alerts" 
+                      checked={selectedSections.alerts}
+                      onCheckedChange={(checked) => 
+                        setSelectedSections(prev => ({ ...prev, alerts: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="alerts" className="text-sm font-medium cursor-pointer">
+                      ⚠️ Alertas e Indicadores de Atenção
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleExport}>
+                  Gerar Relatório {exportType === 'excel' ? 'Excel' : 'PDF'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => {
+              setExportType('pdf');
+              setShowExportDialog(true);
+            }}
+          >
             <FileText className="w-4 h-4" />
             PDF Completo
           </Button>
+          
           <Select value={activeFilter} onValueChange={setActiveFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar status" />
