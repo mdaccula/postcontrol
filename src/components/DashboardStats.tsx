@@ -1185,15 +1185,18 @@ export const DashboardStats = () => {
                     <Legend />
                   </RePieChart>
                 </ResponsiveContainer>
+                </div>
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                   Sem dados demográficos disponíveis
                 </div>
               )}
             </Card>
+          </div>
 
-            {/* Gráfico de Barras - Top 10 */}
-            <Card className="p-6 md:col-span-2">
+          {/* Gráfico de Barras - Top 10 */}
+          {selectedSections.top10Chart && (
+            <Card className="p-6">
               <h3 className="text-lg font-bold mb-4">Top 10 Usuários por Posts Aprovados</h3>
               {top10Users.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
@@ -1212,7 +1215,7 @@ export const DashboardStats = () => {
                 </div>
               )}
             </Card>
-          </div>
+          )}
         </TabsContent>
 
         {/* Timeline */}

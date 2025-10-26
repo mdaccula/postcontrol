@@ -384,15 +384,6 @@ const Admin = () => {
     }
   };
 
-  const getFilteredSubmissions = () => {
-    return submissions.filter((s: any) => {
-      const eventMatch = submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter;
-      const postMatch = submissionPostFilter === "all" || s.posts?.post_number?.toString() === submissionPostFilter;
-      const statusMatch = submissionStatusFilter === "all" || s.status === submissionStatusFilter;
-      return eventMatch && postMatch && statusMatch;
-    });
-  };
-
   const getAvailablePostNumbers = () => {
     const filtered = submissions.filter((s: any) => 
       submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter
