@@ -306,6 +306,28 @@ const Submit = () => {
     setIsSubmitting(true);
 
     try {
+      // Rate limiting check (5 submissions per hour)
+      const { data: rateLimitCheck, error: rateLimitError } = await sb.rpc('check_rate_limit', {
+        p_user_id: user!.id,
+        p_action_type: 'submission',
+        p_max_count: 5,
+        p_window_minutes: 60
+      });
+
+      if (rateLimitError) {
+        console.error('Rate limit check error:', rateLimitError);
+      }
+
+      if (rateLimitCheck === false) {
+        toast({
+          variant: "destructive",
+          title: "Limite atingido",
+          description: "Você pode enviar no máximo 5 submissões por hora. Aguarde um pouco.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const post = posts.find((p) => p.id === selectedPost);
       if (post && new Date(post.deadline) < new Date()) {
         toast({
