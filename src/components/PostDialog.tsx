@@ -95,6 +95,13 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
           description: "A postagem foi atualizada com sucesso.",
         });
       } else {
+        // Get user's agency_id
+        const { data: profileData } = await sb
+          .from('profiles')
+          .select('agency_id')
+          .eq('id', user.id)
+          .maybeSingle();
+
         // Create new post
         const { error } = await sb
           .from('posts')
@@ -103,6 +110,7 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
             post_number: parseInt(postNumber),
             deadline: new Date(deadline).toISOString(),
             created_by: user.id,
+            agency_id: profileData?.agency_id || null,
           });
 
         if (error) throw error;

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, TrendingUp, Award, Calendar, LogOut, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { Progress } from "@/components/ui/progress";
@@ -44,6 +45,7 @@ interface EventStats {
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
+  const { isMasterAdmin } = useAuthStore();
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [eventStats, setEventStats] = useState<EventStats[]>([]);
@@ -213,6 +215,13 @@ const Dashboard = () => {
           <div className="flex items-center gap-4">
             {user && <NotificationBell userId={user.id} />}
             <ThemeToggle />
+            {isMasterAdmin && (
+              <Link to="/master-admin">
+                <Button className="bg-gradient-primary">
+                  🔑 Painel Master
+                </Button>
+              </Link>
+            )}
             {isAdmin && (
               <Link to="/admin">
                 <Button variant="outline">

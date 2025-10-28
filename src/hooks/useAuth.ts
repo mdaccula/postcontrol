@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
-  const { setUser, setSession, setLoading, checkAdminStatus } = useAuthStore();
+  const { setUser, setSession, setLoading, checkAdminStatus, checkMasterAdminStatus } = useAuthStore();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -15,6 +15,7 @@ export const useAuth = () => {
         if (session?.user) {
           setTimeout(() => {
             checkAdminStatus();
+            checkMasterAdminStatus();
           }, 0);
         }
       }
@@ -29,6 +30,7 @@ export const useAuth = () => {
       if (session?.user) {
         setTimeout(() => {
           checkAdminStatus();
+          checkMasterAdminStatus();
         }, 0);
       }
     });
