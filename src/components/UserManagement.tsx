@@ -95,11 +95,11 @@ export const UserManagement = () => {
         // Agency admin vê apenas usuários que fizeram submissões em eventos da sua agência
         console.log('👤 Agency Admin - carregando usuários com submissões da agência:', currentAgencyId);
         
-        const { data, error } = await sb
+        // Primeiro, buscar os IDs dos usuários que fizeram submissões
+        const { data: submissionsData, error: submissionsError } = await sb
           .from('submissions')
           .select(`
             user_id,
-            profiles!inner(*),
             posts!inner(
               event_id,
               events!inner(
@@ -109,20 +109,38 @@ export const UserManagement = () => {
           `)
           .eq('posts.events.agency_id', currentAgencyId);
 
-        if (error) throw error;
+        if (submissionsError) {
+          console.error('❌ Erro ao buscar submissões:', submissionsError);
+          throw submissionsError;
+        }
+
+        console.log('📋 Submissões encontradas:', submissionsData?.length || 0);
+
+        // Extrair IDs únicos de usuários
+        const userIds = Array.from(new Set((submissionsData || []).map((s: any) => s.user_id)));
+        console.log('👥 User IDs únicos:', userIds.length, userIds);
+
+        if (userIds.length === 0) {
+          console.log('⚠️ Nenhum usuário encontrado com submissões');
+          setUsers([]);
+          setLoading(false);
+          return;
+        }
+
+        // Buscar os perfis desses usuários
+        const { data: profilesData, error: profilesError } = await sb
+          .from('profiles')
+          .select('*')
+          .in('id', userIds)
+          .order('created_at', { ascending: false });
+
+        if (profilesError) {
+          console.error('❌ Erro ao buscar perfis:', profilesError);
+          throw profilesError;
+        }
         
-        // Remover duplicatas (mesmo usuário pode ter múltiplas submissões)
-        const uniqueUsers = Array.from(
-          new Map(
-            (data || []).map((item: any) => [
-              item.profiles.id,
-              item.profiles
-            ])
-          ).values()
-        ) as Profile[];
-        
-        console.log(`📊 Loaded ${uniqueUsers.length} users for agency ${currentAgencyId}`);
-        setUsers(uniqueUsers);
+        console.log(`📊 Loaded ${profilesData?.length || 0} users for agency ${currentAgencyId}`);
+        setUsers(profilesData || []);
       } else {
         console.warn('⚠️ Agency admin sem currentAgencyId definido');
         setUsers([]);
