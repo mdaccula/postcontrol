@@ -326,7 +326,7 @@ const Home = () => {
                         <span className="text-muted-foreground">/mês</span>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {plan.max_influencers} divulgadores • {plan.max_events} eventos
+                        {plan.max_influencers} influencers • {plan.max_events} eventos
                       </p>
                     </div>
 
@@ -339,17 +339,23 @@ const Home = () => {
                       ))}
                     </div>
 
-                    <Link to="/auth" className="block">
-                      <Button 
-                        size="lg" 
-                        className={`w-full ${
-                          isPopular ? 'bg-gradient-primary' : 'bg-gradient-secondary'
-                        }`}
-                      >
-                        Começar Agora
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
+<a 
+  href="https://wa.me/5511999136884?text=Olá! Gostaria de contratar o plano [NOME_DO_PLANO]"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="block"
+>
+  <Button 
+    size="lg" 
+    className={`w-full ${
+      isPopular ? 'bg-gradient-primary' : 'bg-gradient-secondary'
+    }`}
+  >
+    Contratar via WhatsApp
+    <MessageCircle className="ml-2 h-4 w-4" />
+  </Button>
+</a>
+
                   </Card>
                 );
               })}
