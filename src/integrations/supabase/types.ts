@@ -40,6 +40,7 @@ export type Database = {
       }
       agencies: {
         Row: {
+          admin_email: string | null
           created_at: string
           custom_domain: string | null
           id: string
@@ -48,12 +49,16 @@ export type Database = {
           max_influencers: number | null
           name: string
           owner_id: string | null
+          plan_expiry_date: string | null
           slug: string
           subscription_plan: string | null
           subscription_status: string | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string
         }
         Insert: {
+          admin_email?: string | null
           created_at?: string
           custom_domain?: string | null
           id?: string
@@ -62,12 +67,16 @@ export type Database = {
           max_influencers?: number | null
           name: string
           owner_id?: string | null
+          plan_expiry_date?: string | null
           slug: string
           subscription_plan?: string | null
           subscription_status?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
         }
         Update: {
+          admin_email?: string | null
           created_at?: string
           custom_domain?: string | null
           id?: string
@@ -76,9 +85,12 @@ export type Database = {
           max_influencers?: number | null
           name?: string
           owner_id?: string | null
+          plan_expiry_date?: string | null
           slug?: string
           subscription_plan?: string | null
           subscription_status?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -372,6 +384,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          agency_id: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -383,6 +396,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agency_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -394,6 +408,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agency_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -404,7 +419,15 @@ export type Database = {
           tutorial_completed?: boolean | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rate_limits: {
         Row: {
@@ -765,6 +788,10 @@ export type Database = {
         Returns: boolean
       }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
+      link_admin_to_agency: {
+        Args: { p_admin_email: string; p_agency_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "user" | "agency_admin" | "master_admin"

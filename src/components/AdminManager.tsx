@@ -17,9 +17,18 @@ import {
   SelectTrigger,
   SelectValue 
 } from "@/components/ui/select";
-import { UserPlus, Building2, Link as LinkIcon } from "lucide-react";
+import { UserPlus, Building2, Link as LinkIcon, Edit, Trash2, ExternalLink, Copy } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
+import { EditAdminDialog } from "./EditAdminDialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Plan {
   plan_key: string;
@@ -29,10 +38,26 @@ interface Plan {
   max_events: number;
 }
 
+interface AdminData {
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone?: string;
+  instagram?: string;
+  agency_id?: string;
+  agency_name?: string;
+  agency_slug?: string;
+  created_at: string;
+}
+
 export const AdminManager = () => {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [admins, setAdmins] = useState<AdminData[]>([]);
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminData | null>(null);
+  const [inviteLink, setInviteLink] = useState("");
   const [newAdmin, setNewAdmin] = useState({
     email: "",
     agencyName: "",
@@ -42,6 +67,7 @@ export const AdminManager = () => {
 
   useEffect(() => {
     loadPlans();
+    loadAdmins();
   }, []);
 
   const loadPlans = async () => {
@@ -52,6 +78,48 @@ export const AdminManager = () => {
     
     if (data) {
       setPlans(data);
+    }
+  };
+
+  const loadAdmins = async () => {
+    const { data: userRoles } = await sb
+      .from('user_roles')
+      .select(`
+        user_id,
+        created_at,
+        profiles:user_id (
+          email,
+          full_name,
+          phone,
+          instagram
+        )
+      `)
+      .eq('role', 'agency_admin');
+
+    if (userRoles) {
+      const adminsWithAgencies = await Promise.all(
+        userRoles.map(async (role: any) => {
+          const { data: agency } = await sb
+            .from('agencies')
+            .select('id, name, slug')
+            .eq('owner_id', role.user_id)
+            .maybeSingle();
+
+          return {
+            user_id: role.user_id,
+            email: role.profiles?.email || '',
+            full_name: role.profiles?.full_name || '',
+            phone: role.profiles?.phone,
+            instagram: role.profiles?.instagram,
+            agency_id: agency?.id,
+            agency_name: agency?.name,
+            agency_slug: agency?.slug,
+            created_at: role.created_at,
+          };
+        })
+      );
+
+      setAdmins(adminsWithAgencies);
     }
   };
 
@@ -98,11 +166,16 @@ export const AdminManager = () => {
         return;
       }
 
+      // Gerar link de convite
+      const link = `${window.location.origin}/auth?agency=${agency.slug}&email=${encodeURIComponent(newAdmin.email)}&mode=signup`;
+      setInviteLink(link);
+
       toast({
-        title: "Admin criado!",
-        description: `${newAdmin.agencyName} foi criado com sucesso. Envie o link de acesso para ${newAdmin.email}`,
+        title: "Agência e Admin criados!",
+        description: `${newAdmin.agencyName} foi criado com sucesso. Link de convite gerado!`,
       });
 
+      await loadAdmins();
       setDialogOpen(false);
       setNewAdmin({ email: "", agencyName: "", agencySlug: "", plan: "basic" });
     } catch (error: any) {
@@ -110,6 +183,43 @@ export const AdminManager = () => {
         title: "Erro ao criar admin",
         description: error.message || "Tente novamente.",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAdmin = async (userId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este admin? A agência não será excluída.')) return;
+
+    try {
+      const { error } = await sb
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'agency_admin');
+
+      if (error) throw error;
+
+      toast({
+        title: "Admin excluído",
+        description: "O admin foi removido com sucesso.",
+      });
+
+      await loadAdmins();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyInviteLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      toast({
+        title: "Link copiado!",
+        description: "Envie este link para o admin se cadastrar.",
       });
     }
   };
@@ -129,18 +239,98 @@ export const AdminManager = () => {
         </Button>
       </div>
 
+      {inviteLink && (
+        <Card className="p-4 bg-primary/5 border-primary/20 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium mb-1">Link de Convite Gerado:</p>
+              <code className="text-xs bg-background p-2 rounded block overflow-x-auto">
+                {inviteLink}
+              </code>
+            </div>
+            <Button onClick={handleCopyInviteLink} variant="outline" size="sm">
+              <Copy className="w-4 h-4 mr-2" />
+              Copiar
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-6">
-        <div className="text-center py-8">
-          <Building2 className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Gerencie suas agências</h3>
-          <p className="text-muted-foreground mb-4">
-            Crie uma nova agência e envie o convite para o administrador
-          </p>
-          <Button onClick={() => setDialogOpen(true)} variant="outline">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Criar Primeira Agência
-          </Button>
-        </div>
+        {admins.length === 0 ? (
+          <div className="text-center py-8">
+            <Building2 className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum admin cadastrado</h3>
+            <p className="text-muted-foreground mb-4">
+              Crie uma nova agência e convide o primeiro administrador
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Agência</TableHead>
+                  <TableHead>Cadastro</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {admins.map((admin) => (
+                  <TableRow key={admin.user_id}>
+                    <TableCell className="font-medium">{admin.full_name}</TableCell>
+                    <TableCell>{admin.email}</TableCell>
+                    <TableCell>{admin.phone || '-'}</TableCell>
+                    <TableCell>
+                      {admin.agency_name ? (
+                        <div>
+                          <div className="font-medium">{admin.agency_name}</div>
+                          <div className="text-xs text-muted-foreground">/{admin.agency_slug}</div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Sem agência</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{new Date(admin.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAdmin(admin);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        {admin.agency_slug && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/admin?agency=${admin.agency_slug}`, '_blank')}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteAdmin(admin.user_id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -163,7 +353,7 @@ export const AdminManager = () => {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                O convite será enviado para este email
+                Um link de convite será gerado após a criação
               </p>
             </div>
 
@@ -209,6 +399,7 @@ export const AdminManager = () => {
               </Select>
               {newAdmin.plan && (
                 <div className="bg-muted p-3 rounded-lg text-sm">
+                  <p className="font-semibold mb-1">✅ 7 dias de teste gratuito incluídos</p>
                   <p className="font-semibold mb-1">Limites do plano:</p>
                   {plans.filter(p => p.plan_key === newAdmin.plan).map((plan) => (
                     <ul key={plan.plan_key} className="list-disc list-inside text-muted-foreground">
@@ -232,6 +423,13 @@ export const AdminManager = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <EditAdminDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        admin={selectedAdmin}
+        onSuccess={loadAdmins}
+      />
     </>
   );
 };

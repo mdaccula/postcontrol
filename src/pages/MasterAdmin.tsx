@@ -35,6 +35,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlanManager } from "@/components/PlanManager";
 import { AdminManager } from "@/components/AdminManager";
+import { FinancialReports } from "@/components/FinancialReports";
+import { EditAgencyDialog } from "@/components/EditAgencyDialog";
 
 interface Agency {
   id: string;
@@ -62,6 +64,8 @@ const MasterAdmin = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editAgencyDialogOpen, setEditAgencyDialogOpen] = useState(false);
+  const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [agencyStats, setAgencyStats] = useState<Record<string, AgencyStats>>({});
 
   // Form state
@@ -277,20 +281,17 @@ const MasterAdmin = () => {
 
         {/* Tabs com diferentes áreas */}
         <Tabs defaultValue="agencies" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="agencies">Agências</TabsTrigger>
             <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
+            <TabsTrigger value="reports">Relatórios</TabsTrigger>
           </TabsList>
 
           <TabsContent value="agencies" className="space-y-6">
             {/* Actions */}
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Agências Cadastradas</h2>
-              <Button onClick={() => setDialogOpen(true)} className="bg-gradient-primary">
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Agência
-              </Button>
             </div>
 
             {/* Agencies List */}
@@ -298,9 +299,7 @@ const MasterAdmin = () => {
               {agencies.length === 0 ? (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground mb-4">Nenhuma agência cadastrada</p>
-                  <Button onClick={() => setDialogOpen(true)} className="bg-gradient-primary">
-                    Criar Primeira Agência
-                  </Button>
+                  <p className="text-sm text-muted-foreground">Vá para a aba "Admins" para criar uma nova agência com admin</p>
                 </Card>
               ) : (
                 agencies.map((agency) => (
@@ -350,11 +349,22 @@ const MasterAdmin = () => {
                         </div>
 
                         <div className="mt-4 flex gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedAgency(agency);
+                              setEditAgencyDialogOpen(true);
+                            }}
+                          >
                             <Settings className="mr-2 h-4 w-4" />
                             Configurar
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(`/admin?agency=${agency.slug}`, '_blank')}
+                          >
                             <ExternalLink className="mr-2 h-4 w-4" />
                             Ver Dashboard
                           </Button>
@@ -374,8 +384,19 @@ const MasterAdmin = () => {
           <TabsContent value="plans">
             <PlanManager />
           </TabsContent>
+
+          <TabsContent value="reports">
+            <FinancialReports />
+          </TabsContent>
         </Tabs>
       </div>
+
+      <EditAgencyDialog
+        open={editAgencyDialogOpen}
+        onOpenChange={setEditAgencyDialogOpen}
+        agency={selectedAgency}
+        onSuccess={loadAgencies}
+      />
 
       {/* Create Agency Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
