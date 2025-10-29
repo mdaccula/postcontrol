@@ -12,7 +12,8 @@ import {
   TrendingUp,
   Plus,
   Settings,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
@@ -67,6 +68,7 @@ const MasterAdmin = () => {
   const [editAgencyDialogOpen, setEditAgencyDialogOpen] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [agencyStats, setAgencyStats] = useState<Record<string, AgencyStats>>({});
+  const [plans, setPlans] = useState<any[]>([]);
 
   // Form state
   const [newAgency, setNewAgency] = useState({
@@ -94,7 +96,20 @@ const MasterAdmin = () => {
     }
 
     loadAgencies();
+    loadPlans();
   }, [user, isMasterAdmin, navigate]);
+
+  const loadPlans = async () => {
+    const { data } = await sb
+      .from('subscription_plans')
+      .select('*')
+      .eq('is_visible', true)
+      .order('monthly_price', { ascending: true });
+    
+    if (data) {
+      setPlans(data);
+    }
+  };
 
   const loadAgencies = async () => {
     setLoading(true);
@@ -184,15 +199,26 @@ const MasterAdmin = () => {
   };
 
   const getTotalRevenue = () => {
-    const planPrices: Record<string, number> = {
-      basic: 299,
-      pro: 599,
-      enterprise: 1499,
-    };
-
     return agencies
       .filter(a => a.subscription_status === 'active')
-      .reduce((sum, a) => sum + (planPrices[a.subscription_plan] || 0), 0);
+      .reduce((sum, a) => {
+        const plan = plans.find(p => p.plan_key === a.subscription_plan);
+        return sum + (plan?.monthly_price || 0);
+      }, 0);
+  };
+
+  const getFullAgencyUrl = (slug: string) => {
+    const baseDomain = window.location.origin;
+    return `${baseDomain}/agency/${slug}`;
+  };
+
+  const handleCopyAgencyLink = (slug: string) => {
+    const url = getFullAgencyUrl(slug);
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link Copiado!",
+      description: "O link da agência foi copiado para a área de transferência.",
+    });
   };
 
   if (loading) {
@@ -324,9 +350,9 @@ const MasterAdmin = () => {
                         </div>
                         
                         <div className="grid md:grid-cols-4 gap-4 mt-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Slug</p>
-                            <p className="font-mono text-sm">{agency.slug}</p>
+                          <div className="md:col-span-2">
+                            <p className="text-sm text-muted-foreground">URL da Agência</p>
+                            <p className="font-mono text-sm break-all">{getFullAgencyUrl(agency.slug)}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Influencers</p>
@@ -352,6 +378,14 @@ const MasterAdmin = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
+                            onClick={() => handleCopyAgencyLink(agency.slug)}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copiar Link
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
                             onClick={() => {
                               setSelectedAgency(agency);
                               setEditAgencyDialogOpen(true);
@@ -363,7 +397,7 @@ const MasterAdmin = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => window.open(`/admin?agency=${agency.slug}`, '_blank')}
+                            onClick={() => navigate(`/admin?agency=${agency.slug}`)}
                           >
                             <ExternalLink className="mr-2 h-4 w-4" />
                             Ver Dashboard

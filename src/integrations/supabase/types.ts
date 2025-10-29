@@ -217,6 +217,7 @@ export type Database = {
       }
       events: {
         Row: {
+          agency_id: string | null
           auto_activate_at: string | null
           auto_deactivate_at: string | null
           created_at: string
@@ -238,6 +239,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agency_id?: string | null
           auto_activate_at?: string | null
           auto_deactivate_at?: string | null
           created_at?: string
@@ -259,6 +261,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agency_id?: string | null
           auto_activate_at?: string | null
           auto_deactivate_at?: string | null
           created_at?: string
@@ -279,7 +282,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_preferences: {
         Row: {
@@ -346,6 +357,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          agency_id: string | null
           created_at: string
           created_by: string
           deadline: string
@@ -355,6 +367,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agency_id?: string | null
           created_at?: string
           created_by: string
           deadline: string
@@ -364,6 +377,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agency_id?: string | null
           created_at?: string
           created_by?: string
           deadline?: string
@@ -373,6 +387,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_event_id_fkey"
             columns: ["event_id"]
