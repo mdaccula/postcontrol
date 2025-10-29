@@ -565,10 +565,19 @@ export const DashboardStats = () => {
         }
       });
 
-      // Coletar dados de gênero
-      if (event.target_gender && Array.isArray(event.target_gender)) {
-        event.target_gender.forEach((g: string) => {
-          allGenderData.set(g, (allGenderData.get(g) || 0) + uniqueUsers.size);
+      // Coletar dados de gênero dos usuários reais
+      const userIds = Array.from(uniqueUsers);
+      if (userIds.length > 0) {
+        const { data: profilesGender } = await sb
+          .from('profiles')
+          .select('gender')
+          .in('id', userIds);
+        
+        (profilesGender || []).forEach((p: any) => {
+          if (p.gender) {
+            const displayGender = p.gender === 'masculino' ? 'Masculino' : p.gender === 'feminino' ? 'Feminino' : 'LGBTQ+';
+            allGenderData.set(displayGender, (allGenderData.get(displayGender) || 0) + 1);
+          }
         });
       }
 
@@ -615,18 +624,54 @@ export const DashboardStats = () => {
     }));
     setGenderData(genderArray);
 
-    // Estatísticas por usuário
+    // Estatísticas por usuário - apenas da agência
+    const allUserIds = new Set<string>();
+    for (const event of eventsData || []) {
+      const { data: postsData } = await sb
+        .from('posts')
+        .select('id')
+        .eq('event_id', event.id);
+      
+      const postIds = (postsData || []).map((p: any) => p.id);
+      
+      if (postIds.length > 0) {
+        const { data: submissionsData } = await sb
+          .from('submissions')
+          .select('user_id')
+          .in('post_id', postIds);
+        
+        (submissionsData || []).forEach((s: any) => allUserIds.add(s.user_id));
+      }
+    }
+
+    const uniqueUserIds = Array.from(allUserIds);
+    if (uniqueUserIds.length === 0) {
+      setUserStats([]);
+      return;
+    }
+
     const { data: profilesData } = await sb
       .from('profiles')
-      .select('id, full_name, email, instagram');
+      .select('id, full_name, email, instagram')
+      .in('id', uniqueUserIds);
 
     const userStatsData: UserStats[] = [];
 
     for (const profile of profilesData || []) {
+      // Buscar apenas submissões dos eventos da agência
+      const eventIds = (eventsData || []).map((e: any) => e.id);
+      const { data: eventPosts } = await sb
+        .from('posts')
+        .select('id, event_id')
+        .in('event_id', eventIds);
+      
+      const postIds = (eventPosts || []).map(p => p.id);
+      
       const { data: userSubmissions } = await sb
         .from('submissions')
-        .select('post_id, status, posts(event_id)')
-        .eq('user_id', profile.id);
+        .select('post_id, status, posts!inner(event_id)')
+        .eq('user_id', profile.id)
+        .in('post_id', postIds);
 
       const eventsParticipated = new Set(
         (userSubmissions || [])
@@ -634,19 +679,18 @@ export const DashboardStats = () => {
           .filter(Boolean)
       ).size;
 
-      // Calcular total de posts disponíveis para os eventos que o usuário participou
-      const eventIds = Array.from(new Set(
+      const userEventIds = Array.from(new Set(
         (userSubmissions || [])
           .map((s: any) => s.posts?.event_id)
           .filter(Boolean)
       ));
 
       let totalPostsAvailable = 0;
-      if (eventIds.length > 0) {
+      if (userEventIds.length > 0) {
         const { count } = await sb
           .from('posts')
           .select('*', { count: 'exact', head: true })
-          .in('event_id', eventIds);
+          .in('event_id', userEventIds);
         totalPostsAvailable = count || 0;
       }
 
@@ -739,11 +783,24 @@ export const DashboardStats = () => {
 
     setTimelineData(sortedTimeline.map(d => ({ date: d.date, submissions: d.count })));
 
-    // Gender data
-    if (event.target_gender && Array.isArray(event.target_gender)) {
-      const genderArray = event.target_gender.map((g: string) => ({
-        gender: g,
-        count: uniqueUsers.size
+    // Gender data - buscar gênero real dos usuários
+    const uniqueUserIds = Array.from(uniqueUsers);
+    if (uniqueUserIds.length > 0) {
+      const { data: profilesGender } = await sb
+        .from('profiles')
+        .select('gender')
+        .in('id', uniqueUserIds);
+      
+      const genderCount = new Map<string, number>();
+      (profilesGender || []).forEach((p: any) => {
+        if (p.gender) {
+          genderCount.set(p.gender, (genderCount.get(p.gender) || 0) + 1);
+        }
+      });
+      
+      const genderArray = Array.from(genderCount.entries()).map(([gender, count]) => ({
+        gender: gender === 'masculino' ? 'Masculino' : gender === 'feminino' ? 'Feminino' : 'LGBTQ+',
+        count
       }));
       setGenderData(genderArray);
     } else {

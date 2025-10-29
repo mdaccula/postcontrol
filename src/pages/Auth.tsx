@@ -19,6 +19,7 @@ const loginSchema = z.object({
 
 const signupSchema = loginSchema.extend({
   fullName: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100, "Nome muito longo"),
+  gender: z.string().min(1, "Selecione um gênero"),
 });
 
 const Auth = () => {
@@ -26,6 +27,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("");
   const [loading, setLoading] = useState(false);
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.loading);
@@ -88,7 +90,7 @@ const Auth = () => {
         }
       } else {
         try {
-          signupSchema.parse({ email, password, fullName });
+          signupSchema.parse({ email, password, fullName, gender });
         } catch (error) {
           if (error instanceof z.ZodError) {
             toast({
@@ -108,6 +110,7 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
               full_name: fullName,
+              gender: gender,
             }
           }
         });
@@ -167,17 +170,36 @@ const Auth = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo *</Label>
-                <Input 
-                  id="name" 
-                  placeholder="Seu nome completo" 
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome Completo *</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="Seu nome completo" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gênero *</Label>
+                  <select
+                    id="gender"
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="lgbtq+">LGBTQ+</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
