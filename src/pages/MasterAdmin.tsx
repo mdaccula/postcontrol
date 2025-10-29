@@ -78,7 +78,7 @@ const MasterAdmin = () => {
       navigate('/auth');
       return;
     }
-    
+
     if (!isMasterAdmin) {
       navigate('/dashboard');
       toast({

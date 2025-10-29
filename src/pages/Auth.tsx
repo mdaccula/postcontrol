@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { z } from "zod";
@@ -26,19 +27,17 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn, user, isAdmin } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const authLoading = useAuthStore((state) => state.loading);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      if (isAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+    // SEMPRE redirecionar para dashboard após login (sem verificar isAdmin)
+    if (user && !authLoading) {
+      navigate('/dashboard');
     }
-  }, [user, isAdmin, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,7 +60,10 @@ const Auth = () => {
           }
         }
 
-        const { error } = await signIn(email, password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
@@ -99,7 +101,16 @@ const Auth = () => {
           }
         }
 
-        const { error } = await signUp(email, password, fullName);
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              full_name: fullName,
+            }
+          }
+        });
         
         if (error) {
           if (error.message.includes('already registered')) {

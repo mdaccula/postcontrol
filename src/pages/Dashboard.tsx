@@ -213,17 +213,17 @@ const Dashboard = () => {
           <div className="flex items-center gap-4">
             {user && <NotificationBell userId={user.id} />}
             <ThemeToggle />
+            {isAdmin && (
+              <Link to="/admin">
+                <Button className="bg-gradient-secondary">
+                  🏢 Painel Agência
+                </Button>
+              </Link>
+            )}
             {isMasterAdmin && (
               <Link to="/master-admin">
                 <Button className="bg-gradient-primary">
                   🔑 Painel Master
-                </Button>
-              </Link>
-            )}
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="outline">
-                  Painel Admin
                 </Button>
               </Link>
             )}

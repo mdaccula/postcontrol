@@ -18,7 +18,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Upload, ArrowLeft, X, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { z } from "zod";
@@ -73,7 +73,7 @@ const instagramLinkSchema = z
 
 const Submit = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

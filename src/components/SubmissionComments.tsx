@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Send, Lock } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -31,7 +31,7 @@ interface SubmissionCommentsProps {
 }
 
 export const SubmissionComments = ({ submissionId, onCommentAdded }: SubmissionCommentsProps) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuthStore();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);

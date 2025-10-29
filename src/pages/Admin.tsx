@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Trash2, Copy, Columns3 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useNavigate, Link } from "react-router-dom";
 import { EventDialog } from "@/components/EventDialog";
 import { PostDialog } from "@/components/PostDialog";
@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 
 const Admin = () => {
-  const { user, isAdmin, signOut, loading } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuthStore();
   const navigate = useNavigate();
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
@@ -68,7 +68,8 @@ const Admin = () => {
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
-      navigate('/auth');
+      navigate('/dashboard');
+      toast.error("Acesso negado. Você não tem permissão para acessar esta página.");
     }
   }, [user, isAdmin, loading, navigate]);
 

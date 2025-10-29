@@ -12,11 +12,13 @@ export const useAuth = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
+        setLoading(false); // ✅ Adicionar aqui
+        
         if (session?.user) {
           setTimeout(() => {
             checkAdminStatus();
             checkMasterAdminStatus();
-          }, 100);
+          }, 200); // Aumentar delay para 200ms
         } else {
           // Clear admin status on logout
           setIsAdmin(false);
@@ -35,7 +37,7 @@ export const useAuth = () => {
         setTimeout(() => {
           checkAdminStatus();
           checkMasterAdminStatus();
-        }, 100);
+        }, 200); // Aumentar delay para 200ms
       }
     });
 
