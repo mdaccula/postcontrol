@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
 import MasterAdmin from "./pages/MasterAdmin";
+import AgencySignup from "./pages/AgencySignup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => {
             <Route path="/admin" element={<Admin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/master-admin" element={<MasterAdmin />} />
+            <Route path="/agency/:slug" element={<AgencySignup />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

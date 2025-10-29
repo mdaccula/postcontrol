@@ -21,6 +21,7 @@ import { UserPlus, Building2, Link as LinkIcon, Copy } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
 import { EditAdminDialog } from "./EditAdminDialog";
+import { EditAgencyDialog } from "./EditAgencyDialog";
 import { AgencyAdminCard } from "./AgencyAdminCard";
 
 interface Plan {
@@ -67,11 +68,13 @@ export const AdminManager = () => {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editAgencyDialogOpen, setEditAgencyDialogOpen] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [admins, setAdmins] = useState<AdminData[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'suspended'>('all');
   const [selectedAdmin, setSelectedAdmin] = useState<AdminData | null>(null);
+  const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [inviteLink, setInviteLink] = useState("");
   const [customDomain, setCustomDomain] = useState<string>("");
   const [newAdmin, setNewAdmin] = useState({
@@ -385,6 +388,11 @@ export const AdminManager = () => {
     return admin?.agency_id;
   };
 
+  const handleEditAgency = (agency: Agency) => {
+    setSelectedAgency(agency);
+    setEditAgencyDialogOpen(true);
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -472,9 +480,7 @@ export const AdminManager = () => {
               planDetails={agency.plan || null}
               stats={agency.stats}
               fullUrl={agency.fullUrl || ''}
-              onEdit={() => {
-                // TODO: Abrir EditAgencyDialog
-              }}
+              onEdit={() => handleEditAgency(agency)}
               onDelete={() => handleDeleteAgency(agency.id, agency.name)}
               onViewDashboard={() => window.open(`/admin?agency=${agency.slug}`, '_blank')}
               onCopyLink={() => handleCopyAgencyLink(agency.slug)}
@@ -579,6 +585,13 @@ export const AdminManager = () => {
         onOpenChange={setEditDialogOpen}
         admin={selectedAdmin}
         onSuccess={loadAdmins}
+      />
+
+      <EditAgencyDialog
+        open={editAgencyDialogOpen}
+        onOpenChange={setEditAgencyDialogOpen}
+        agency={selectedAgency}
+        onSuccess={loadAgencies}
       />
     </>
   );
