@@ -185,10 +185,19 @@ const Admin = () => {
       // Master Admin viewing specific agency by ID
       agencyIdFilter = queryAgencyId;
       console.log('👑 Master Admin visualizando agência específica:', agencyIdFilter);
-    } else if (isMasterAdmin && !currentAgency) {
-      // Master admin without specific agency = see all data
-      agencyIdFilter = null;
-      console.log('👑 Master Admin - Visualizando todos os dados');
+// Linha ~188-191 (melhorar log):
+} else if (isMasterAdmin && !currentAgency) {
+  // Master admin without specific agency = see all data
+  agencyIdFilter = null;
+  console.log('👑 Master Admin - Visualizando todos os dados');
+  console.log('🔍 DEBUG ISOLAMENTO:', {
+    userId: user.id,
+    isMasterAdmin,
+    isAgencyAdmin,
+    agencyIdFilter,
+    queryAgencyId,
+    currentAgency
+  });
     } else if (currentAgency) {
       // Viewing specific agency (master admin or agency admin)
       agencyIdFilter = currentAgency.id;
@@ -664,9 +673,9 @@ const Admin = () => {
     );
   }
 
-  if (!user || !isAgencyAdmin) {
-    return null;
-  }
+if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
+  return null;
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
