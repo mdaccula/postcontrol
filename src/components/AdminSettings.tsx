@@ -68,26 +68,26 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
 
     try {
       // Atualizar whatsapp
-      if (whatsappNumber) {
-        await sb
-          .from('admin_settings')
-          .upsert({ 
-            setting_key: 'whatsapp_number', 
-            setting_value: whatsappNumber,
-            updated_at: new Date().toISOString() 
-          }, { onConflict: 'setting_key' });
-      }
+// DEPOIS:
+await sb
+  .from('admin_settings')
+  .upsert({ 
+    setting_key: 'whatsapp_number', 
+    setting_value: whatsappNumber || '',  // Sempre salva, mesmo se vazio
+    updated_at: new Date().toISOString() 
+  }, { onConflict: 'setting_key' });
 
       // Atualizar custom domain
-      if (customDomain) {
-        await sb
-          .from('admin_settings')
-          .upsert({ 
-            setting_key: 'custom_domain', 
-            setting_value: customDomain.replace(/\/$/, ''), // Remove trailing slash
-            updated_at: new Date().toISOString() 
-          }, { onConflict: 'setting_key' });
-      }
+// DEPOIS:
+if (isMasterAdmin) {  // Apenas master admin pode alterar custom domain
+  await sb
+    .from('admin_settings')
+    .upsert({ 
+      setting_key: 'custom_domain', 
+      setting_value: customDomain.replace(/\/$/, ''),
+      updated_at: new Date().toISOString() 
+    }, { onConflict: 'setting_key' });
+}
 
       // Atualizar AI Insights (apenas master admin)
       if (isMasterAdmin) {
@@ -109,7 +109,14 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
           }, { onConflict: 'setting_key' });
       }
 
-      toast.success("Configurações salvas com sucesso!");
+      // Recarregar as configurações para confirmar o salvamento
+await loadSettings();
+console.log('✅ Configurações recarregadas:', {
+  whatsappNumber,
+  customDomain,
+  aiInsightsEnabled,
+  badgesEnabled
+});
     } catch (error: any) {
       console.error('Error saving settings:', error);
       toast.error("Erro ao salvar configurações");
