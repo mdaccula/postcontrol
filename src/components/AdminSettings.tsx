@@ -41,10 +41,17 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
       const aiInsights = settings.find(s => s.setting_key === 'ai_insights_enabled');
       const badges = settings.find(s => s.setting_key === 'badges_enabled');
       
+      console.log('🔍 DEBUG - Configurações carregadas:', {
+        whatsapp: whatsapp?.setting_value,
+        domain: domain?.setting_value,
+        aiInsights: aiInsights?.setting_value,
+        badges: badges?.setting_value
+      });
+      
       setWhatsappNumber(whatsapp?.setting_value || '');
       setCustomDomain(domain?.setting_value || '');
-      setAiInsightsEnabled(aiInsights?.setting_value !== 'false');
-      setBadgesEnabled(badges?.setting_value !== 'false');
+      setAiInsightsEnabled(aiInsights?.setting_value === 'true');
+      setBadgesEnabled(badges?.setting_value === 'true');
     }
   };
 
@@ -119,7 +126,18 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast.error("Erro ao salvar configurações");
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      if (error.code === '42501') {
+        toast.error("Erro de permissão: Você não tem acesso para salvar essas configurações");
+      } else {
+        toast.error("Erro ao salvar configurações: " + error.message);
+      }
     }
 
     setLoading(false);
