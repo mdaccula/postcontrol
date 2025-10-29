@@ -109,17 +109,74 @@ const Submit = () => {
   }, [selectedEvent]);
 
   const loadEvents = async () => {
+    console.log('🔄 Carregando eventos...');
+    
+    if (!user) {
+      console.log('❌ Usuário não logado');
+      setEvents([]);
+      return;
+    }
+
+    // 1. Buscar contexto da agência (via URL query param ou última acessada)
+    const urlParams = new URLSearchParams(window.location.search);
+    let contextAgencyId = urlParams.get('agency');
+
+    if (!contextAgencyId) {
+      // Buscar última agência acessada pelo usuário
+      const { data: userAgencies, error: agenciesError } = await sb
+        .from('user_agencies')
+        .select('agency_id')
+        .eq('user_id', user.id)
+        .order('last_accessed_at', { ascending: false })
+        .limit(1);
+
+      if (agenciesError) {
+        console.error('❌ Erro ao buscar agências do usuário:', agenciesError);
+        toast({
+          title: "Erro de configuração",
+          description: "Não foi possível carregar suas agências.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!userAgencies || userAgencies.length === 0) {
+        console.warn('⚠️ Usuário sem agência vinculada');
+        toast({
+          title: "Sem agência vinculada",
+          description: "Você precisa se cadastrar através do link de uma agência.",
+          variant: "destructive"
+        });
+        setEvents([]);
+        return;
+      }
+
+      contextAgencyId = userAgencies[0].agency_id;
+    }
+
+    console.log('🏢 Contexto da agência:', contextAgencyId);
+
+    // 2. Atualizar last_accessed_at
+    await sb
+      .from('user_agencies')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('agency_id', contextAgencyId);
+
+    // 3. Buscar eventos APENAS da agência no contexto
     const { data, error } = await sb
       .from("events")
       .select("id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link")
       .eq("is_active", true)
+      .eq("agency_id", contextAgencyId)
       .order("event_date", { ascending: true });
 
     if (error) {
-      console.error("Error loading events:", error);
+      console.error("❌ Erro ao carregar eventos:", error);
       return;
     }
 
+    console.log(`✅ ${data?.length || 0} eventos carregados da agência ${contextAgencyId}`);
     setEvents(data || []);
   };
 

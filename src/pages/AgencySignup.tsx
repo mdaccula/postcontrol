@@ -86,7 +86,7 @@ export default function AgencySignup() {
 
       if (authError) throw authError;
 
-      // 2. Atualizar profile com agency_id
+      // 2. Atualizar profile (SEM agency_id - agora usa user_agencies)
       if (authData.user) {
         const { error: profileError } = await sb
           .from('profiles')
@@ -94,11 +94,24 @@ export default function AgencySignup() {
             full_name: formData.fullName,
             instagram: formData.instagram,
             phone: formData.phone,
-            agency_id: agency.id
           })
           .eq('id', authData.user.id);
 
         if (profileError) throw profileError;
+
+        // 3. Criar associação na tabela user_agencies
+        const { error: agencyLinkError } = await sb
+          .from('user_agencies')
+          .insert({
+            user_id: authData.user.id,
+            agency_id: agency.id,
+            joined_at: new Date().toISOString(),
+            last_accessed_at: new Date().toISOString()
+          });
+
+        if (agencyLinkError && agencyLinkError.code !== '23505') { // Ignora erro de duplicata
+          throw agencyLinkError;
+        }
       }
 
       toast({
@@ -126,12 +139,29 @@ export default function AgencySignup() {
     setSubmitting(true);
 
     try {
-      const { error } = await sb.auth.signInWithPassword({
+      const { data: authData, error } = await sb.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
       if (error) throw error;
+
+      // Após login bem-sucedido, adicionar ou atualizar associação com a agência
+      if (authData.user) {
+        const { error: agencyLinkError } = await sb
+          .from('user_agencies')
+          .upsert({
+            user_id: authData.user.id,
+            agency_id: agency.id,
+            last_accessed_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,agency_id'
+          });
+
+        if (agencyLinkError) {
+          console.warn('⚠️ Erro ao vincular agência:', agencyLinkError);
+        }
+      }
 
       toast({
         title: "Login realizado!",
@@ -139,7 +169,7 @@ export default function AgencySignup() {
       });
 
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate(`/dashboard?agency=${agency.id}`);
       }, 1000);
     } catch (error: any) {
       toast({

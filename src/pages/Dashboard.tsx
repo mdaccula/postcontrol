@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, TrendingUp, Award, Calendar, LogOut, MessageCircle, Building2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, TrendingUp, Award, Calendar, LogOut, MessageCircle, Building2, ChevronDown } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
@@ -16,6 +16,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AIInsights } from "@/components/AIInsights";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
 interface Submission {
   id: string;
@@ -45,6 +46,8 @@ interface EventStats {
 const Dashboard = () => {
   const { user, signOut, isAgencyAdmin, isMasterAdmin } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [eventStats, setEventStats] = useState<EventStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,8 @@ const Dashboard = () => {
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
   const [events, setEvents] = useState<any[]>([]);
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
+  const [userAgencies, setUserAgencies] = useState<any[]>([]);
+  const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -71,24 +76,73 @@ const Dashboard = () => {
     // Carregar perfil
     const { data: profileData } = await sb
       .from('profiles')
-      .select('full_name, email, instagram, agency_id')
+      .select('full_name, email, instagram')
       .eq('id', user.id)
       .maybeSingle();
 
     setProfile(profileData);
 
-    // Load agency info if user has one
-    if (profileData?.agency_id) {
-      const { data: agencyData } = await sb
-        .from('agencies')
-        .select('name, subscription_plan')
-        .eq('id', profileData.agency_id)
-        .maybeSingle();
-      
-      if (agencyData) {
-        setAgencyName(agencyData.name);
-        setAgencyPlan(agencyData.subscription_plan);
-      }
+    // 🆕 Carregar agências do usuário
+    const { data: agencies, error: agenciesError } = await sb
+      .from('user_agencies')
+      .select(`
+        agency_id,
+        last_accessed_at,
+        agencies (
+          id,
+          name,
+          subscription_plan,
+          logo_url
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('last_accessed_at', { ascending: false });
+
+    if (agenciesError) {
+      console.error('❌ Erro ao carregar agências:', agenciesError);
+      toast({
+        title: "Erro ao carregar agências",
+        description: "Não foi possível carregar suas agências.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    const agenciesList = agencies?.map((ua: any) => ua.agencies).filter(Boolean) || [];
+    setUserAgencies(agenciesList);
+
+    // Determinar agência atual (query param ou última acessada)
+    let contextAgency = searchParams.get('agency');
+    if (!contextAgency && agenciesList.length > 0) {
+      contextAgency = agenciesList[0].id;
+    }
+
+    if (!contextAgency) {
+      console.warn('⚠️ Nenhuma agência encontrada para o usuário');
+      toast({
+        title: "Sem agência vinculada",
+        description: "Você precisa se cadastrar através do link de uma agência.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    setCurrentAgencyId(contextAgency);
+
+    // Atualizar last_accessed_at
+    await sb
+      .from('user_agencies')
+      .update({ last_accessed_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('agency_id', contextAgency);
+
+    // Carregar dados da agência atual
+    const currentAgency = agenciesList.find((a: any) => a.id === contextAgency);
+    if (currentAgency) {
+      setAgencyName(currentAgency.name);
+      setAgencyPlan(currentAgency.subscription_plan);
     }
 
     // Carregar configuração do WhatsApp
@@ -102,16 +156,17 @@ const Dashboard = () => {
       setWhatsappNumber(whatsappData.setting_value);
     }
 
-    // Carregar eventos ativos
+    // Carregar eventos ativos da agência atual
     const { data: eventsData } = await sb
       .from('events')
       .select('id, title')
       .eq('is_active', true)
+      .eq('agency_id', contextAgency)
       .order('event_date', { ascending: false });
     
     setEvents(eventsData || []);
 
-    // Carregar submissões - Filtrar apenas eventos ativos
+    // Carregar submissões - Filtrar apenas eventos ativos da agência atual
     const { data: submissionsData } = await sb
       .from('submissions')
       .select(`
@@ -128,12 +183,14 @@ const Dashboard = () => {
             title,
             required_posts,
             id,
-            is_active
+            is_active,
+            agency_id
           )
         )
       `)
       .eq('user_id', user.id)
       .eq('posts.events.is_active', true)
+      .eq('posts.events.agency_id', contextAgency)
       .order('submitted_at', { ascending: false });
 
     setSubmissions(submissionsData || []);
@@ -216,26 +273,50 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-8 px-4">
       <TutorialGuide />
       
-      {/* User Context Header */}
+      {/* User Context Header com Seletor de Agência */}
       <Card className="max-w-7xl mx-auto mb-8 p-4 bg-gradient-primary text-white">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold">
               {profile?.full_name || 'Usuário'}
             </h2>
             <div className="flex flex-wrap items-center gap-4 text-sm text-white/90">
               <span>{profile?.email}</span>
-              {profile?.agency_id && (
+              {agencyName && (
                 <>
                   <span>•</span>
                   <span className="flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    Agência: {agencyName || 'Carregando...'}
+                    {agencyName}
                   </span>
                 </>
               )}
             </div>
           </div>
+
+          {/* 🆕 Seletor de Agência (se usuário tiver múltiplas) */}
+          {userAgencies.length > 1 && (
+            <Select 
+              value={currentAgencyId || ''} 
+              onValueChange={(newAgencyId) => {
+                setSearchParams({ agency: newAgencyId });
+                window.location.reload(); // Recarregar com nova agência
+              }}
+            >
+              <SelectTrigger className="w-[250px] bg-white/10 border-white/20 text-white">
+                <Building2 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Selecionar agência" />
+              </SelectTrigger>
+              <SelectContent>
+                {userAgencies.map((agency: any) => (
+                  <SelectItem key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {agencyPlan && (
             <Badge variant="secondary" className="text-base px-4 py-2">
               Plano: {agencyPlan.toUpperCase()}
@@ -289,7 +370,11 @@ const Dashboard = () => {
               <p className="text-sm md:text-base text-muted-foreground mb-2 break-words">{profile?.email}</p>
               <p className="text-sm text-muted-foreground break-words">Instagram: {profile?.instagram}</p>
             </div>
-            <Link to="/submit" className="w-full sm:w-auto" id="submit-button">
+            <Link 
+              to={`/submit${currentAgencyId ? `?agency=${currentAgencyId}` : ''}`} 
+              className="w-full sm:w-auto" 
+              id="submit-button"
+            >
               <Button className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap">
                 Enviar Nova Postagem
               </Button>

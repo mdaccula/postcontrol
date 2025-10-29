@@ -707,6 +707,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_agencies: {
+        Row: {
+          agency_id: string
+          id: string
+          joined_at: string | null
+          last_accessed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          id?: string
+          joined_at?: string | null
+          last_accessed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          id?: string
+          joined_at?: string | null
+          last_accessed_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_agencies_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_agencies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_badges: {
         Row: {
           badge_type: string
