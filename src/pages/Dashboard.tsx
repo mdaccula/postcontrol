@@ -346,13 +346,6 @@ const Dashboard = () => {
                 </Button>
               </Link>
             )}
-            {isMasterAdmin && (
-              <Link to="/master-admin">
-                <Button className="bg-gradient-primary">
-                  🔑 Painel Master
-                </Button>
-              </Link>
-            )}
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sair
