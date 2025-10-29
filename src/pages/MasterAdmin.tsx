@@ -32,6 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlanManager } from "@/components/PlanManager";
+import { AdminManager } from "@/components/AdminManager";
 
 interface Agency {
   id: string;
@@ -272,87 +275,106 @@ const MasterAdmin = () => {
           </Card>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Agências Cadastradas</h2>
-          <Button onClick={() => setDialogOpen(true)} className="bg-gradient-primary">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Agência
-          </Button>
-        </div>
+        {/* Tabs com diferentes áreas */}
+        <Tabs defaultValue="agencies" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+            <TabsTrigger value="agencies">Agências</TabsTrigger>
+            <TabsTrigger value="admins">Admins</TabsTrigger>
+            <TabsTrigger value="plans">Planos</TabsTrigger>
+          </TabsList>
 
-        {/* Agencies List */}
-        <div className="grid gap-6">
-          {agencies.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground mb-4">Nenhuma agência cadastrada</p>
+          <TabsContent value="agencies" className="space-y-6">
+            {/* Actions */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Agências Cadastradas</h2>
               <Button onClick={() => setDialogOpen(true)} className="bg-gradient-primary">
-                Criar Primeira Agência
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Agência
               </Button>
-            </Card>
-          ) : (
-            agencies.map((agency) => (
-              <Card key={agency.id} className="p-6 border-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold">{agency.name}</h3>
-                      <Badge variant={
-                        agency.subscription_status === 'active' ? 'default' :
-                        agency.subscription_status === 'trial' ? 'secondary' :
-                        'destructive'
-                      }>
-                        {agency.subscription_status === 'active' ? 'Ativo' :
-                         agency.subscription_status === 'trial' ? 'Trial' :
-                         agency.subscription_status === 'suspended' ? 'Suspenso' : 'Inativo'}
-                      </Badge>
-                      <Badge variant="outline">
-                        {agency.subscription_plan === 'basic' ? 'Básico' :
-                         agency.subscription_plan === 'pro' ? 'Pro' : 'Enterprise'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-4 gap-4 mt-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Slug</p>
-                        <p className="font-mono text-sm">{agency.slug}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Influencers</p>
-                        <p className="text-lg font-bold">
-                          {agencyStats[agency.id]?.totalInfluencers || 0} / {agency.max_influencers}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Eventos</p>
-                        <p className="text-lg font-bold">
-                          {agencyStats[agency.id]?.totalEvents || 0} / {agency.max_events}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Submissões</p>
-                        <p className="text-lg font-bold">
-                          {agencyStats[agency.id]?.totalSubmissions || 0}
-                        </p>
-                      </div>
-                    </div>
+            </div>
 
-                    <div className="mt-4 flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Configurar
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Ver Dashboard
-                      </Button>
+            {/* Agencies List */}
+            <div className="grid gap-6">
+              {agencies.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground mb-4">Nenhuma agência cadastrada</p>
+                  <Button onClick={() => setDialogOpen(true)} className="bg-gradient-primary">
+                    Criar Primeira Agência
+                  </Button>
+                </Card>
+              ) : (
+                agencies.map((agency) => (
+                  <Card key={agency.id} className="p-6 border-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-bold">{agency.name}</h3>
+                          <Badge variant={
+                            agency.subscription_status === 'active' ? 'default' :
+                            agency.subscription_status === 'trial' ? 'secondary' :
+                            'destructive'
+                          }>
+                            {agency.subscription_status === 'active' ? 'Ativo' :
+                             agency.subscription_status === 'trial' ? 'Trial' :
+                             agency.subscription_status === 'suspended' ? 'Suspenso' : 'Inativo'}
+                          </Badge>
+                          <Badge variant="outline">
+                            {agency.subscription_plan === 'basic' ? 'Básico' :
+                             agency.subscription_plan === 'pro' ? 'Pro' : 'Enterprise'}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid md:grid-cols-4 gap-4 mt-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Slug</p>
+                            <p className="font-mono text-sm">{agency.slug}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Influencers</p>
+                            <p className="text-lg font-bold">
+                              {agencyStats[agency.id]?.totalInfluencers || 0} / {agency.max_influencers}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Eventos</p>
+                            <p className="text-lg font-bold">
+                              {agencyStats[agency.id]?.totalEvents || 0} / {agency.max_events}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Submissões</p>
+                            <p className="text-lg font-bold">
+                              {agencyStats[agency.id]?.totalSubmissions || 0}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Settings className="mr-2 h-4 w-4" />
+                            Configurar
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Ver Dashboard
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="admins">
+            <AdminManager />
+          </TabsContent>
+
+          <TabsContent value="plans">
+            <PlanManager />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Create Agency Dialog */}

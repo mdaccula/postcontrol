@@ -38,6 +38,51 @@ export type Database = {
         }
         Relationships: []
       }
+      agencies: {
+        Row: {
+          created_at: string
+          custom_domain: string | null
+          id: string
+          logo_url: string | null
+          max_events: number | null
+          max_influencers: number | null
+          name: string
+          owner_id: string | null
+          slug: string
+          subscription_plan: string | null
+          subscription_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          logo_url?: string | null
+          max_events?: number | null
+          max_influencers?: number | null
+          name: string
+          owner_id?: string | null
+          slug: string
+          subscription_plan?: string | null
+          subscription_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          logo_url?: string | null
+          max_events?: number | null
+          max_influencers?: number | null
+          name?: string
+          owner_id?: string | null
+          slug?: string
+          subscription_plan?: string | null
+          subscription_status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       auto_approval_rules: {
         Row: {
           auto_approve_after_x_approvals: number | null
@@ -569,6 +614,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          features: Json | null
+          id: string
+          is_visible: boolean | null
+          max_events: number
+          max_influencers: number
+          monthly_price: number
+          plan_key: string
+          plan_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          is_visible?: boolean | null
+          max_events: number
+          max_influencers: number
+          monthly_price: number
+          plan_key: string
+          plan_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          is_visible?: boolean | null
+          max_events?: number
+          max_influencers?: number
+          monthly_price?: number
+          plan_key?: string
+          plan_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_badges: {
         Row: {
