@@ -84,18 +84,18 @@ const Dashboard = () => {
 
     setProfile(profileData);
 
-    // 🆕 Carregar configurações de features
-    const { data: featuresSettings } = await sb
-      .from('admin_settings')
-      .select('setting_key, setting_value')
-      .in('setting_key', ['ai_insights_enabled', 'badges_enabled']);
-    
-    if (featuresSettings) {
-      const aiInsights = featuresSettings.find(s => s.setting_key === 'ai_insights_enabled');
-      const badges = featuresSettings.find(s => s.setting_key === 'badges_enabled');
-      setAiInsightsEnabled(aiInsights?.setting_value !== 'false');
-      setBadgesEnabled(badges?.setting_value !== 'false');
-    }
+// 🆕 Carregar configurações de features
+const { data: featuresSettings } = await sb
+  .from('admin_settings')
+  .select('setting_key, setting_value')
+  .in('setting_key', ['ai_insights_enabled', 'badges_enabled']);
+
+if (featuresSettings) {
+  const aiInsights = featuresSettings.find(s => s.setting_key === 'ai_insights_enabled');
+  const badges = featuresSettings.find(s => s.setting_key === 'badges_enabled');
+  setAiInsightsEnabled(aiInsights?.setting_value === 'true');  // ✅ LÓGICA CORRETA
+  setBadgesEnabled(badges?.setting_value === 'true');          // ✅ LÓGICA CORRETA
+}
 
     // 🆕 Carregar agências do usuário
     const { data: agencies, error: agenciesError } = await sb
@@ -288,6 +288,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-8 px-4">
       <TutorialGuide />
       
+// COMEÇA AQUI
 {/* Card 1: Informações Pessoais */}
 <Card className="max-w-7xl mx-auto mb-6 p-6 bg-gradient-primary text-white">
   <div>
@@ -356,6 +357,8 @@ const Dashboard = () => {
     </div>
   </Card>
 )}
+
+// TERMINA AQUI
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
