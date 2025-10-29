@@ -205,12 +205,12 @@ export const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.instagram?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone?.includes(searchTerm)
-  );
+const filteredUsers = users.filter(user => {
+  const matchesSearch = ...; // lógica atual
+  const matchesGender = genderFilter === 'all' || user.gender === genderFilter;
+  const matchesEvent = eventFilter === 'all' || userEvents[user.id]?.includes(eventFilter);
+  return matchesSearch && matchesGender && matchesEvent;
+});
 
   if (loading) {
     return (
@@ -298,14 +298,7 @@ export const UserManagement = () => {
                         </div>
                         <div>
                           <span className="text-muted-foreground">Instagram:</span>{' '}
-<a 
-  href={`https://instagram.com/${user.instagram?.replace('@', '') || ''}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="font-medium text-primary hover:underline"
->
-  @{user.instagram?.replace('@', '') || 'Não definido'}
-</a>
+                          <span className="font-medium">@{user.instagram || 'Não definido'}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Telefone:</span>{' '}
