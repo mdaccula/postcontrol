@@ -72,6 +72,7 @@ export const DashboardStats = () => {
   const [loading, setLoading] = useState(true);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel');
+  const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [selectedSections, setSelectedSections] = useState({
     essentialData: true,
     participationMetrics: true,
@@ -87,21 +88,43 @@ export const DashboardStats = () => {
   const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
   useEffect(() => {
-    loadEvents();
+    checkAgencyAndLoadEvents();
   }, []);
 
   useEffect(() => {
-    if (selectedEventId) {
+    if (selectedEventId && currentAgencyId) {
       loadStats();
     }
-  }, [selectedEventId, activeFilter]);
+  }, [selectedEventId, activeFilter, currentAgencyId]);
 
-  const loadEvents = async () => {
+  const checkAgencyAndLoadEvents = async () => {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+
+    // Buscar agência onde é owner
+    const { data: agencyData } = await sb
+      .from('agencies')
+      .select('id')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+    
+    const agencyId = agencyData?.id || null;
+    setCurrentAgencyId(agencyId);
+    console.log('📊 DashboardStats - Agency ID:', agencyId);
+
+    if (agencyId) {
+      await loadEvents(agencyId);
+    }
+  };
+
+  const loadEvents = async (agencyId: string) => {
     const { data } = await sb
       .from('events')
       .select('*')
+      .eq('agency_id', agencyId)
       .order('created_at', { ascending: false });
     
+    console.log('📊 Loaded events for agency:', data?.length || 0);
     setEvents(data || []);
     if (data && data.length > 0) {
       setSelectedEventId("all");
@@ -485,8 +508,13 @@ export const DashboardStats = () => {
   };
 
   const loadAllStats = async () => {
+    if (!currentAgencyId) {
+      console.warn('⚠️ No agency ID available');
+      return;
+    }
+
     // Estatísticas por evento
-    let query = sb.from('events').select('*');
+    let query = sb.from('events').select('*').eq('agency_id', currentAgencyId);
     
     if (activeFilter === "active") {
       query = query.eq('is_active', true);
@@ -495,6 +523,7 @@ export const DashboardStats = () => {
     }
     
     const { data: eventsData } = await query;
+    console.log('📊 Loading stats for events:', eventsData?.length || 0);
 
     const eventStatsData: EventStats[] = [];
     const allSubmissionsDates: { date: string; count: number }[] = [];
@@ -644,11 +673,25 @@ export const DashboardStats = () => {
   };
 
   const loadEventSpecificStats = async (eventId: string) => {
+    if (!currentAgencyId) {
+      console.warn('⚠️ No agency ID available');
+      return;
+    }
+
+    // Verificar se o evento pertence à agência
     const { data: event } = await sb
       .from('events')
       .select('*')
       .eq('id', eventId)
-      .single();
+      .eq('agency_id', currentAgencyId)
+      .maybeSingle();
+
+    if (!event) {
+      console.warn('⚠️ Evento não pertence à agência');
+      setEventStats([]);
+      setUserStats([]);
+      return;
+    }
 
     const { data: postsData } = await sb
       .from('posts')

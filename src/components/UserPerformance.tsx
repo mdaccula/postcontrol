@@ -33,23 +33,46 @@ export const UserPerformance = () => {
   const [loading, setLoading] = useState(true);
   const [searchName, setSearchName] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
+  const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadEvents();
+    checkAgencyAndLoadEvents();
   }, []);
 
   useEffect(() => {
-    if (selectedEventId) {
+    if (selectedEventId && currentAgencyId) {
       loadStats();
     }
-  }, [selectedEventId, activeFilter]);
+  }, [selectedEventId, activeFilter, currentAgencyId]);
 
-  const loadEvents = async () => {
+  const checkAgencyAndLoadEvents = async () => {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+
+    // Buscar agência onde é owner
+    const { data: agencyData } = await sb
+      .from('agencies')
+      .select('id')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+    
+    const agencyId = agencyData?.id || null;
+    setCurrentAgencyId(agencyId);
+    console.log('👤 UserPerformance - Agency ID:', agencyId);
+
+    if (agencyId) {
+      await loadEvents(agencyId);
+    }
+  };
+
+  const loadEvents = async (agencyId: string) => {
     const { data } = await sb
       .from('events')
       .select('*')
+      .eq('agency_id', agencyId)
       .order('created_at', { ascending: false });
     
+    console.log('👤 Loaded events for agency:', data?.length || 0);
     setEvents(data || []);
     if (data && data.length > 0) {
       setSelectedEventId("all");
@@ -138,9 +161,57 @@ export const UserPerformance = () => {
   };
 
   const loadAllStats = async () => {
+    if (!currentAgencyId) {
+      console.warn('⚠️ No agency ID available');
+      return;
+    }
+
+    // Buscar apenas eventos da agência
+    const { data: agencyEvents } = await sb
+      .from('events')
+      .select('id')
+      .eq('agency_id', currentAgencyId);
+
+    const eventIds = (agencyEvents || []).map(e => e.id);
+
+    if (eventIds.length === 0) {
+      console.log('⚠️ Nenhum evento encontrado para a agência');
+      setUserStats([]);
+      return;
+    }
+
+    // Buscar posts desses eventos
+    const { data: postsData } = await sb
+      .from('posts')
+      .select('id, event_id')
+      .in('event_id', eventIds);
+
+    const postIds = (postsData || []).map(p => p.id);
+
+    if (postIds.length === 0) {
+      console.log('⚠️ Nenhum post encontrado');
+      setUserStats([]);
+      return;
+    }
+
+    // Buscar submissões desses posts
+    const { data: submissionsData } = await sb
+      .from('submissions')
+      .select('user_id, status, post_id')
+      .in('post_id', postIds);
+
+    const uniqueUserIds = Array.from(new Set((submissionsData || []).map(s => s.user_id)));
+
+    if (uniqueUserIds.length === 0) {
+      console.log('⚠️ Nenhum usuário encontrado');
+      setUserStats([]);
+      return;
+    }
+
     const { data: profilesData } = await sb
       .from('profiles')
-      .select('id, full_name, email, instagram, phone');
+      .select('id, full_name, email, instagram, phone')
+      .in('id', uniqueUserIds);
 
     const userStatsData: UserStats[] = [];
 
@@ -148,7 +219,8 @@ export const UserPerformance = () => {
       const { data: userSubmissions } = await sb
         .from('submissions')
         .select('post_id, status, posts(event_id)')
-        .eq('user_id', profile.id);
+        .eq('user_id', profile.id)
+        .in('post_id', postIds);
 
       const eventsParticipated = new Set(
         (userSubmissions || [])
@@ -156,18 +228,18 @@ export const UserPerformance = () => {
           .filter(Boolean)
       ).size;
 
-      const eventIds = Array.from(new Set(
+      const userEventIds = Array.from(new Set(
         (userSubmissions || [])
           .map((s: any) => s.posts?.event_id)
           .filter(Boolean)
       ));
 
       let totalPostsAvailable = 0;
-      if (eventIds.length > 0) {
+      if (userEventIds.length > 0) {
         const { count } = await sb
           .from('posts')
           .select('*', { count: 'exact', head: true })
-          .in('event_id', eventIds);
+          .in('event_id', userEventIds);
         totalPostsAvailable = count || 0;
       }
 
@@ -195,10 +267,30 @@ export const UserPerformance = () => {
       });
     }
 
+    console.log('👤 User stats loaded:', userStatsData.length);
     setUserStats(userStatsData.filter(u => u.total_submissions > 0));
   };
 
   const loadEventSpecificStats = async (eventId: string) => {
+    if (!currentAgencyId) {
+      console.warn('⚠️ No agency ID available');
+      return;
+    }
+
+    // Verificar se o evento pertence à agência
+    const { data: eventData } = await sb
+      .from('events')
+      .select('id, agency_id')
+      .eq('id', eventId)
+      .eq('agency_id', currentAgencyId)
+      .maybeSingle();
+
+    if (!eventData) {
+      console.warn('⚠️ Evento não pertence à agência');
+      setUserStats([]);
+      return;
+    }
+
     const { data: postsData } = await sb
       .from('posts')
       .select('id')
@@ -206,6 +298,11 @@ export const UserPerformance = () => {
 
     const postIds = (postsData || []).map((p: any) => p.id);
     
+    if (postIds.length === 0) {
+      setUserStats([]);
+      return;
+    }
+
     const { data: submissionsData } = await sb
       .from('submissions')
       .select('user_id')
