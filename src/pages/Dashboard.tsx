@@ -51,7 +51,12 @@ const Dashboard = () => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [eventStats, setEventStats] = useState<EventStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ full_name: string; email: string; instagram: string; agency_id?: string } | null>(null);
+  const [profile, setProfile] = useState<{
+    full_name: string;
+    email: string;
+    instagram: string;
+    agency_id?: string;
+  } | null>(null);
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyPlan, setAgencyPlan] = useState<string>("");
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
@@ -64,7 +69,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
     loadData();
@@ -77,30 +82,31 @@ const Dashboard = () => {
 
     // Carregar perfil
     const { data: profileData } = await sb
-      .from('profiles')
-      .select('full_name, email, instagram')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("full_name, email, instagram")
+      .eq("id", user.id)
       .maybeSingle();
 
     setProfile(profileData);
 
-// 🆕 Carregar configurações de features
-const { data: featuresSettings } = await sb
-  .from('admin_settings')
-  .select('setting_key, setting_value')
-  .in('setting_key', ['ai_insights_enabled', 'badges_enabled']);
+    // 🆕 Carregar configurações de features
+    const { data: featuresSettings } = await sb
+      .from("admin_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", ["ai_insights_enabled", "badges_enabled"]);
 
-if (featuresSettings) {
-  const aiInsights = featuresSettings.find(s => s.setting_key === 'ai_insights_enabled');
-  const badges = featuresSettings.find(s => s.setting_key === 'badges_enabled');
-  setAiInsightsEnabled(aiInsights?.setting_value === 'true');  // ✅ LÓGICA CORRETA
-  setBadgesEnabled(badges?.setting_value === 'true');          // ✅ LÓGICA CORRETA
-}
+    if (featuresSettings) {
+      const aiInsights = featuresSettings.find((s) => s.setting_key === "ai_insights_enabled");
+      const badges = featuresSettings.find((s) => s.setting_key === "badges_enabled");
+      setAiInsightsEnabled(aiInsights?.setting_value === "true"); // ✅ LÓGICA CORRETA
+      setBadgesEnabled(badges?.setting_value === "true"); // ✅ LÓGICA CORRETA
+    }
 
     // 🆕 Carregar agências do usuário
     const { data: agencies, error: agenciesError } = await sb
-      .from('user_agencies')
-      .select(`
+      .from("user_agencies")
+      .select(
+        `
         agency_id,
         last_accessed_at,
         agencies (
@@ -109,16 +115,17 @@ if (featuresSettings) {
           subscription_plan,
           logo_url
         )
-      `)
-      .eq('user_id', user.id)
-      .order('last_accessed_at', { ascending: false });
+      `,
+      )
+      .eq("user_id", user.id)
+      .order("last_accessed_at", { ascending: false });
 
     if (agenciesError) {
-      console.error('❌ Erro ao carregar agências:', agenciesError);
+      console.error("❌ Erro ao carregar agências:", agenciesError);
       toast({
         title: "Erro ao carregar agências",
         description: "Não foi possível carregar suas agências.",
-        variant: "destructive"
+        variant: "destructive",
       });
       setLoading(false);
       return;
@@ -128,17 +135,17 @@ if (featuresSettings) {
     setUserAgencies(agenciesList);
 
     // Determinar agência atual (query param ou última acessada)
-    let contextAgency = searchParams.get('agency');
+    let contextAgency = searchParams.get("agency");
     if (!contextAgency && agenciesList.length > 0) {
       contextAgency = agenciesList[0].id;
     }
 
     if (!contextAgency) {
-      console.warn('⚠️ Nenhuma agência encontrada para o usuário');
+      console.warn("⚠️ Nenhuma agência encontrada para o usuário");
       toast({
         title: "Sem agência vinculada",
         description: "Você precisa se cadastrar através do link de uma agência.",
-        variant: "destructive"
+        variant: "destructive",
       });
       setLoading(false);
       return;
@@ -148,10 +155,10 @@ if (featuresSettings) {
 
     // Atualizar last_accessed_at
     await sb
-      .from('user_agencies')
+      .from("user_agencies")
       .update({ last_accessed_at: new Date().toISOString() })
-      .eq('user_id', user.id)
-      .eq('agency_id', contextAgency);
+      .eq("user_id", user.id)
+      .eq("agency_id", contextAgency);
 
     // Carregar dados da agência atual
     const currentAgency = agenciesList.find((a: any) => a.id === contextAgency);
@@ -162,29 +169,30 @@ if (featuresSettings) {
 
     // Carregar configuração do WhatsApp
     const { data: whatsappData } = await sb
-      .from('admin_settings')
-      .select('setting_value')
-      .eq('setting_key', 'whatsapp_number')
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "whatsapp_number")
       .maybeSingle();
-    
+
     if (whatsappData?.setting_value) {
       setWhatsappNumber(whatsappData.setting_value);
     }
 
     // Carregar eventos ativos da agência atual
     const { data: eventsData } = await sb
-      .from('events')
-      .select('id, title')
-      .eq('is_active', true)
-      .eq('agency_id', contextAgency)
-      .order('event_date', { ascending: false });
-    
+      .from("events")
+      .select("id, title")
+      .eq("is_active", true)
+      .eq("agency_id", contextAgency)
+      .order("event_date", { ascending: false });
+
     setEvents(eventsData || []);
 
     // Carregar submissões - Filtrar apenas eventos ativos da agência atual
     const { data: submissionsData } = await sb
-      .from('submissions')
-      .select(`
+      .from("submissions")
+      .select(
+        `
         id,
         submitted_at,
         screenshot_url,
@@ -202,11 +210,12 @@ if (featuresSettings) {
             agency_id
           )
         )
-      `)
-      .eq('user_id', user.id)
-      .eq('posts.events.is_active', true)
-      .eq('posts.events.agency_id', contextAgency)
-      .order('submitted_at', { ascending: false });
+      `,
+      )
+      .eq("user_id", user.id)
+      .eq("posts.events.is_active", true)
+      .eq("posts.events.agency_id", contextAgency)
+      .order("submitted_at", { ascending: false });
 
     setSubmissions(submissionsData || []);
 
@@ -225,31 +234,24 @@ if (featuresSettings) {
 
       // Para cada evento, buscar o total de posts criados
       for (const eventId of Array.from(uniqueEventIds)) {
-        const eventData = submissionsData.find(
-          (sub) => sub.posts?.events && (sub.posts.events as any).id === eventId
-        )?.posts?.events;
+        const eventData = submissionsData.find((sub) => sub.posts?.events && (sub.posts.events as any).id === eventId)
+          ?.posts?.events;
 
         if (eventData) {
           // Contar total de posts do evento
-          const { count } = await sb
-            .from('posts')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', eventId);
+          const { count } = await sb.from("posts").select("*", { count: "exact", head: true }).eq("event_id", eventId);
 
           const totalPosts = count || 0;
 
           // Contar posts aprovados do usuário neste evento
           const approvedCount = submissionsData.filter(
-            (sub) => 
-              sub.status === 'approved' && 
-              sub.posts?.events && 
-              (sub.posts.events as any).id === eventId
+            (sub) => sub.status === "approved" && sub.posts?.events && (sub.posts.events as any).id === eventId,
           ).length;
 
           eventMap.set(eventId, {
             title: eventData.title,
             totalPosts: totalPosts,
-            approvedCount: approvedCount
+            approvedCount: approvedCount,
           });
         }
       }
@@ -259,7 +261,7 @@ if (featuresSettings) {
         eventTitle: data.title,
         totalRequired: data.totalPosts,
         submitted: data.approvedCount,
-        percentage: data.totalPosts > 0 ? (data.approvedCount / data.totalPosts) * 100 : 0
+        percentage: data.totalPosts > 0 ? (data.approvedCount / data.totalPosts) * 100 : 0,
       }));
 
       setEventStats(stats);
@@ -270,7 +272,7 @@ if (featuresSettings) {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
 
   if (loading) {
@@ -287,78 +289,68 @@ if (featuresSettings) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-8 px-4">
       <TutorialGuide />
-      
-// COMEÇA AQUI
-{/* Card 1: Informações Pessoais */}
-<Card className="max-w-7xl mx-auto mb-6 p-6 bg-gradient-primary text-white">
-  <div>
-    <h2 className="text-2xl font-bold mb-2">
-      {profile?.full_name || 'Usuário'}
-    </h2>
-    <div className="flex flex-wrap items-center gap-3 text-sm text-white/90">
-      <span className="flex items-center gap-2">
-        📧 {profile?.email}
-      </span>
-      {profile?.instagram && (
-        <>
-          <span>•</span>
-          <span className="flex items-center gap-2">
-            📷 Instagram: {profile.instagram}
-          </span>
-        </>
-      )}
-    </div>
-  </div>
-</Card>
 
-
-
-{/* Card 2: Seletor de Agência (NOVO CARD SEPARADO) */}
-{userAgencies.length > 0 && (
-  <Card className="max-w-7xl mx-auto mb-6 p-6 bg-white dark:bg-gray-800">
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-3">
-        <Building2 className="h-5 w-5 text-primary" />
+      {/* Card 1: Informações Pessoais */}
+      <Card className="max-w-7xl mx-auto mb-6 p-6 bg-gradient-primary text-white">
         <div>
-          <p className="text-sm font-semibold text-foreground">Agência Atual</p>
-          <p className="text-lg font-bold text-primary">{agencyName}</p>
+          <h2 className="text-2xl font-bold mb-2">{profile?.full_name || "Usuário"}</h2>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-white/90">
+            <span className="flex items-center gap-2">📧 {profile?.email}</span>
+            {profile?.instagram && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-2">📷 Instagram: {profile.instagram}</span>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-      
-      {userAgencies.length > 1 && (
-        <Select 
-          value={currentAgencyId || ''} 
-          onValueChange={(newAgencyId) => {
-            setSearchParams({ agency: newAgencyId });
-            window.location.reload();
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-[280px] border-2">
-            <SelectValue placeholder="Trocar de agência" />
-          </SelectTrigger>
-          <SelectContent>
-            {userAgencies.map((agency: any) => (
-              <SelectItem key={agency.id} value={agency.id}>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {agency.name}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      </Card>
+
+      {/* Card 2: Seletor de Agência (NOVO CARD SEPARADO) */}
+      {userAgencies.length > 0 && (
+        <Card className="max-w-7xl mx-auto mb-6 p-6 bg-white dark:bg-gray-800">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Agência Atual</p>
+                <p className="text-lg font-bold text-primary">{agencyName}</p>
+              </div>
+            </div>
+
+            {userAgencies.length > 1 && (
+              <Select
+                value={currentAgencyId || ""}
+                onValueChange={(newAgencyId) => {
+                  setSearchParams({ agency: newAgencyId });
+                  window.location.reload();
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[280px] border-2">
+                  <SelectValue placeholder="Trocar de agência" />
+                </SelectTrigger>
+                <SelectContent>
+                  {userAgencies.map((agency: any) => (
+                    <SelectItem key={agency.id} value={agency.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {agency.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {agencyPlan && (
+              <Badge variant="secondary" className="text-base px-4 py-2">
+                Plano: {agencyPlan.toUpperCase()}
+              </Badge>
+            )}
+          </div>
+        </Card>
       )}
 
-      {agencyPlan && (
-        <Badge variant="secondary" className="text-base px-4 py-2">
-          Plano: {agencyPlan.toUpperCase()}
-        </Badge>
-      )}
-    </div>
-  </Card>
-)}
-
-// TERMINA AQUI
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -375,16 +367,12 @@ if (featuresSettings) {
             <ThemeToggle />
             {isMasterAdmin && (
               <Link to="/master-admin">
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                  🎯 Painel Master
-                </Button>
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">🎯 Painel Master</Button>
               </Link>
             )}
             {isAgencyAdmin && (
               <Link to="/admin">
-                <Button className="bg-gradient-secondary">
-                  🏢 Painel Agência
-                </Button>
+                <Button className="bg-gradient-secondary">🏢 Painel Agência</Button>
               </Link>
             )}
             <Button variant="outline" onClick={handleSignOut}>
@@ -399,19 +387,17 @@ if (featuresSettings) {
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent break-words">
-                Olá, {profile?.full_name || 'Usuário'}!
+                Olá, {profile?.full_name || "Usuário"}!
               </h1>
               <p className="text-sm md:text-base text-muted-foreground mb-2 break-words">{profile?.email}</p>
               <p className="text-sm text-muted-foreground break-words">Instagram: {profile?.instagram}</p>
             </div>
-            <Link 
-              to={`/submit${currentAgencyId ? `?agency=${currentAgencyId}` : ''}`} 
-              className="w-full sm:w-auto" 
+            <Link
+              to={`/submit${currentAgencyId ? `?agency=${currentAgencyId}` : ""}`}
+              className="w-full sm:w-auto"
               id="submit-button"
             >
-              <Button className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap">
-                Enviar Nova Postagem
-              </Button>
+              <Button className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap">Enviar Nova Postagem</Button>
             </Link>
           </div>
         </Card>
@@ -420,41 +406,39 @@ if (featuresSettings) {
         {badgesEnabled && <BadgeDisplay />}
 
         {/* Barra de progresso para próximo badge */}
-        {badgesEnabled && user && (() => {
-          const approvedCount = submissions.filter(s => s.status === 'approved').length;
-          const milestones = [
-            { count: 5, name: 'Bronze', emoji: '🥉' },
-            { count: 10, name: 'Prata', emoji: '🥈' },
-            { count: 25, name: 'Ouro', emoji: '🥇' },
-            { count: 50, name: 'Diamante', emoji: '💎' },
-            { count: 100, name: 'Lenda', emoji: '🏆' }
-          ];
-          
-          const next = milestones.find(m => approvedCount < m.count);
-          
-          if (next) {
-            return (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card className="p-4 bg-gradient-secondary text-white mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold">Próximo Badge: {next.emoji} {next.name}</span>
-                    <span className="text-sm">
-                      {approvedCount}/{next.count}
-                    </span>
-                  </div>
-                  <Progress 
-                    value={(approvedCount / next.count) * 100}
-                    className="h-2"
-                  />
-                </Card>
-              </motion.div>
-            );
-          }
-          return null;
-        })()}
+        {badgesEnabled &&
+          user &&
+          (() => {
+            const approvedCount = submissions.filter((s) => s.status === "approved").length;
+            const milestones = [
+              { count: 5, name: "Bronze", emoji: "🥉" },
+              { count: 10, name: "Prata", emoji: "🥈" },
+              { count: 25, name: "Ouro", emoji: "🥇" },
+              { count: 50, name: "Diamante", emoji: "💎" },
+              { count: 100, name: "Lenda", emoji: "🏆" },
+            ];
+
+            const next = milestones.find((m) => approvedCount < m.count);
+
+            if (next) {
+              return (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card className="p-4 bg-gradient-secondary text-white mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold">
+                        Próximo Badge: {next.emoji} {next.name}
+                      </span>
+                      <span className="text-sm">
+                        {approvedCount}/{next.count}
+                      </span>
+                    </div>
+                    <Progress value={(approvedCount / next.count) * 100} className="h-2" />
+                  </Card>
+                </motion.div>
+              );
+            }
+            return null;
+          })()}
 
         {/* AI Insights */}
         {aiInsightsEnabled && user && eventStats.length > 0 && (
@@ -472,10 +456,10 @@ if (featuresSettings) {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">Posts Aprovados</p>
-                <p className="text-3xl font-bold">{submissions.filter(s => s.status === 'approved').length}</p>
-                {submissions.filter(s => s.status === 'pending').length > 0 && (
+                <p className="text-3xl font-bold">{submissions.filter((s) => s.status === "approved").length}</p>
+                {submissions.filter((s) => s.status === "pending").length > 0 && (
                   <p className="text-xs text-yellow-600 mt-1">
-                    {submissions.filter(s => s.status === 'pending').length} pendente(s) de aprovação
+                    {submissions.filter((s) => s.status === "pending").length} pendente(s) de aprovação
                   </p>
                 )}
               </div>
@@ -503,8 +487,8 @@ if (featuresSettings) {
                 <p className="text-sm text-muted-foreground">Último Envio</p>
                 <p className="text-lg font-bold">
                   {submissions.length > 0
-                    ? new Date(submissions[0].submitted_at).toLocaleDateString('pt-BR')
-                    : 'Nenhum'}
+                    ? new Date(submissions[0].submitted_at).toLocaleDateString("pt-BR")
+                    : "Nenhum"}
                 </p>
               </div>
             </div>
@@ -520,14 +504,12 @@ if (featuresSettings) {
           {/* Aba de Estatísticas */}
           <TabsContent value="stats" className="space-y-6">
             <h2 className="text-2xl font-bold">Progresso por Evento</h2>
-            
+
             {eventStats.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground mb-4">Você ainda não enviou nenhuma postagem</p>
                 <Link to="/submit">
-                  <Button className="bg-gradient-primary">
-                    Enviar Primeira Postagem
-                  </Button>
+                  <Button className="bg-gradient-primary">Enviar Primeira Postagem</Button>
                 </Link>
               </Card>
             ) : (
@@ -541,7 +523,7 @@ if (featuresSettings) {
                           {stat.submitted}/{stat.totalRequired}
                         </Badge>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm text-muted-foreground">
                           <span>Progresso</span>
@@ -581,7 +563,7 @@ if (featuresSettings) {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {submissions.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">Nenhuma postagem enviada ainda</p>
@@ -595,56 +577,62 @@ if (featuresSettings) {
                       return submission.posts?.event_id === selectedHistoryEvent;
                     })
                     .map((submission, index) => (
-                    <motion.div
-                      key={submission.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Card className="overflow-hidden hover:shadow-glow transition-all">
-                        <img 
-                          src={submission.screenshot_url} 
-                          alt="Screenshot da postagem"
-                          loading="lazy"
-                          className="w-full h-48 object-cover"
-                        />
-                        <div className="p-4 space-y-2">
-                          <h3 className="font-bold">
-                            {submission.posts?.events?.title || 'Evento'}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Post #{submission.posts?.post_number}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Enviado em {new Date(submission.submitted_at).toLocaleDateString('pt-BR')} às {new Date(submission.submitted_at).toLocaleTimeString('pt-BR')}
-                          </p>
-                          {submission.status === 'pending' && (
-                            <Badge variant="outline" className="w-full justify-center bg-yellow-500/20 text-yellow-500 border-yellow-500">
-                              Aguardando Aprovação
-                            </Badge>
-                          )}
-                          {submission.status === 'approved' && (
-                            <Badge variant="outline" className="w-full justify-center bg-green-500/20 text-green-500 border-green-500">
-                              Aprovado
-                            </Badge>
-                          )}
-                          {submission.status === 'rejected' && (
-                            <div className="space-y-2">
-                              <Badge variant="outline" className="w-full justify-center bg-red-500/20 text-red-500 border-red-500">
-                                Rejeitado
+                      <motion.div
+                        key={submission.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <Card className="overflow-hidden hover:shadow-glow transition-all">
+                          <img
+                            src={submission.screenshot_url}
+                            alt="Screenshot da postagem"
+                            loading="lazy"
+                            className="w-full h-48 object-cover"
+                          />
+                          <div className="p-4 space-y-2">
+                            <h3 className="font-bold">{submission.posts?.events?.title || "Evento"}</h3>
+                            <p className="text-sm text-muted-foreground">Post #{submission.posts?.post_number}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Enviado em {new Date(submission.submitted_at).toLocaleDateString("pt-BR")} às{" "}
+                              {new Date(submission.submitted_at).toLocaleTimeString("pt-BR")}
+                            </p>
+                            {submission.status === "pending" && (
+                              <Badge
+                                variant="outline"
+                                className="w-full justify-center bg-yellow-500/20 text-yellow-500 border-yellow-500"
+                              >
+                                Aguardando Aprovação
                               </Badge>
-                              {submission.rejection_reason && (
-                                <div className="bg-red-500/10 border border-red-500/30 rounded p-2 text-xs text-red-500">
-                                  <strong>Motivo:</strong> {submission.rejection_reason}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-                    </motion.div>
-                  ))}
+                            )}
+                            {submission.status === "approved" && (
+                              <Badge
+                                variant="outline"
+                                className="w-full justify-center bg-green-500/20 text-green-500 border-green-500"
+                              >
+                                Aprovado
+                              </Badge>
+                            )}
+                            {submission.status === "rejected" && (
+                              <div className="space-y-2">
+                                <Badge
+                                  variant="outline"
+                                  className="w-full justify-center bg-red-500/20 text-red-500 border-red-500"
+                                >
+                                  Rejeitado
+                                </Badge>
+                                {submission.rejection_reason && (
+                                  <div className="bg-red-500/10 border border-red-500/30 rounded p-2 text-xs text-red-500">
+                                    <strong>Motivo:</strong> {submission.rejection_reason}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      </motion.div>
+                    ))}
                 </AnimatePresence>
               </div>
             )}
@@ -655,13 +643,9 @@ if (featuresSettings) {
       {/* Botão flutuante do WhatsApp */}
       {whatsappNumber && (
         <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            size="lg"
-            className="rounded-full shadow-lg h-14 w-14 bg-green-500 hover:bg-green-600"
-            asChild
-          >
+          <Button size="lg" className="rounded-full shadow-lg h-14 w-14 bg-green-500 hover:bg-green-600" asChild>
             <a
-              href={`https://wa.me/55${whatsappNumber.replace(/\D/g, '')}?text=Olá, tenho uma dúvida sobre os eventos`}
+              href={`https://wa.me/55${whatsappNumber.replace(/\D/g, "")}?text=Olá, tenho uma dúvida sobre os eventos`}
               target="_blank"
               rel="noopener noreferrer"
               title="Falar com o Admin no WhatsApp"
