@@ -47,6 +47,8 @@ const Admin = () => {
   const [postEventFilter, setPostEventFilter] = useState<string>("all");
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [selectedSubmissionForRejection, setSelectedSubmissionForRejection] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -577,6 +579,58 @@ const Admin = () => {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+
+    try {
+      // Verificar se há submissões associadas a este post
+      const { data: submissions } = await sb
+        .from('submissions')
+        .select('id')
+        .eq('post_id', postToDelete);
+
+      if (submissions && submissions.length > 0) {
+        toast.error(`Não é possível deletar. Existem ${submissions.length} submissão(ões) associada(s) a esta postagem.`);
+        setPostToDelete(null);
+        return;
+      }
+
+      const { error } = await sb
+        .from('posts')
+        .delete()
+        .eq('id', postToDelete);
+
+      if (error) throw error;
+
+      toast.success("Postagem deletada com sucesso");
+      await loadData();
+      setPostToDelete(null);
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error("Erro ao deletar postagem");
+    }
+  };
+
+  const handleDeleteSubmission = async () => {
+    if (!submissionToDelete) return;
+
+    try {
+      const { error } = await sb
+        .from('submissions')
+        .delete()
+        .eq('id', submissionToDelete);
+
+      if (error) throw error;
+
+      toast.success("Submissão deletada com sucesso");
+      await loadData();
+      setSubmissionToDelete(null);
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      toast.error("Erro ao deletar submissão");
+    }
+  };
+
   const getAvailablePostNumbers = () => {
     const filtered = submissions.filter((s: any) => 
       submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter
@@ -852,16 +906,26 @@ const Admin = () => {
                             Prazo: {new Date(post.deadline).toLocaleString('pt-BR')}
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPost(post);
-                            setPostDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPost(post);
+                              setPostDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPostToDelete(post.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -1169,6 +1233,19 @@ const Admin = () => {
                                 </Button>
                               </div>
                             )}
+                            
+                            {/* Botão de deletar sempre visível */}
+                            <div className="border-t pt-3">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
+                                onClick={() => setSubmissionToDelete(submission.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Deletar Submissão
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
@@ -1410,6 +1487,47 @@ const Admin = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => eventToDelete && handleDeleteEvent(eventToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!postToDelete} onOpenChange={(open) => !open && setPostToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir postagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A postagem será permanentemente excluída. 
+              Não será possível deletar se houver submissões associadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePost}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!submissionToDelete} onOpenChange={(open) => !open && setSubmissionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir submissão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A submissão será permanentemente excluída do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteSubmission}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
