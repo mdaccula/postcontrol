@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { useAuth } from "@/hooks/useAuth";
 import Home from "./pages/Home";
 import Submit from "./pages/Submit";
 import Auth from "./pages/Auth";
@@ -14,7 +15,10 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  useAuth(); // Inicializa o listener de autenticação
+  
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
       <TooltipProvider>
@@ -35,6 +39,7 @@ const App = () => (
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
