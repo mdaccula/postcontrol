@@ -36,7 +36,7 @@ export const useAuth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [setUser, setSession, setLoading, checkAdminStatus]);
+  }, [setUser, setSession, setLoading, checkAdminStatus, checkMasterAdminStatus]);
 
   return useAuthStore();
 };

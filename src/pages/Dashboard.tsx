@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, TrendingUp, Award, Calendar, LogOut, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
@@ -44,8 +43,7 @@ interface EventStats {
 }
 
 const Dashboard = () => {
-  const { user, signOut, isAdmin } = useAuth();
-  const { isMasterAdmin } = useAuthStore();
+  const { user, signOut, isAdmin, isMasterAdmin } = useAuthStore();
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [eventStats, setEventStats] = useState<EventStats[]>([]);
