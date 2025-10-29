@@ -47,32 +47,54 @@ export const PlanManager = () => {
     setEditData(plan);
   };
 
-  const handleSave = async () => {
-    if (!editingId) return;
+const handleSave = async () => {
+  if (!editingId) return;
 
-    const { error } = await sb
-      .from('subscription_plans')
-      .update(editData)
-      .eq('id', editingId);
+  const { error } = await sb
+    .from('subscription_plans')
+    .update(editData)
+    .eq('id', editingId);
 
-    if (error) {
+  if (error) {
+    toast({
+      title: "Erro ao salvar",
+      description: "Não foi possível atualizar o plano.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // 🆕 ATUALIZAR todas as agências que usam este plano
+  const plan = plans.find(p => p.id === editingId);
+  if (plan && editData.max_influencers !== undefined && editData.max_events !== undefined) {
+    const { error: agencyUpdateError } = await sb
+      .from('agencies')
+      .update({
+        max_influencers: editData.max_influencers,
+        max_events: editData.max_events
+      })
+      .eq('subscription_plan', plan.plan_key);
+
+    if (agencyUpdateError) {
+      console.error('Erro ao atualizar agências:', agencyUpdateError);
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível atualizar o plano.",
+        title: "Aviso",
+        description: "Plano atualizado, mas algumas agências podem não ter sido atualizadas.",
         variant: "destructive",
       });
-      return;
     }
+  }
 
-    toast({
-      title: "Plano atualizado!",
-      description: "As alterações foram salvas com sucesso.",
-    });
+  toast({
+    title: "Plano atualizado!",
+    description: "As alterações foram salvas com sucesso e aplicadas a todas as agências.",
+  });
 
-    setEditingId(null);
-    setEditData({});
-    loadPlans();
-  };
+  setEditingId(null);
+  setEditData({});
+  loadPlans();
+};
+
 
   const handleCancel = () => {
     setEditingId(null);
