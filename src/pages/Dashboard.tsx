@@ -311,29 +311,7 @@ const Dashboard = () => {
   </div>
 </Card>
 
-{/* Botão Enviar Nova Postagem (mover para cá - linha 397-416) */}
-<Card id="welcome-card" className="max-w-7xl mx-auto p-4 md:p-6 mb-6 border-2">
-  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-    <div className="flex-1 min-w-0">
-      <h1 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent break-words">
-        Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}!
-      </h1>
-      <p className="text-muted-foreground break-words">
-        {profile?.email}
-      </p>
-      {profile?.instagram && (
-        <p className="text-sm text-muted-foreground mt-1 break-words">
-          Instagram: {profile.instagram}
-        </p>
-      )}
-    </div>
-    <Link to="/submit">
-      <Button className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap">
-        Enviar Nova Postagem
-      </Button>
-    </Link>
-  </div>
-</Card>
+
 
 {/* Card 2: Seletor de Agência (NOVO CARD SEPARADO) */}
 {userAgencies.length > 0 && (
