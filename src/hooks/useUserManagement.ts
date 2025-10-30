@@ -97,22 +97,12 @@ export const useUserManagement = () => {
         if (data && data.length > 0) {
           await loadUserEvents(data.map((u) => u.id));
         }
-   } else if (currentAgencyId) {
-  // 🆕 NOVA LÓGICA: Buscar TODOS os usuários da agência (com ou sem submissões)
-  const { data: profilesData, error: profilesError } = await sb
-    .from("profiles")
-    .select("*, gender")
-    .eq("agency_id", currentAgencyId) // ✅ Usa o agency_id do profile
-    .order("created_at", { ascending: false });
-
-  if (profilesError) throw profilesError;
-
-  setUsers(profilesData || []);
-
-  if (profilesData && profilesData.length > 0) {
-    await loadUserEvents(profilesData.map((u) => u.id));
-  }
-}
+      } else if (currentAgencyId) {
+        const { data: profilesData, error: profilesError } = await sb
+          .from("profiles")
+          .select("*, gender")
+          .eq("agency_id", currentAgencyId)
+          .order("created_at", { ascending: false });
 
         if (profilesError) throw profilesError;
 
