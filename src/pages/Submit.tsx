@@ -396,7 +396,8 @@ const Submit = () => {
       return;
     }
 
-    if (!selectedPost) {
+    // Validar apenas se for tipo "post"
+    if (submissionType === "post" && !selectedPost) {
       toast({
         title: "Selecione uma postagem",
         description: "Por favor, selecione qual postagem você está enviando.",
@@ -513,10 +514,17 @@ const Submit = () => {
 
       // Store only the file path, not the signed URL
       const insertData: any = {
-        post_id: selectedPost,
         user_id: user.id,
         submission_type: submissionType,
       };
+
+      // Apenas adicionar post_id se for postagem
+      if (submissionType === "post") {
+        insertData.post_id = selectedPost;
+      } else {
+        // Para vendas, post_id será NULL
+        insertData.post_id = null;
+      }
 
       if (submissionType === "post") {
         insertData.screenshot_path = fileName;
@@ -669,25 +677,38 @@ const Submit = () => {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  {posts.length > 0 ? (
-                    <div className="bg-primary/10 border border-primary rounded-lg p-4">
-                      <p className="font-semibold text-primary mb-2">📌 Postagem Atual Disponível:</p>
-                      <p className="text-sm">
-                        Postagem #{posts[0].post_number} - Prazo: {new Date(posts[0].deadline).toLocaleDateString("pt-BR")} às {new Date(posts[0].deadline).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Após enviar, a próxima postagem será liberada automaticamente.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-muted/50 border border-border rounded-lg p-4">
-                      <p className="text-sm text-muted-foreground text-center">
-                        Não há postagens disponíveis para este evento no momento ou você já completou todas as postagens! 🎉
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {/* Mostrar seleção de postagem APENAS se tipo for "post" */}
+                {submissionType === "post" && (
+                  <div className="space-y-2">
+                    {posts.length > 0 ? (
+                      <div className="bg-primary/10 border border-primary rounded-lg p-4">
+                        <p className="font-semibold text-primary mb-2">📌 Postagem Atual Disponível:</p>
+                        <p className="text-sm">
+                          Postagem #{posts[0].post_number} - Prazo: {new Date(posts[0].deadline).toLocaleDateString("pt-BR")} às {new Date(posts[0].deadline).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Após enviar, a próxima postagem será liberada automaticamente.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-muted/50 border border-border rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground text-center">
+                          Não há postagens disponíveis para este evento no momento ou você já completou todas as postagens! 🎉
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Para vendas, mostrar apenas informação */}
+                {submissionType === "sale" && (
+                  <div className="bg-muted/50 border border-border rounded-lg p-4">
+                    <p className="text-sm text-center">
+                      💰 <strong>Envio de Comprovante de Venda</strong><br/>
+                      Vendas não estão vinculadas a números de postagem
+                    </p>
+                  </div>
+                )}
 
                 {requirements.length > 0 && (
                   <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">

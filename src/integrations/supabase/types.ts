@@ -670,7 +670,7 @@ export type Database = {
           id: string
           instagram_verified: boolean | null
           instagram_verified_at: string | null
-          post_id: string
+          post_id: string | null
           rejection_reason: string | null
           sales_proof_url: string | null
           screenshot_path: string | null
@@ -687,7 +687,7 @@ export type Database = {
           id?: string
           instagram_verified?: boolean | null
           instagram_verified_at?: string | null
-          post_id: string
+          post_id?: string | null
           rejection_reason?: string | null
           sales_proof_url?: string | null
           screenshot_path?: string | null
@@ -704,7 +704,7 @@ export type Database = {
           id?: string
           instagram_verified?: boolean | null
           instagram_verified_at?: string | null
-          post_id?: string
+          post_id?: string | null
           rejection_reason?: string | null
           sales_proof_url?: string | null
           screenshot_path?: string | null
