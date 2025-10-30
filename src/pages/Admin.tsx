@@ -66,6 +66,7 @@ const Admin = () => {
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [selectedImageForZoom, setSelectedImageForZoom] = useState<string | null>(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [usersCount, setUsersCount] = useState(0);
 
   // Debounce para busca
   useEffect(() => {
@@ -121,8 +122,15 @@ const Admin = () => {
       loadCurrentAgency();
       loadEvents();
       loadRejectionTemplates();
+      loadUsersCount();
     }
   }, [user, isAgencyAdmin, isMasterAdmin]);
+
+  useEffect(() => {
+    if (currentAgency) {
+      loadUsersCount();
+    }
+  }, [currentAgency]);
 
   // Carregar submissions apenas quando um evento específico for selecionado
   useEffect(() => {
@@ -179,6 +187,42 @@ const Admin = () => {
   const loadRejectionTemplates = async () => {
     const { data } = await sb.from('rejection_templates').select('*').order('title');
     setRejectionTemplatesFromDB(data || []);
+  };
+
+  const loadUsersCount = async () => {
+    if (!user) return;
+
+    let agencyIdFilter = null;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryAgencyId = urlParams.get('agencyId');
+
+    if (queryAgencyId && isMasterAdmin) {
+      agencyIdFilter = queryAgencyId;
+    } else if (isMasterAdmin && !currentAgency) {
+      agencyIdFilter = null;
+    } else if (currentAgency) {
+      agencyIdFilter = currentAgency.id;
+    } else if (isAgencyAdmin) {
+      const { data: profileData } = await sb
+        .from('profiles')
+        .select('agency_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      agencyIdFilter = profileData?.agency_id;
+    }
+
+    let countQuery = sb
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+    
+    if (agencyIdFilter) {
+      countQuery = countQuery.eq('agency_id', agencyIdFilter);
+    }
+
+    const { count } = await countQuery;
+    setUsersCount(count || 0);
   };
 
   const loadEvents = async () => {
@@ -806,7 +850,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats */}
-        <div id="stats-cards" className="grid md:grid-cols-3 gap-6 mb-8">
+        <div id="stats-cards" className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
@@ -839,6 +883,18 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               <div>
                 <p className="text-sm text-muted-foreground">Submissões</p>
                 <p className="text-2xl font-bold">{submissions.length}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Usuários Cadastrados</p>
+                <p className="text-2xl font-bold">{usersCount}</p>
               </div>
             </div>
           </Card>
