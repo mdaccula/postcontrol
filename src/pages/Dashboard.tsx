@@ -193,25 +193,24 @@ const Dashboard = () => {
       .from("submissions")
       .select(
         `
-    id,
-    submitted_at,
-    screenshot_url,
-    screenshot_path,
-    status,
-    rejection_reason,
-    posts!inner (
-      post_number,
-      deadline,
-      event_id,
-      events!inner (
-        title,
-        required_posts,
         id,
-        is_active,
-        agency_id
-      )
-    )
-  `,
+        submitted_at,
+        screenshot_url,
+        status,
+        rejection_reason,
+        posts!inner (
+          post_number,
+          deadline,
+          event_id,
+          events!inner (
+            title,
+            required_posts,
+            id,
+            is_active,
+            agency_id
+          )
+        )
+      `,
       )
       .eq("user_id", user.id)
       .eq("posts.events.is_active", true)
@@ -590,12 +589,13 @@ const Dashboard = () => {
                         transition={{ delay: index * 0.05 }}
                       >
                         <Card className="overflow-hidden hover:shadow-glow transition-all">
-                          <img
-                            src={submission.screenshot_url}
-                            alt="Screenshot da postagem"
-                            loading="lazy"
+                          <SubmissionImageDisplay
+                            screenshotPath={submission.screenshot_path}
+                            screenshotUrl={submission.screenshot_url}
+                            alt="Screenshot da submissão"
                             className="w-full h-48 object-cover"
                           />
+
                           <div className="p-4 space-y-2">
                             <h3 className="font-bold">{submission.posts?.events?.title || "Evento"}</h3>
                             <p className="text-sm text-muted-foreground">Post #{submission.posts?.post_number}</p>
