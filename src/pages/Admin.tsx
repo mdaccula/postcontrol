@@ -561,6 +561,16 @@ const Admin = () => {
       filtered = filtered.filter((s: any) => s.status === submissionStatusFilter);
     }
 
+    // Filtro de tipo de submissão
+    if (submissionTypeFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.submission_type === submissionTypeFilter);
+    }
+
+    // Filtro de propósito do evento
+    if (eventPurposeFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.posts?.events?.event_purpose === eventPurposeFilter);
+    }
+
     // Filtro de busca (nome, email, Instagram) - usando debounced search
     if (debouncedSearch) {
       const search = debouncedSearch.toLowerCase();
@@ -901,8 +911,22 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                 <Users className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Usuários Cadastrados</p>
+                <p className="text-sm text-muted-foreground">Usuários</p>
                 <p className="text-2xl font-bold">{usersCount}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Vendas Totais</p>
+                <p className="text-2xl font-bold">
+                  {submissions.filter(s => s.submission_type === 'sale' && s.status === 'approved').length}
+                </p>
               </div>
             </div>
           </Card>
@@ -1088,7 +1112,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
 
               {/* Filtros sempre visíveis */}
               <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   <Select value={submissionEventFilter} onValueChange={(v) => {
                     setSubmissionEventFilter(v);
                     setSubmissionPostFilter("all");
@@ -1145,6 +1169,55 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Select 
+                    value={submissionTypeFilter} 
+                    onValueChange={(v) => {
+                      setSubmissionTypeFilter(v);
+                      setCurrentPage(1);
+                    }}
+                    disabled={submissionEventFilter === "all"}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Tipo de Submissão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      <SelectItem value="post">📸 Postagens</SelectItem>
+                      <SelectItem value="sale">💰 Vendas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select 
+                    value={eventPurposeFilter} 
+                    onValueChange={(v) => {
+                      setEventPurposeFilter(v);
+                      setCurrentPage(1);
+                    }}
+                    disabled={submissionEventFilter === "all"}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Propósito do Evento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os propósitos</SelectItem>
+                      <SelectItem value="divulgacao">📢 Divulgação</SelectItem>
+                      <SelectItem value="selecao_perfil">👤 Seleção de Perfil</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {submissionEventFilter !== "all" && (
+                  <Button 
+                    onClick={() => setAddSubmissionDialogOpen(true)}
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Submissão Manual
+                  </Button>
+                )}
               </div>
 
               {kanbanView ? (
@@ -1755,6 +1828,19 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Manual Submission Dialog */}
+      <Suspense fallback={null}>
+        <AddManualSubmissionDialog
+          open={addSubmissionDialogOpen}
+          onOpenChange={setAddSubmissionDialogOpen}
+          onSuccess={() => {
+            loadSubmissions();
+            toast.success("Submissão adicionada com sucesso!");
+          }}
+          selectedEventId={submissionEventFilter !== "all" ? submissionEventFilter : undefined}
+        />
+      </Suspense>
     </div>
   );
 };

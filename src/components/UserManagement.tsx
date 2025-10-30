@@ -46,6 +46,7 @@ export const UserManagement = () => {
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [events, setEvents] = useState<any[]>([]);
   const [userEvents, setUserEvents] = useState<Record<string, string[]>>({});
+  const [userSalesCount, setUserSalesCount] = useState<Record<string, number>>({});
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
   // Usar React Query para cache de profiles
@@ -208,6 +209,7 @@ export const UserManagement = () => {
   const loadUserEvents = async (userIds: string[]) => {
     // Buscar eventos únicos por usuário via submissions
     const eventsMap: Record<string, string[]> = {};
+    const salesMap: Record<string, number> = {};
 
     for (const userId of userIds) {
       const { data } = await sb
@@ -219,7 +221,9 @@ export const UserManagement = () => {
               id,
               title
             )
-          )
+          ),
+          submission_type,
+          status
         `,
         )
         .eq("user_id", userId);
@@ -227,12 +231,18 @@ export const UserManagement = () => {
       if (data && data.length > 0) {
         const eventTitles = Array.from(new Set(data.map((s: any) => s.posts?.events?.title).filter(Boolean)));
         eventsMap[userId] = eventTitles as string[];
+        
+        // Contar vendas aprovadas
+        const salesCount = data.filter((s: any) => s.submission_type === 'sale' && s.status === 'approved').length;
+        salesMap[userId] = salesCount;
       } else {
         eventsMap[userId] = [];
+        salesMap[userId] = 0;
       }
     }
 
     setUserEvents(eventsMap);
+    setUserSalesCount(salesMap);
   };
 
   const startEdit = (user: Profile) => {
@@ -493,6 +503,12 @@ export const UserManagement = () => {
                                 </span>
                               ))}
                             </div>
+                          </div>
+                        )}
+                        {userSalesCount[user.id] !== undefined && userSalesCount[user.id] > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Vendas Aprovadas:</span>{" "}
+                            <span className="font-medium text-green-600">💰 {userSalesCount[user.id]}</span>
                           </div>
                         )}
                       </div>
