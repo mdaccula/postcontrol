@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +13,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlanManager } from "@/components/PlanManager";
-import { AdminManager } from "@/components/AdminManager";
-import { FinancialReports } from "@/components/FinancialReports";
-import { EditAgencyDialog } from "@/components/EditAgencyDialog";
-import { AgencyAdminCard } from "@/components/AgencyAdminCard";
-import { AllUsersManagement } from "@/components/AllUsersManagement";
-import { AdminSettings } from "@/components/AdminSettings";
+// M2: Lazy loading de componentes pesados
+const PlanManager = lazy(() => import("@/components/PlanManager").then(m => ({ default: m.PlanManager })));
+const AdminManager = lazy(() => import("@/components/AdminManager").then(m => ({ default: m.AdminManager })));
+const FinancialReports = lazy(() => import("@/components/FinancialReports").then(m => ({ default: m.FinancialReports })));
+const EditAgencyDialog = lazy(() => import("@/components/EditAgencyDialog").then(m => ({ default: m.EditAgencyDialog })));
+const AgencyAdminCard = lazy(() => import("@/components/AgencyAdminCard").then(m => ({ default: m.AgencyAdminCard })));
+const AllUsersManagement = lazy(() => import("@/components/AllUsersManagement").then(m => ({ default: m.AllUsersManagement })));
+const AdminSettings = lazy(() => import("@/components/AdminSettings").then(m => ({ default: m.AdminSettings })));
 
 interface Agency {
   id: string;
@@ -334,23 +336,33 @@ const MasterAdmin = () => {
           </TabsList>
 
           <TabsContent value="agencies" className="space-y-6">
-            <AdminManager />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <AdminManager />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="users">
-            <AllUsersManagement />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <AllUsersManagement />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="plans">
-            <PlanManager />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <PlanManager />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="reports">
-            <FinancialReports />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <FinancialReports />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="settings">
-            <AdminSettings isMasterAdmin={true} />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <AdminSettings isMasterAdmin={true} />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

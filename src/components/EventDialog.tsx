@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Lock } from "lucide-react";
+import { Loader2, Plus, Trash2, Lock, Save, FileText } from "lucide-react";
+import { useEventTemplates } from "@/hooks/useEventTemplates";
 
 interface EventDialogProps {
   open: boolean;
@@ -44,7 +46,11 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
   const [totalRequiredPosts, setTotalRequiredPosts] = useState<number>(0);
   const [isApproximateTotal, setIsApproximateTotal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
+  const [templateName, setTemplateName] = useState("");
   const { toast } = useToast();
+  const { templates, loadTemplates, saveTemplate, deleteTemplate } = useEventTemplates();
 
   useEffect(() => {
     const loadEventData = async () => {
@@ -92,12 +98,77 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setTotalRequiredPosts(0);
         setIsApproximateTotal(false);
       }
+      
+      // Load agency_id and templates
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await sb
+          .from('profiles')
+          .select('agency_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        const userAgencyId = profileData?.agency_id;
+        setAgencyId(userAgencyId);
+        
+        if (userAgencyId) {
+          await loadTemplates(userAgencyId);
+        }
+      }
     };
 
     if (open) {
       loadEventData();
     }
   }, [event, open]);
+
+  const loadFromTemplate = (templateData: any) => {
+    if (templateData.title) setTitle(templateData.title);
+    if (templateData.description) setDescription(templateData.description);
+    if (templateData.location) setLocation(templateData.location);
+    if (templateData.setor) setSetor(templateData.setor);
+    if (templateData.numero_de_vagas) setNumeroDeVagas(String(templateData.numero_de_vagas));
+    if (templateData.require_instagram_link !== undefined) setRequireInstagramLink(templateData.require_instagram_link);
+    if (templateData.target_gender) setTargetGender(templateData.target_gender);
+    if (templateData.requirements) setRequirements(templateData.requirements);
+    if (templateData.total_required_posts !== undefined) setTotalRequiredPosts(templateData.total_required_posts);
+    if (templateData.is_approximate_total !== undefined) setIsApproximateTotal(templateData.is_approximate_total);
+    
+    toast({
+      title: "Template carregado",
+      description: "Os dados do template foram preenchidos no formulário."
+    });
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!templateName.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Digite um nome para o template.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const templateData = {
+      title,
+      description,
+      location,
+      setor,
+      numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
+      require_instagram_link: requireInstagramLink,
+      target_gender: targetGender,
+      requirements,
+      total_required_posts: totalRequiredPosts,
+      is_approximate_total: isApproximateTotal
+    };
+
+    const success = await saveTemplate(templateName, templateData, agencyId || undefined);
+    if (success) {
+      setShowSaveTemplateDialog(false);
+      setTemplateName("");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,6 +329,31 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           <DialogTitle>{event ? "Editar Evento" : "Criar Novo Evento"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* M10: Template selector */}
+          {!event && templates.length > 0 && (
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4" />
+                <Label>Usar Template Salvo (Opcional)</Label>
+              </div>
+              <Select onValueChange={(value) => {
+                const template = templates.find(t => t.id === value);
+                if (template) loadFromTemplate(template.template_data);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="title">Nome *</Label>
             <Input
@@ -591,6 +687,17 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           </div>
 
           <div className="flex gap-2 justify-end">
+            {!event && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSaveTemplateDialog(true)}
+                disabled={loading || !title}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Salvar como Template
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -612,6 +719,41 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           </div>
         </form>
       </DialogContent>
+
+      {/* M10: Save Template Dialog */}
+      <Dialog open={showSaveTemplateDialog} onOpenChange={setShowSaveTemplateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salvar como Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="template-name">Nome do Template</Label>
+              <Input
+                id="template-name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Ex: Evento Corporativo Padrão"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowSaveTemplateDialog(false);
+                  setTemplateName("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveAsTemplate}>
+                Salvar Template
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

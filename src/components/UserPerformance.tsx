@@ -35,6 +35,7 @@ export const UserPerformance = () => {
   const [searchPhone, setSearchPhone] = useState("");
   const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isMasterAdmin, setIsMasterAdmin] = useState<boolean>(false);
 
   useEffect(() => {
     checkAgencyAndLoadEvents();
@@ -44,19 +45,46 @@ export const UserPerformance = () => {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
 
-    // Buscar agência onde é owner
-    const { data: agencyData } = await sb
-      .from('agencies')
-      .select('id')
-      .eq('owner_id', user.id)
+    // Verificar se é master admin
+    const { data: roleData } = await sb
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'master_admin')
       .maybeSingle();
     
-    const agencyId = agencyData?.id || null;
-    setCurrentAgencyId(agencyId);
-    console.log('👤 UserPerformance - Agency ID:', agencyId);
+    const isMaster = !!roleData;
+    setIsMasterAdmin(isMaster);
 
-    if (agencyId) {
-      await loadEvents(agencyId);
+    if (isMaster) {
+      // Master admin vê todos os eventos
+      await loadAllEvents();
+    } else {
+      // Agency admin vê apenas seus eventos
+      const { data: agencyData } = await sb
+        .from('agencies')
+        .select('id')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      
+      const agencyId = agencyData?.id || null;
+      setCurrentAgencyId(agencyId);
+      
+      if (agencyId) {
+        await loadEvents(agencyId);
+      }
+    }
+  };
+
+  const loadAllEvents = async () => {
+    const { data } = await sb
+      .from('events')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    setEvents(data || []);
+    if (data && data.length > 0) {
+      setSelectedEventId("all");
     }
   };
 
@@ -165,16 +193,19 @@ export const UserPerformance = () => {
   };
 
   const loadAllStats = async () => {
-    if (!currentAgencyId) {
+    if (!currentAgencyId && !isMasterAdmin) {
       console.warn('⚠️ No agency ID available');
       return;
     }
 
-    // Buscar apenas eventos da agência
-    const { data: agencyEvents } = await sb
-      .from('events')
-      .select('id')
-      .eq('agency_id', currentAgencyId);
+    // Buscar eventos da agência ou todos se master admin
+    let eventsQuery = sb.from('events').select('id');
+    
+    if (!isMasterAdmin && currentAgencyId) {
+      eventsQuery = eventsQuery.eq('agency_id', currentAgencyId);
+    }
+    
+    const { data: agencyEvents } = await eventsQuery;
 
     const eventIds = (agencyEvents || []).map(e => e.id);
 
@@ -276,23 +307,25 @@ export const UserPerformance = () => {
   };
 
   const loadEventSpecificStats = async (eventId: string) => {
-    if (!currentAgencyId) {
+    if (!currentAgencyId && !isMasterAdmin) {
       console.warn('⚠️ No agency ID available');
       return;
     }
 
-    // Verificar se o evento pertence à agência
-    const { data: eventData } = await sb
-      .from('events')
-      .select('id, agency_id')
-      .eq('id', eventId)
-      .eq('agency_id', currentAgencyId)
-      .maybeSingle();
+    // Verificar se o evento pertence à agência (apenas para agency admin)
+    if (!isMasterAdmin && currentAgencyId) {
+      const { data: eventData } = await sb
+        .from('events')
+        .select('id, agency_id')
+        .eq('id', eventId)
+        .eq('agency_id', currentAgencyId)
+        .maybeSingle();
 
-    if (!eventData) {
-      console.warn('⚠️ Evento não pertence à agência');
-      setUserStats([]);
-      return;
+      if (!eventData) {
+        console.warn('⚠️ Evento não pertence à agência');
+        setUserStats([]);
+        return;
+      }
     }
 
     const { data: postsData } = await sb

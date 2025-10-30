@@ -280,6 +280,28 @@ const Submit = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // M3: Validação de tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "A imagem deve ter no máximo 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validar tipo de arquivo
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Formato inválido",
+          description: "Use apenas imagens JPG, PNG ou WEBP.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setSelectedFile(file);
 
       const reader = new FileReader();
@@ -307,13 +329,20 @@ const Submit = () => {
       return;
     }
 
-    // Validate form inputs
+    // M4: Validação aprimorada com mensagens específicas
     try {
       submitFormSchema.parse({ name, email, instagram, phone, instagramLink });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const fieldNames: Record<string, string> = {
+          name: "Nome",
+          email: "E-mail",
+          instagram: "Instagram",
+          phone: "Telefone"
+        };
+        const fieldName = fieldNames[error.errors[0].path[0] as string] || "Campo";
         toast({
-          title: "Dados inválidos",
+          title: `${fieldName} inválido`,
           description: error.errors[0].message,
           variant: "destructive",
         });
@@ -396,10 +425,11 @@ const Submit = () => {
       }
 
       if (rateLimitCheck === false) {
+        const minutesLeft = 60; // Simplificado - idealmente calcular tempo real restante
         toast({
           variant: "destructive",
-          title: "Limite atingido",
-          description: "Você pode enviar no máximo 5 submissões por hora. Aguarde um pouco.",
+          title: "Limite de envios atingido",
+          description: `Você atingiu o limite de 5 submissões por hora. Aguarde aproximadamente ${minutesLeft} minutos para enviar novamente.`,
         });
         setIsSubmitting(false);
         return;

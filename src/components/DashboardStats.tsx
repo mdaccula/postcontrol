@@ -74,6 +74,7 @@ export const DashboardStats = () => {
   const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel');
   const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isMasterAdmin, setIsMasterAdmin] = useState<boolean>(false);
   const [selectedSections, setSelectedSections] = useState({
     essentialData: true,
     participationMetrics: true,
@@ -96,19 +97,46 @@ export const DashboardStats = () => {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
 
-    // Buscar agência onde é owner
-    const { data: agencyData } = await sb
-      .from('agencies')
-      .select('id')
-      .eq('owner_id', user.id)
+    // Verificar se é master admin
+    const { data: roleData } = await sb
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'master_admin')
       .maybeSingle();
     
-    const agencyId = agencyData?.id || null;
-    setCurrentAgencyId(agencyId);
-    console.log('📊 DashboardStats - Agency ID:', agencyId);
+    const isMaster = !!roleData;
+    setIsMasterAdmin(isMaster);
 
-    if (agencyId) {
-      await loadEvents(agencyId);
+    if (isMaster) {
+      // Master admin vê todos os eventos
+      await loadAllEvents();
+    } else {
+      // Agency admin vê apenas seus eventos
+      const { data: agencyData } = await sb
+        .from('agencies')
+        .select('id')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      
+      const agencyId = agencyData?.id || null;
+      setCurrentAgencyId(agencyId);
+      
+      if (agencyId) {
+        await loadEvents(agencyId);
+      }
+    }
+  };
+
+  const loadAllEvents = async () => {
+    const { data } = await sb
+      .from('events')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    setEvents(data || []);
+    if (data && data.length > 0) {
+      setSelectedEventId("all");
     }
   };
 

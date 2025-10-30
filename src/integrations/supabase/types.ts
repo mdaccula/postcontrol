@@ -218,6 +218,41 @@ export type Database = {
           },
         ]
       }
+      event_templates: {
+        Row: {
+          agency_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          template_data: Json
+        }
+        Insert: {
+          agency_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          template_data: Json
+        }
+        Update: {
+          agency_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          template_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_templates_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           agency_id: string | null
