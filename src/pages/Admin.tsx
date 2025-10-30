@@ -327,12 +327,12 @@ const Admin = () => {
       agencyIdFilter = profileData?.agency_id;
     }
     
-    // Load submissions via posts.agency_id
+    // Load submissions via posts.agency_id (LEFT JOIN para incluir vendas)
     let submissionsQuery = sb
       .from('submissions')
       .select(`
         *,
-        posts!inner(post_number, deadline, event_id, agency_id, events(title, id))
+        posts(post_number, deadline, event_id, agency_id, events(title, id))
       `);
     
     if (agencyIdFilter) {
@@ -1400,12 +1400,22 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                                 )}
                               </div>
                               <div className="sm:text-right">
-                                <p className="text-sm font-medium">
-                                  Postagem #{submission.posts?.post_number}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {submission.posts?.events?.title}
-                                </p>
+                                <div className="flex flex-col sm:items-end gap-1">
+                                  {submission.submission_type === "sale" ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-500 font-medium">
+                                        💰 Comprovante de Venda
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm font-medium">
+                                      Postagem #{submission.posts?.post_number}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground">
+                                    {submission.posts?.events?.title}
+                                  </p>
+                                </div>
                                 <div className="mt-2">
                                   {submission.status === 'pending' && (
                                     <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-500">

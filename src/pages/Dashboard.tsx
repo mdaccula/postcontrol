@@ -28,6 +28,7 @@ interface Submission {
   screenshot_path?: string;
   status: string;
   rejection_reason?: string;
+  submission_type?: string;
   posts: {
     post_number: number;
     deadline: string;
@@ -149,7 +150,7 @@ const Dashboard = () => {
       .eq("user_id", user.id)
       .eq("agency_id", currentAgencyId);
 
-    // Carregar submissões - Filtrar apenas eventos ativos da agência atual
+    // Carregar submissões - Incluir vendas (LEFT JOIN em posts)
     const { data: submissionsData } = await sb
       .from("submissions")
       .select(
@@ -160,11 +161,13 @@ const Dashboard = () => {
         screenshot_path,
         status,
         rejection_reason,
-        posts!inner (
+        submission_type,
+        posts (
           post_number,
           deadline,
           event_id,
-          events!inner (
+          agency_id,
+          events (
             title,
             required_posts,
             id,
@@ -175,11 +178,22 @@ const Dashboard = () => {
       `
       )
       .eq("user_id", user.id)
-      .eq("posts.events.is_active", true)
-      .eq("posts.events.agency_id", currentAgencyId)
       .order("submitted_at", { ascending: false });
 
-    setSubmissions(submissionsData || []);
+    // Filtrar manualmente submissões da agência correta
+    const filteredSubmissions = (submissionsData || []).filter((sub: any) => {
+      // Se tem post, verificar agência do evento
+      if (sub.posts?.events) {
+        return sub.posts.events.is_active && sub.posts.events.agency_id === currentAgencyId;
+      }
+      // Se não tem post (venda), verificar pela agency_id do post virtual
+      if (sub.posts?.agency_id) {
+        return sub.posts.agency_id === currentAgencyId;
+      }
+      return false;
+    });
+
+    setSubmissions(filteredSubmissions);
 
     // Calcular estatísticas por evento - posts aprovados / total de posts do evento
     if (submissionsData) {
@@ -569,7 +583,13 @@ const Dashboard = () => {
 
                           <div className="p-4 space-y-2">
                             <h3 className="font-bold">{submission.posts?.events?.title || "Evento"}</h3>
-                            <p className="text-sm text-muted-foreground">Post #{submission.posts?.post_number}</p>
+                            {submission.submission_type === "sale" ? (
+                              <Badge className="bg-green-500/20 text-green-500 border-green-500">
+                                💰 Comprovante de Venda
+                              </Badge>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Post #{submission.posts?.post_number}</p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                               Enviado em {new Date(submission.submitted_at).toLocaleDateString("pt-BR")} às{" "}
                               {new Date(submission.submitted_at).toLocaleTimeString("pt-BR")}

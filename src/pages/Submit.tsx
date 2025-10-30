@@ -96,6 +96,7 @@ const Submit = () => {
   const [submissionType, setSubmissionType] = useState<string>("post");
   const [salesProofFile, setSalesProofFile] = useState<File | null>(null);
   const [salesProofPreview, setSalesProofPreview] = useState<string | null>(null);
+  const [agencyId, setAgencyId] = useState<string | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -162,6 +163,7 @@ const Submit = () => {
     }
 
     console.log('🏢 Contexto da agência:', contextAgencyId);
+    setAgencyId(contextAgencyId); // ✅ Armazenar agency_id no estado
 
     // 2. Atualizar last_accessed_at
     await sb
@@ -516,20 +518,45 @@ const Submit = () => {
       const insertData: any = {
         user_id: user.id,
         submission_type: submissionType,
+        screenshot_path: fileName, // ✅ Sempre usar screenshot_path
       };
 
-      // Apenas adicionar post_id se for postagem
+      // Adicionar post_id e event_id baseado no tipo
       if (submissionType === "post") {
         insertData.post_id = selectedPost;
+        // event_id virá do post automaticamente
       } else {
-        // Para vendas, post_id será NULL
+        // Para vendas: sem post, mas COM event_id
         insertData.post_id = null;
-      }
-
-      if (submissionType === "post") {
-        insertData.screenshot_path = fileName;
-      } else {
-        insertData.sales_proof_url = fileName;
+        
+        // ✅ CRÍTICO: Adicionar event_id manualmente para vendas
+        if (selectedEvent && agencyId) {
+          // Buscar o event_id real para inserir na submission
+          const { data: eventData } = await sb
+            .from('events')
+            .select('id')
+            .eq('id', selectedEvent)
+            .single();
+          
+          if (eventData) {
+            // Criar entrada virtual em posts para manter compatibilidade com queries
+            const { data: virtualPost } = await sb
+              .from('posts')
+              .insert({
+                event_id: eventData.id,
+                post_number: 0, // Número especial para vendas
+                deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 ano no futuro
+                created_by: user.id,
+                agency_id: agencyId,
+              })
+              .select()
+              .single();
+            
+            if (virtualPost) {
+              insertData.post_id = virtualPost.id;
+            }
+          }
+        }
       }
 
       const { error } = await sb.from("submissions").insert(insertData);
