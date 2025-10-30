@@ -112,3 +112,149 @@ export const usePosts = (eventId?: string, agencyId?: string) => {
     gcTime: 5 * 60 * 1000,
   });
 };
+
+// Hook para user agencies com cache
+export const useUserAgencies = (userId?: string) => {
+  return useQuery({
+    queryKey: ['userAgencies', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      
+      const { data, error } = await sb
+        .from('user_agencies')
+        .select(`
+          agency_id,
+          last_accessed_at,
+          agencies (
+            id,
+            name,
+            subscription_plan,
+            logo_url
+          )
+        `)
+        .eq('user_id', userId)
+        .order('last_accessed_at', { ascending: false });
+      
+      if (error) throw error;
+      return data?.map((ua: any) => ua.agencies).filter(Boolean) || [];
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 30 * 60 * 1000,
+    enabled: !!userId,
+  });
+};
+
+// Hook para admin settings com cache
+export const useAdminSettings = (keys?: string[]) => {
+  return useQuery({
+    queryKey: ['adminSettings', keys],
+    queryFn: async () => {
+      let query = sb.from('admin_settings').select('setting_key, setting_value');
+      
+      if (keys && keys.length > 0) {
+        query = query.in('setting_key', keys);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Converter para objeto chave-valor
+      const settings: Record<string, string> = {};
+      data?.forEach((s) => {
+        settings[s.setting_key] = s.setting_value;
+      });
+      
+      return settings;
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+};
+
+// ============= MUTATIONS COM INVALIDAÇÃO =============
+
+// Mutation para atualizar status de submissão
+export const useUpdateSubmissionStatus = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      submissionId, 
+      status, 
+      rejectionReason, 
+      approvedBy 
+    }: { 
+      submissionId: string; 
+      status: string; 
+      rejectionReason?: string;
+      approvedBy?: string;
+    }) => {
+      const { error } = await sb
+        .from('submissions')
+        .update({
+          status,
+          rejection_reason: rejectionReason,
+          approved_at: status === 'approved' ? new Date().toISOString() : null,
+          approved_by: approvedBy,
+        })
+        .eq('id', submissionId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submissions'] });
+    },
+  });
+};
+
+// Mutation para criar/atualizar evento
+export const useUpsertEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (eventData: any) => {
+      const { error } = await sb.from('events').upsert(eventData);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+};
+
+// Mutation para deletar evento
+export const useDeleteEvent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await sb.from('events').delete().eq('id', eventId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+};
+
+// Mutation para atualizar perfil
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ userId, profileData }: { userId: string; profileData: any }) => {
+      const { error } = await sb
+        .from('profiles')
+        .update(profileData)
+        .eq('id', userId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+  });
+};

@@ -19,6 +19,7 @@ import { SubmissionImageDisplay } from "@/components/SubmissionImageDisplay";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUserAgencies, useAdminSettings, useEvents } from "@/hooks/useReactQuery";
 
 interface Submission {
   id: string;
@@ -71,16 +72,64 @@ const Dashboard = () => {
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const [badgesEnabled, setBadgesEnabled] = useState(true);
 
+  // React Query hooks com cache
+  const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgencies(user?.id);
+  const { data: adminSettingsData, isLoading: isLoadingSettings } = useAdminSettings([
+    'ai_insights_enabled',
+    'badges_enabled',
+    'whatsapp_number'
+  ]);
+
   useEffect(() => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    loadData();
-  }, [user, navigate]);
+    
+    // Processar dados das agencies do cache
+    if (userAgenciesData && !isLoadingAgencies) {
+      setUserAgencies(userAgenciesData);
+      
+      let contextAgency = searchParams.get("agency");
+      if (!contextAgency && userAgenciesData.length > 0) {
+        contextAgency = userAgenciesData[0].id;
+      }
+      
+      if (contextAgency) {
+        setCurrentAgencyId(contextAgency);
+        const currentAgency = userAgenciesData.find((a: any) => a.id === contextAgency);
+        if (currentAgency) {
+          setAgencyName(currentAgency.name);
+          setAgencyPlan(currentAgency.subscription_plan);
+        }
+      }
+    }
+    
+    // Processar settings do cache
+    if (adminSettingsData && !isLoadingSettings) {
+      setAiInsightsEnabled(adminSettingsData.ai_insights_enabled === 'true');
+      setBadgesEnabled(adminSettingsData.badges_enabled === 'true');
+      setWhatsappNumber(adminSettingsData.whatsapp_number || '');
+    }
+  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingAgencies, isLoadingSettings, searchParams]);
 
-  const loadData = async () => {
-    if (!user) return;
+  // Hook para eventos com cache
+  const { data: eventsData, isLoading: isLoadingEvents } = useEvents(currentAgencyId || undefined, true);
+
+  useEffect(() => {
+    if (eventsData) {
+      setEvents(eventsData);
+    }
+  }, [eventsData]);
+
+  useEffect(() => {
+    if (currentAgencyId && user) {
+      loadSubmissionsData();
+    }
+  }, [currentAgencyId, user]);
+
+  const loadSubmissionsData = async () => {
+    if (!user || !currentAgencyId) return;
 
     setLoading(true);
 
@@ -93,104 +142,12 @@ const Dashboard = () => {
 
     setProfile(profileData);
 
-    // 🆕 Carregar configurações de features
-    const { data: featuresSettings } = await sb
-      .from("admin_settings")
-      .select("setting_key, setting_value")
-      .in("setting_key", ["ai_insights_enabled", "badges_enabled"]);
-
-    if (featuresSettings) {
-      const aiInsights = featuresSettings.find((s) => s.setting_key === "ai_insights_enabled");
-      const badges = featuresSettings.find((s) => s.setting_key === "badges_enabled");
-      setAiInsightsEnabled(aiInsights?.setting_value === "true"); // ✅ LÓGICA CORRETA
-      setBadgesEnabled(badges?.setting_value === "true"); // ✅ LÓGICA CORRETA
-    }
-
-    // 🆕 Carregar agências do usuário
-    const { data: agencies, error: agenciesError } = await sb
-      .from("user_agencies")
-      .select(
-        `
-        agency_id,
-        last_accessed_at,
-        agencies (
-          id,
-          name,
-          subscription_plan,
-          logo_url
-        )
-      `,
-      )
-      .eq("user_id", user.id)
-      .order("last_accessed_at", { ascending: false });
-
-    if (agenciesError) {
-      console.error("❌ Erro ao carregar agências:", agenciesError);
-      toast({
-        title: "Erro ao carregar agências",
-        description: "Não foi possível carregar suas agências.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    const agenciesList = agencies?.map((ua: any) => ua.agencies).filter(Boolean) || [];
-    setUserAgencies(agenciesList);
-
-    // Determinar agência atual (query param ou última acessada)
-    let contextAgency = searchParams.get("agency");
-    if (!contextAgency && agenciesList.length > 0) {
-      contextAgency = agenciesList[0].id;
-    }
-
-    if (!contextAgency) {
-      console.warn("⚠️ Nenhuma agência encontrada para o usuário");
-      toast({
-        title: "Sem agência vinculada",
-        description: "Você precisa se cadastrar através do link de uma agência.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    setCurrentAgencyId(contextAgency);
-
     // Atualizar last_accessed_at
     await sb
       .from("user_agencies")
       .update({ last_accessed_at: new Date().toISOString() })
       .eq("user_id", user.id)
-      .eq("agency_id", contextAgency);
-
-    // Carregar dados da agência atual
-    const currentAgency = agenciesList.find((a: any) => a.id === contextAgency);
-    if (currentAgency) {
-      setAgencyName(currentAgency.name);
-      setAgencyPlan(currentAgency.subscription_plan);
-    }
-
-    // Carregar configuração do WhatsApp
-    const { data: whatsappData } = await sb
-      .from("admin_settings")
-      .select("setting_value")
-      .eq("setting_key", "whatsapp_number")
-      .maybeSingle();
-
-    if (whatsappData?.setting_value) {
-      setWhatsappNumber(whatsappData.setting_value);
-    }
-
-    // Carregar eventos ativos da agência atual
-    const { data: eventsData } = await sb
-      .from("events")
-      .select("id, title")
-      .eq("is_active", true)
-      .eq("agency_id", contextAgency)
-      .order("event_date", { ascending: false });
-
-    setEvents(eventsData || []);
+      .eq("agency_id", currentAgencyId);
 
     // Carregar submissões - Filtrar apenas eventos ativos da agência atual
     const { data: submissionsData } = await sb
@@ -215,11 +172,11 @@ const Dashboard = () => {
             agency_id
           )
         )
-      `,
+      `
       )
       .eq("user_id", user.id)
       .eq("posts.events.is_active", true)
-      .eq("posts.events.agency_id", contextAgency)
+      .eq("posts.events.agency_id", currentAgencyId)
       .order("submitted_at", { ascending: false });
 
     setSubmissions(submissionsData || []);

@@ -4,10 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, User, Calendar } from "lucide-react";
-import { sb } from "@/lib/supabaseSafe";
 import { toast } from "sonner";
-
 import { SubmissionImageDisplay } from "./SubmissionImageDisplay";
+import { useUpdateSubmissionStatus } from "@/hooks/useReactQuery";
 
 interface Submission {
   id: string;
@@ -112,6 +111,9 @@ const DroppableColumn = ({
 export const SubmissionKanban = ({ submissions, onUpdate, userId }: SubmissionKanbanProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggingSubmission, setDraggingSubmission] = useState<Submission | null>(null);
+  
+  // Mutation com cache automático
+  const updateStatusMutation = useUpdateSubmissionStatus();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -150,27 +152,16 @@ export const SubmissionKanban = ({ submissions, onUpdate, userId }: SubmissionKa
     const submission = submissions.find((s) => s.id === submissionId);
     if (!submission || submission.status === newStatus) return;
 
-    // Atualizar status no banco
-    const { error } = await sb
-      .from('submissions')
-      .update({
-        status: newStatus,
-        approved_at: new Date().toISOString(),
-        approved_by: userId,
-      })
-      .eq('id', submissionId);
-
-    if (error) {
-      console.error('Error updating status:', error);
-      toast.error("Erro ao atualizar status", {
-        description: "Não foi possível atualizar o status da submissão. Tente novamente."
-      });
-    } else {
-      toast.success(`Status atualizado para ${newStatus === 'approved' ? 'aprovado' : newStatus === 'rejected' ? 'rejeitado' : 'pendente'}`, {
-        description: "A submissão foi movida para a nova coluna."
-      });
-      onUpdate();
-    }
+    // Usar mutation com cache automático
+    updateStatusMutation.mutate({
+      submissionId,
+      status: newStatus,
+      approvedBy: userId,
+    }, {
+      onSuccess: () => {
+        onUpdate(); // Atualizar UI local também
+      }
+    });
   };
 
   return (
