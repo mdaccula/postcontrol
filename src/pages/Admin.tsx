@@ -436,6 +436,9 @@ const Admin = () => {
   const confirmRejection = async () => {
     if (!selectedSubmissionForRejection) return;
     
+    // Fechar o diálogo imediatamente para evitar tela cinza
+    setRejectionDialogOpen(false);
+    
     try {
       const { data, error } = await supabase
         .from('submissions')
@@ -452,15 +455,17 @@ const Admin = () => {
         toast.error("Erro ao rejeitar submissão");
         console.error('Erro detalhado:', error);
       } else {
-        toast.success("Submissão rejeitada");
+        toast.success("Submissão rejeitada com sucesso");
         await loadSubmissions();
-        setRejectionDialogOpen(false);
-        setSelectedSubmissionForRejection(null);
-        setRejectionReason("");
       }
     } catch (error) {
       toast.error("Erro ao rejeitar submissão");
       console.error('Exception:', error);
+    } finally {
+      // Limpar estados independente do resultado
+      setSelectedSubmissionForRejection(null);
+      setRejectionReason("");
+      setRejectionTemplate("");
     }
   };
 
