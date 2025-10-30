@@ -43,6 +43,7 @@ interface EventStats {
   totalRequired: number;
   submitted: number;
   percentage: number;
+  isApproximate: boolean;
 }
 
 const Dashboard = () => {
@@ -224,7 +225,7 @@ const Dashboard = () => {
 
     // Calcular estatísticas por evento - posts aprovados / total de posts do evento
     if (submissionsData) {
-      const eventMap = new Map<string, { title: string; totalPosts: number; approvedCount: number }>();
+      const eventMap = new Map<string, { title: string; totalPosts: number; approvedCount: number; isApproximate: boolean }>();
 
       // Primeiro, coletar todos os eventos únicos das submissões
       const uniqueEventIds = new Set<string>();
@@ -244,11 +245,12 @@ const Dashboard = () => {
           // Buscar dados completos do evento incluindo total_required_posts
           const { data: fullEventData } = await sb
             .from("events")
-            .select("total_required_posts")
+            .select("total_required_posts, is_approximate_total")
             .eq("id", eventId)
             .single();
 
           const totalRequiredPosts = fullEventData?.total_required_posts || 0;
+          const isApproximate = fullEventData?.is_approximate_total || false;
 
           // Contar posts aprovados do usuário neste evento
           const approvedCount = submissionsData.filter(
@@ -259,6 +261,7 @@ const Dashboard = () => {
             title: eventData.title,
             totalPosts: totalRequiredPosts,
             approvedCount: approvedCount,
+            isApproximate: isApproximate,
           });
         }
       }
@@ -269,6 +272,7 @@ const Dashboard = () => {
         totalRequired: data.totalPosts,
         submitted: data.approvedCount,
         percentage: data.totalPosts > 0 ? (data.approvedCount / data.totalPosts) * 100 : 0,
+        isApproximate: data.isApproximate,
       }));
 
       setEventStats(stats);
@@ -527,7 +531,7 @@ const Dashboard = () => {
                       <div className="flex items-center justify-between">
                         <h3 className="text-xl font-bold">{stat.eventTitle}</h3>
                         <Badge variant={stat.percentage >= 100 ? "default" : "secondary"} className="text-lg px-3 py-1">
-                          {stat.submitted}/{stat.totalRequired}
+                          {stat.submitted}/{stat.totalRequired}{stat.isApproximate && " (aproximado)"}
                         </Badge>
                       </div>
 

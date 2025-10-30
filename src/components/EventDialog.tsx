@@ -42,6 +42,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
   const [requireInstagramLink, setRequireInstagramLink] = useState(false);
   const [internalNotes, setInternalNotes] = useState("");
   const [totalRequiredPosts, setTotalRequiredPosts] = useState<number>(0);
+  const [isApproximateTotal, setIsApproximateTotal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -60,6 +61,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setRequireInstagramLink(event.require_instagram_link || false);
         setInternalNotes(event.internal_notes || "");
         setTotalRequiredPosts(event.total_required_posts || 0);
+        setIsApproximateTotal(event.is_approximate_total || false);
 
         // Load requirements
         const { data: reqData } = await sb
@@ -88,6 +90,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setRequireInstagramLink(false);
         setInternalNotes("");
         setTotalRequiredPosts(0);
+        setIsApproximateTotal(false);
       }
     };
 
@@ -172,6 +175,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             require_instagram_link: requireInstagramLink,
             internal_notes: internalNotes,
             total_required_posts: totalRequiredPosts,
+            is_approximate_total: isApproximateTotal,
           })
           .eq('id', event.id);
 
@@ -198,6 +202,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             require_instagram_link: requireInstagramLink,
             internal_notes: internalNotes,
             total_required_posts: totalRequiredPosts,
+            is_approximate_total: isApproximateTotal,
             created_by: user.id,
             agency_id: userAgencyId,
           })
@@ -323,8 +328,22 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
               required
               disabled={loading}
             />
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="is_approximate_total"
+                checked={isApproximateTotal}
+                onCheckedChange={(checked) => setIsApproximateTotal(checked as boolean)}
+                disabled={loading}
+              />
+              <label
+                htmlFor="is_approximate_total"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Aproximado (o número pode mudar)
+              </label>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Este número será usado para calcular o progresso dos divulgadores
+              Este número será usado para calcular o progresso dos divulgadores. Se marcar como "aproximado", será exibido ao usuário com a indicação de que pode mudar.
             </p>
           </div>
 

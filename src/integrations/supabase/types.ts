@@ -231,6 +231,7 @@ export type Database = {
           id: string
           internal_notes: string | null
           is_active: boolean
+          is_approximate_total: boolean | null
           location: string | null
           numero_de_vagas: number | null
           require_instagram_link: boolean | null
@@ -254,6 +255,7 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           is_active?: boolean
+          is_approximate_total?: boolean | null
           location?: string | null
           numero_de_vagas?: number | null
           require_instagram_link?: boolean | null
@@ -277,6 +279,7 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           is_active?: boolean
+          is_approximate_total?: boolean | null
           location?: string | null
           numero_de_vagas?: number | null
           require_instagram_link?: boolean | null

@@ -1022,6 +1022,67 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                 </Button>
               </div>
 
+              {/* Filtros sempre visíveis */}
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <Select value={submissionEventFilter} onValueChange={(v) => {
+                    setSubmissionEventFilter(v);
+                    setSubmissionPostFilter("all");
+                    setCurrentPage(1);
+                  }}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filtrar por evento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Selecione um evento</SelectItem>
+                      {events.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
+                          {event.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={submissionPostFilter} 
+                    onValueChange={(v) => {
+                      setSubmissionPostFilter(v);
+                      setCurrentPage(1);
+                    }}
+                    disabled={submissionEventFilter === "all"}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Número da postagem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os números</SelectItem>
+                      {getAvailablePostNumbers().map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          Postagem #{num}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={submissionStatusFilter} 
+                    onValueChange={(v) => {
+                      setSubmissionStatusFilter(v);
+                      setCurrentPage(1);
+                    }}
+                    disabled={submissionEventFilter === "all"}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="pending">Aguardando aprovação</SelectItem>
+                      <SelectItem value="approved">Aprovados</SelectItem>
+                      <SelectItem value="rejected">Reprovados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {kanbanView ? (
                 <SubmissionKanban 
                   submissions={getFilteredSubmissions()} 
@@ -1031,8 +1092,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               ) : submissionEventFilter === "all" ? (
                 <Card className="p-12 text-center">
                   <div className="text-muted-foreground">
-                    <p className="text-lg mb-2">Selecione um evento acima para visualizar as submissões</p>
-                    <p className="text-sm">Os filtros ajudam a carregar os dados mais rapidamente</p>
+                    <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-semibold mb-2">Selecione um evento acima</p>
+                    <p className="text-sm">Escolha um evento nos filtros para visualizar as submissões</p>
                   </div>
                 </Card>
               ) : loadingSubmissions ? (
@@ -1057,7 +1119,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
-                      setCurrentPage(1); // Reset para página 1 ao buscar
+                      setCurrentPage(1);
                     }}
                     className="max-w-sm"
                   />
@@ -1116,49 +1178,6 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                     </div>
                   )}
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <Select value={submissionEventFilter} onValueChange={(v) => {
-                    setSubmissionEventFilter(v);
-                    setSubmissionPostFilter("all");
-                  }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filtrar por evento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os eventos</SelectItem>
-                      {events.map((event) => (
-                        <SelectItem key={event.id} value={event.id}>
-                          {event.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={submissionPostFilter} onValueChange={setSubmissionPostFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Número da postagem" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os números</SelectItem>
-                      {getAvailablePostNumbers().map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          Postagem #{num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={submissionStatusFilter} onValueChange={setSubmissionStatusFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os status</SelectItem>
-                      <SelectItem value="pending">Aguardando aprovação</SelectItem>
-                      <SelectItem value="approved">Aprovados</SelectItem>
-                      <SelectItem value="rejected">Reprovados</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  </div>
                 </div>
               
               <Card className="p-6">
