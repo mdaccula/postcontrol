@@ -97,37 +97,22 @@ export const useUserManagement = () => {
         if (data && data.length > 0) {
           await loadUserEvents(data.map((u) => u.id));
         }
-      } else if (currentAgencyId) {
-        const { data: submissionsData, error: submissionsError } = await sb
-          .from("submissions")
-          .select(
-            `
-            user_id,
-            posts!inner(
-              event_id,
-              events!inner(
-                agency_id
-              )
-            )
-          `
-          )
-          .eq("posts.events.agency_id", currentAgencyId);
+   } else if (currentAgencyId) {
+  // 🆕 NOVA LÓGICA: Buscar TODOS os usuários da agência (com ou sem submissões)
+  const { data: profilesData, error: profilesError } = await sb
+    .from("profiles")
+    .select("*, gender")
+    .eq("agency_id", currentAgencyId) // ✅ Usa o agency_id do profile
+    .order("created_at", { ascending: false });
 
-        if (submissionsError) throw submissionsError;
+  if (profilesError) throw profilesError;
 
-        const userIds = Array.from(new Set((submissionsData || []).map((s: any) => s.user_id)));
+  setUsers(profilesData || []);
 
-        if (userIds.length === 0) {
-          setUsers([]);
-          setLoading(false);
-          return;
-        }
-
-        const { data: profilesData, error: profilesError } = await sb
-          .from("profiles")
-          .select("*, gender")
-          .in("id", userIds)
-          .order("created_at", { ascending: false });
+  if (profilesData && profilesData.length > 0) {
+    await loadUserEvents(profilesData.map((u) => u.id));
+  }
+}
 
         if (profilesError) throw profilesError;
 
