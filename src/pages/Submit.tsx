@@ -294,58 +294,117 @@ const Submit = () => {
       setHasExistingPhone(!!data.phone);
     }
   };
+// 🆕 Função para comprimir imagens
+const compressImage = async (file: File, maxWidth: number = 1080, quality: number = 0.8): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, uploadType: 'post' | 'sale' | 'profile' = 'post') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+        // Redimensionar mantendo proporção
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg', // Sempre converter para JPEG
+                lastModified: Date.now(),
+              });
+              console.log(`📦 Imagem comprimida: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Erro ao comprimir imagem'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+  });
+};
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, uploadType: 'post' | 'sale' | 'profile' = 'post') => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    
+    // Validação de tamanho ANTES de comprimir (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A imagem deve ter no máximo 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validar tipo de arquivo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Formato inválido",
+        description: "Use apenas imagens JPG, PNG ou WEBP.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // 🆕 COMPRIMIR IMAGEM
+      const compressedFile = await compressImage(file, 1080, 0.8);
       
-      // M3: Validação de tamanho (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "A imagem deve ter no máximo 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Validar tipo de arquivo
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
-        toast({
-          title: "Formato inválido",
-          description: "Use apenas imagens JPG, PNG ou WEBP.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // 🆕 Suporte para 3 tipos de upload
+      // Suporte para 3 tipos de upload
       if (uploadType === "post") {
-        setSelectedFile(file);
+        setSelectedFile(compressedFile);
         const reader = new FileReader();
         reader.onloadend = () => {
           setPreviewUrl(reader.result as string);
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressedFile);
       } else if (uploadType === "sale") {
-        setSalesProofFile(file);
+        setSalesProofFile(compressedFile);
         const reader = new FileReader();
         reader.onloadend = () => {
           setSalesProofPreview(reader.result as string);
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressedFile);
       } else if (uploadType === "profile") {
-        setProfileScreenshotFile(file);
+        setProfileScreenshotFile(compressedFile);
         const reader = new FileReader();
         reader.onloadend = () => {
           setProfileScreenshotPreview(reader.result as string);
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressedFile);
       }
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error);
+      toast({
+        title: "Erro ao processar imagem",
+        description: "Tente novamente ou use outra imagem.",
+        variant: "destructive",
+      });
     }
-  };
+  }
+};
 
+  
   const handleRemoveImage = (uploadType: 'post' | 'sale' | 'profile' = 'post') => {
     if (uploadType === "post") {
       setSelectedFile(null);
