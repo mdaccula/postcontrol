@@ -744,12 +744,6 @@ const Submit = () => {
 
             {selectedEvent && selectedEventData && (
               <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant={selectedEventData.event_purpose === "divulgacao" ? "default" : "secondary"}>
-                    {selectedEventData.event_purpose === "divulgacao" ? "📢 Divulgação" : "👤 Seleção de Perfil"}
-                  </Badge>
-                </div>
-                
                 {selectedEventData.event_image_url && (
                   <div className="flex justify-center mb-3">
                     <img
@@ -799,7 +793,6 @@ const Submit = () => {
                   <div className="flex items-center gap-2">
                     <Badge 
                       variant={selectedEventData?.event_purpose === "selecao_perfil" ? "secondary" : "default"}
-                      className="text-base py-2 px-4"
                     >
                       {selectedEventData?.event_purpose === "selecao_perfil" ? "👤 Seleção de Perfil" : "📢 Divulgação"}
                     </Badge>
