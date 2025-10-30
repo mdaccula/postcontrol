@@ -339,57 +339,62 @@ export const UserManagement = () => {
             {filteredUsers.map((user) => (
               <Card key={user.id} className="p-6">
                 {editingUser === user.id ? (
-                  aqui
-                
-               <div className="space-y-4">
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <Label>Nome Completo</Label>
-      <Input
-        value={editForm.full_name || ""}
-        onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-      />
-    </div>
-    <div>
-      <Label>Email</Label>
-      <Input
-        type="email"
-        value={editForm.email || ""}
-        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-      />
-    </div>
-    <div>
-      <Label>Instagram (sem @)</Label>
-      <Input
-        value={editForm.instagram || ""}
-        onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
-      />
-    </div>
-    <div>
-      <Label>Telefone</Label>
-      <Input
-        value={editForm.phone || ""}
-        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-      />
-    </div>
-    <div>
-      <Label>Sexo</Label>
-      <select 
-        value={editForm.gender || ""} 
-        onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-      >
-        <option value="">Não definido</option>
-        <option value="Masculino">Masculino</option>
-        <option value="Feminino">Feminino</option>
-        <option value="LGBTQ+">LGBTQ+</option>
-      </select>
-    </div>
-  </div>
-  <div className="flex gap-2 justify-end">
-    ...
-  </div>
-</div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Nome Completo</Label>
+                        <Input
+                          value={editForm.full_name || ""}
+                          onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={editForm.email || ""}
+                          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Instagram (sem @)</Label>
+                        <Input
+                          value={editForm.instagram || ""}
+                          onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Telefone</Label>
+                        <Input
+                          value={editForm.phone || ""}
+                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Sexo</Label>
+                        <select 
+                          value={editForm.gender || ""} 
+                          onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">Não definido</option>
+                          <option value="Masculino">Masculino</option>
+                          <option value="Feminino">Feminino</option>
+                          <option value="LGBTQ+">LGBTQ+</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                        <X className="h-4 w-4 mr-1" />
+                        Cancelar
+                      </Button>
+                      <Button size="sm" onClick={() => saveEdit(user.id)}>
+                        <Save className="h-4 w-4 mr-1" />
+                        Salvar
+                      </Button>
+                    </div>
+                  </div>
 
                 ) : (
                   <div className="flex justify-between items-start">
