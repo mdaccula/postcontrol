@@ -4,35 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  Building2, 
-  Users, 
-  DollarSign, 
-  TrendingUp,
-  Plus,
-  Settings,
-  ExternalLink,
-  Copy
-} from "lucide-react";
+import { ArrowLeft, Building2, Users, DollarSign, TrendingUp, Plus, Settings, ExternalLink, Copy } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlanManager } from "@/components/PlanManager";
 import { AdminManager } from "@/components/AdminManager";
@@ -85,12 +63,12 @@ const MasterAdmin = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
       return;
     }
 
     if (!isMasterAdmin) {
-      navigate('/dashboard');
+      navigate("/dashboard");
       toast({
         title: "Acesso Negado",
         description: "Você não tem permissão para acessar esta área.",
@@ -105,11 +83,11 @@ const MasterAdmin = () => {
 
   const loadPlans = async () => {
     const { data } = await sb
-      .from('subscription_plans')
-      .select('*')
-      .eq('is_visible', true)
-      .order('monthly_price', { ascending: true });
-    
+      .from("subscription_plans")
+      .select("*")
+      .eq("is_visible", true)
+      .order("monthly_price", { ascending: true });
+
     if (data) {
       setPlans(data);
     }
@@ -118,13 +96,10 @@ const MasterAdmin = () => {
   const loadAgencies = async () => {
     setLoading(true);
 
-    const { data, error } = await sb
-      .from('agencies')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await sb.from("agencies").select("*").order("created_at", { ascending: false });
 
     if (error) {
-      console.error('Error loading agencies:', error);
+      console.error("Error loading agencies:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as agências.",
@@ -139,19 +114,37 @@ const MasterAdmin = () => {
     // Load stats for each agency
     if (data) {
       const stats: Record<string, AgencyStats> = {};
-      
+
       for (const agency of data) {
+        // Buscar IDs de admins para excluir da contagem
+        const { data: adminRoles } = await sb
+          .from("user_roles")
+          .select("user_id")
+          .in("role", ["agency_admin", "master_admin"]);
+
+        const adminIds = adminRoles?.map((r) => r.user_id) || [];
+
+        // Contar profiles excluindo admins
+        let influencersQuery = sb
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("agency_id", agency.id);
+
+        if (adminIds.length > 0) {
+          influencersQuery = influencersQuery.not("id", "in", `(${adminIds.join(",")})`);
+        }
+
         const [influencersRes, eventsRes, submissionsRes] = await Promise.all([
-          sb.from('profiles').select('id', { count: 'exact', head: true }).eq('agency_id', agency.id),
-          sb.from('events').select('id', { count: 'exact', head: true }).eq('agency_id', agency.id),
-          sb.from('submissions').select('id', { count: 'exact', head: true }).eq('agency_id', agency.id),
+          influencersQuery,
+          sb.from("events").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
+          sb.from("submissions").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
         ]);
 
         stats[agency.id] = {
           totalInfluencers: influencersRes.count || 0,
           totalEvents: eventsRes.count || 0,
           totalSubmissions: submissionsRes.count || 0,
-          activeInfluencers: influencersRes.count || 0, // Can be refined later
+          activeInfluencers: influencersRes.count || 0,
         };
       }
 
@@ -164,19 +157,17 @@ const MasterAdmin = () => {
   const handleCreateAgency = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await sb
-      .from('agencies')
-      .insert({
-        name: newAgency.name,
-        slug: newAgency.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-        subscription_plan: newAgency.subscription_plan,
-        subscription_status: 'trial',
-        max_influencers: newAgency.max_influencers,
-        max_events: newAgency.max_events,
-      });
+    const { error } = await sb.from("agencies").insert({
+      name: newAgency.name,
+      slug: newAgency.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+      subscription_plan: newAgency.subscription_plan,
+      subscription_status: "trial",
+      max_influencers: newAgency.max_influencers,
+      max_events: newAgency.max_events,
+    });
 
     if (error) {
-      console.error('Error creating agency:', error);
+      console.error("Error creating agency:", error);
       toast({
         title: "Erro",
         description: "Não foi possível criar a agência. Verifique se o slug já não existe.",
@@ -204,20 +195,20 @@ const MasterAdmin = () => {
 
   const getTotalRevenue = () => {
     return agencies
-      .filter(a => a.subscription_status === 'active')
+      .filter((a) => a.subscription_status === "active")
       .reduce((sum, a) => {
-        const plan = plans.find(p => p.plan_key === a.subscription_plan);
+        const plan = plans.find((p) => p.plan_key === a.subscription_plan);
         return sum + (plan?.monthly_price || 0);
       }, 0);
   };
 
   const getFullAgencyUrl = async (token: string) => {
     const { data } = await sb
-      .from('admin_settings')
-      .select('setting_value')
-      .eq('setting_key', 'custom_domain')
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "custom_domain")
       .maybeSingle();
-    
+
     const baseDomain = data?.setting_value || window.location.origin;
     return `${baseDomain}/agency/${token}`;
   };
@@ -274,9 +265,7 @@ const MasterAdmin = () => {
               </Button>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Painel Master
-          </h1>
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Painel Master</h1>
         </div>
 
         {/* Stats Overview */}
@@ -327,7 +316,7 @@ const MasterAdmin = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Agências Ativas</p>
                 <p className="text-3xl font-bold">
-                  {agencies.filter(a => a.subscription_status === 'active').length}
+                  {agencies.filter((a) => a.subscription_status === "active").length}
                 </p>
               </div>
             </div>
@@ -378,9 +367,7 @@ const MasterAdmin = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Criar Nova Agência</DialogTitle>
-            <DialogDescription>
-              Cadastre uma nova agência no sistema
-            </DialogDescription>
+            <DialogDescription>Cadastre uma nova agência no sistema</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateAgency} className="space-y-4">
             <div className="space-y-2">
@@ -403,15 +390,13 @@ const MasterAdmin = () => {
                 placeholder="marketing-digital"
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Apenas letras minúsculas, números e hífens
-              </p>
+              <p className="text-xs text-muted-foreground">Apenas letras minúsculas, números e hífens</p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="plan">Plano *</Label>
-              <Select 
-                value={newAgency.subscription_plan} 
+              <Select
+                value={newAgency.subscription_plan}
                 onValueChange={(value) => setNewAgency({ ...newAgency, subscription_plan: value })}
               >
                 <SelectTrigger>
