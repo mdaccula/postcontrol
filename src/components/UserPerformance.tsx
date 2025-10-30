@@ -177,38 +177,53 @@ export const UserPerformance = () => {
     });
   };
 
-  const exportToPDF = () => {
-    const eventName = selectedEventId === "all" 
-      ? "Todos os Eventos" 
-      : events.find(e => e.id === selectedEventId)?.title || "Evento";
+ const exportToPDF = () => {
+  const eventName = selectedEventId === "all" 
+    ? "Todos os Eventos" 
+    : events.find(e => e.id === selectedEventId)?.title || "Evento";
 
-    const doc = new jsPDF();
-    
-    // Configurar fonte para UTF-8
-    doc.setFont("helvetica");
-    
-    // Título
-    doc.setFontSize(18);
-    doc.text(`Relatorio de Desempenho - ${eventName}`, 14, 20);
-    doc.setFontSize(11);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+  const doc = new jsPDF();
+  
+  // 🆕 Título SEM CARACTERES ESPECIAIS
+  doc.setFontSize(18);
+  doc.text(`Relatorio de Desempenho - ${eventName}`, 14, 20);
+  doc.setFontSize(11);
+  doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
 
-    // Tabela
-    autoTable(doc, {
-      startY: 35,
-      head: [['Nome', 'Email', 'Instagram', 'Aprovados', 'Pendentes', 'Conclusao (%)']],
-      body: filteredStats.map(stat => [
-        stat.user_name,
-        stat.user_email,
-        stat.user_instagram,
-        stat.approved_submissions.toString(),
-        stat.pending_submissions.toString(),
-        `${stat.completion_percentage}%`
-      ]),
-      styles: { fontSize: 9, font: 'helvetica' },
-      headStyles: { fillColor: [168, 85, 247] }
-    });
+  // 🆕 Tabela COM ENCODING CORRETO
+  autoTable(doc, {
+    startY: 35,
+    head: [['Nome', 'Email', 'Instagram', 'Aprovados', 'Pendentes', 'Conclusao (%)']],
+    body: filteredStats.map(stat => [
+      stat.user_name,
+      stat.user_email,
+      stat.user_instagram,
+      stat.approved_submissions.toString(),
+      stat.pending_submissions.toString(),
+      `${stat.completion_percentage}%`
+    ]),
+    styles: { 
+      fontSize: 9, 
+      font: 'helvetica',
+      cellPadding: 3
+    },
+    headStyles: { 
+      fillColor: [168, 85, 247],
+      fontSize: 10,
+      fontStyle: 'bold'
+    },
+    // 🆕 ADICIONAR ESTAS LINHAS PARA UTF-8
+    didDrawCell: (data) => {
+      // Força encoding UTF-8
+      if (data.cell.text && Array.isArray(data.cell.text)) {
+        data.cell.text = data.cell.text.map(t => 
+          typeof t === 'string' ? t.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : t
+        );
+      }
+    }
+  });
 
+   
     doc.save(`Relatorio_${eventName}_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success("Relatório PDF exportado com sucesso!", {
       description: "O arquivo foi baixado para seu computador."
