@@ -90,11 +90,11 @@ export const UserManagement = () => {
     try {
       // Carregar eventos
       const { data: eventsData } = await sb
-        .from('events')
-        .select('id, title, is_active')
-        .eq('is_active', true)
-        .order('title');
-      
+        .from("events")
+        .select("id, title, is_active")
+        .eq("is_active", true)
+        .order("title");
+
       setEvents(eventsData || []);
 
       if (isMasterAdmin) {
@@ -105,10 +105,10 @@ export const UserManagement = () => {
         if (error) throw error;
         console.log(`📊 Loaded ${data?.length || 0} users (master admin)`);
         setUsers(data || []);
-        
+
         // Carregar eventos por usuário
         if (data && data.length > 0) {
-          await loadUserEvents(data.map(u => u.id));
+          await loadUserEvents(data.map((u) => u.id));
         }
       } else if (currentAgencyId) {
         // Agency admin vê apenas usuários que fizeram submissões em eventos da sua agência
@@ -162,10 +162,10 @@ export const UserManagement = () => {
 
         console.log(`📊 Loaded ${profilesData?.length || 0} users for agency ${currentAgencyId}`);
         setUsers(profilesData || []);
-        
+
         // Carregar eventos por usuário
         if (profilesData && profilesData.length > 0) {
-          await loadUserEvents(profilesData.map(u => u.id));
+          await loadUserEvents(profilesData.map((u) => u.id));
         }
       } else {
         console.warn("⚠️ Agency admin sem currentAgencyId definido");
@@ -183,46 +183,43 @@ export const UserManagement = () => {
   const loadUserEvents = async (userIds: string[]) => {
     // Buscar eventos únicos por usuário via submissions
     const eventsMap: Record<string, string[]> = {};
-    
+
     for (const userId of userIds) {
       const { data } = await sb
-        .from('submissions')
-        .select(`
+        .from("submissions")
+        .select(
+          `
           posts!inner(
             events!inner(
               id,
               title
             )
           )
-        `)
-        .eq('user_id', userId);
-      
+        `,
+        )
+        .eq("user_id", userId);
+
       if (data && data.length > 0) {
-        const eventTitles = Array.from(
-          new Set(
-            data
-              .map((s: any) => s.posts?.events?.title)
-              .filter(Boolean)
-          )
-        );
+        const eventTitles = Array.from(new Set(data.map((s: any) => s.posts?.events?.title).filter(Boolean)));
         eventsMap[userId] = eventTitles as string[];
       } else {
         eventsMap[userId] = [];
       }
     }
-    
+
     setUserEvents(eventsMap);
   };
 
-  const startEdit = (user: Profile) => {
-    setEditingUser(user.id);
-    setEditForm({
-      email: user.email,
-      phone: user.phone,
-      full_name: user.full_name,
-      instagram: user.instagram,
-    });
-  };
+  const { error } = await sb
+    .from("profiles")
+    .update({
+      email: editForm.email,
+      phone: editForm.phone,
+      full_name: editForm.full_name,
+      instagram: editForm.instagram,
+      gender: editForm.gender, // ADICIONAR ESTA LINHA
+    })
+    .eq("id", userId);
 
   const cancelEdit = () => {
     setEditingUser(null);
@@ -266,18 +263,18 @@ export const UserManagement = () => {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = 
+    const matchesSearch =
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.instagram?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone?.includes(searchTerm);
-    
+
     const matchesGender = genderFilter === "all" || user.gender === genderFilter;
-    
-    const matchesEvent = eventFilter === "all" || (userEvents[user.id]?.some(eventTitle => 
-      events.find(e => e.title === eventTitle)?.id === eventFilter
-    ));
-    
+
+    const matchesEvent =
+      eventFilter === "all" ||
+      userEvents[user.id]?.some((eventTitle) => events.find((e) => e.title === eventTitle)?.id === eventFilter);
+
     return matchesSearch && matchesGender && matchesEvent;
   });
 
@@ -296,16 +293,12 @@ export const UserManagement = () => {
           <h2 className="text-2xl font-bold">Gerenciador de Usuários</h2>
           <CSVImportExport onImportComplete={loadUsers} />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Input 
-            placeholder="Buscar usuário..." 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-          />
-          
-          <select 
-            value={genderFilter} 
+          <Input placeholder="Buscar usuário..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+
+          <select
+            value={genderFilter}
             onChange={(e) => setGenderFilter(e.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
@@ -314,15 +307,17 @@ export const UserManagement = () => {
             <option value="Feminino">Feminino</option>
             <option value="LGBTQ+">LGBTQ+</option>
           </select>
-          
-          <select 
-            value={eventFilter} 
+
+          <select
+            value={eventFilter}
             onChange={(e) => setEventFilter(e.target.value)}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="all">Todos os eventos</option>
-            {events.map(event => (
-              <option key={event.id} value={event.id}>{event.title}</option>
+            {events.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.title}
+              </option>
             ))}
           </select>
         </div>
@@ -367,17 +362,21 @@ export const UserManagement = () => {
                           onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                         />
                       </div>
+                      <div>
+                        <Label>Sexo</Label>
+                        <select
+                          value={editForm.gender || ""}
+                          onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">Não definido</option>
+                          <option value="Masculino">Masculino</option>
+                          <option value="Feminino">Feminino</option>
+                          <option value="LGBTQ+">LGBTQ+</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={cancelEdit}>
-                        <X className="mr-2 h-4 w-4" />
-                        Cancelar
-                      </Button>
-                      <Button onClick={() => saveEdit(user.id)} className="bg-gradient-primary">
-                        <Save className="mr-2 h-4 w-4" />
-                        Salvar
-                      </Button>
-                    </div>
+                    <div className="flex gap-2 justify-end">...</div>
                   </div>
                 ) : (
                   <div className="flex justify-between items-start">
@@ -416,7 +415,10 @@ export const UserManagement = () => {
                             <span className="text-muted-foreground">Eventos participando:</span>{" "}
                             <div className="flex flex-wrap gap-1 mt-1">
                               {userEvents[user.id].map((eventTitle, idx) => (
-                                <span key={idx} className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded">
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded"
+                                >
                                   {eventTitle}
                                 </span>
                               ))}
