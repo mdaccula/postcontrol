@@ -177,11 +177,10 @@ export const AllUsersManagement = () => {
     if (!confirm) return;
 
     try {
-      // Delete user (cascade will handle submissions)
-      const { error } = await sb
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
+      // Chamar edge function que tem permissão para deletar usuários
+      const { data, error } = await sb.functions.invoke('delete-user', {
+        body: { userId }
+      });
 
       if (error) throw error;
 
