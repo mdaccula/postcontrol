@@ -21,6 +21,7 @@ const SubmissionKanban = lazy(() => import("@/components/SubmissionKanban").then
 const SubmissionAuditLog = lazy(() => import("@/components/SubmissionAuditLog").then(m => ({ default: m.SubmissionAuditLog })));
 const SubmissionComments = lazy(() => import("@/components/SubmissionComments").then(m => ({ default: m.SubmissionComments })));
 const SubmissionImageDisplay = lazy(() => import("@/components/SubmissionImageDisplay").then(m => ({ default: m.SubmissionImageDisplay })));
+import { SubmissionZoomDialog } from "@/components/SubmissionZoomDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -74,6 +75,8 @@ const Admin = () => {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [usersCount, setUsersCount] = useState(0);
+  const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
+  const [zoomSubmissionIndex, setZoomSubmissionIndex] = useState(0);
 
   // Debounce para busca
   useEffect(() => {
@@ -475,6 +478,29 @@ const confirmRejection = async () => {
     setLoadingSubmissions(false);
   }
 };
+
+  // Funções de navegação do zoom
+  const handleOpenZoom = (submissionId: string) => {
+    const filtered = getFilteredSubmissions();
+    const index = filtered.findIndex(s => s.id === submissionId);
+    if (index !== -1) {
+      setZoomSubmissionIndex(index);
+      setZoomDialogOpen(true);
+    }
+  };
+
+  const handleZoomNext = () => {
+    const filtered = getFilteredSubmissions();
+    if (zoomSubmissionIndex < filtered.length - 1) {
+      setZoomSubmissionIndex(prev => prev + 1);
+    }
+  };
+
+  const handleZoomPrevious = () => {
+    if (zoomSubmissionIndex > 0) {
+      setZoomSubmissionIndex(prev => prev - 1);
+    }
+  };
 
   const rejectionTemplates = [
     { value: "formato", label: "Imagem fora do padrão" },
@@ -1365,25 +1391,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                           {/* Screenshot */}
                           <div 
                             className="w-full sm:w-48 h-64 sm:h-48 flex-shrink-0 order-2 sm:order-2 cursor-pointer"
-                            onClick={async () => {
-                              if (!submission.screenshot_path) return;
-                              
-                              // Usar cache se já gerou
-                              if (imageUrls[submission.id]) {
-                                setSelectedImageForZoom(imageUrls[submission.id]);
-                                return;
-                              }
-                              
-                              // Gerar nova URL assinada
-                              const { data } = await supabase.storage
-                                .from('screenshots')
-                                .createSignedUrl(submission.screenshot_path, 3600);
-                                
-                              if (data?.signedUrl) {
-                                setImageUrls(prev => ({ ...prev, [submission.id]: data.signedUrl }));
-                                setSelectedImageForZoom(data.signedUrl);
-                              }
-                            }}
+                            onClick={() => handleOpenZoom(submission.id)}
                           >
                             <Suspense fallback={<Skeleton className="w-full h-full rounded-lg" />}>
                               <SubmissionImageDisplay
@@ -1882,6 +1890,21 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           selectedEventId={submissionEventFilter !== "all" ? submissionEventFilter : undefined}
         />
       </Suspense>
+
+      {/* Zoom Dialog com navegação */}
+      {getFilteredSubmissions().length > 0 && (
+        <SubmissionZoomDialog
+          open={zoomDialogOpen}
+          onOpenChange={setZoomDialogOpen}
+          submission={getFilteredSubmissions()[zoomSubmissionIndex]}
+          onApprove={handleApproveSubmission}
+          onReject={handleRejectSubmission}
+          onNext={handleZoomNext}
+          onPrevious={handleZoomPrevious}
+          hasNext={zoomSubmissionIndex < getFilteredSubmissions().length - 1}
+          hasPrevious={zoomSubmissionIndex > 0}
+        />
+      )}
     </div>
   );
 };
