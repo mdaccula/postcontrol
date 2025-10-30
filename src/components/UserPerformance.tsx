@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface UserStats {
   user_id: string;
@@ -36,10 +37,28 @@ export const UserPerformance = () => {
   const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isMasterAdmin, setIsMasterAdmin] = useState<boolean>(false);
+  const [debouncedSearchName, setDebouncedSearchName] = useState("");
+  const [debouncedSearchPhone, setDebouncedSearchPhone] = useState("");
 
   useEffect(() => {
     checkAgencyAndLoadEvents();
   }, []);
+
+  // Debounce search name
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchName(searchName);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchName]);
+
+  // Debounce search phone
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchPhone(searchPhone);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchPhone]);
 
   const checkAgencyAndLoadEvents = async () => {
     const { data: { user } } = await sb.auth.getUser();
@@ -153,7 +172,9 @@ export const UserPerformance = () => {
       type: 'binary',
       compression: true
     });
-    toast.success("Relatório Excel exportado com sucesso!");
+    toast.success("Relatório Excel exportado com sucesso!", {
+      description: "O arquivo foi baixado para seu computador."
+    });
   };
 
   const exportToPDF = () => {
@@ -189,7 +210,9 @@ export const UserPerformance = () => {
     });
 
     doc.save(`Relatorio_${eventName}_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("Relatório PDF exportado com sucesso!");
+    toast.success("Relatório PDF exportado com sucesso!", {
+      description: "O arquivo foi baixado para seu computador."
+    });
   };
 
   const loadAllStats = async () => {
@@ -390,17 +413,33 @@ export const UserPerformance = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-64" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        <Card className="p-6">
+          <Skeleton className="h-48 w-full" />
+        </Card>
+        <div className="grid gap-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       </div>
     );
   }
 
-  const filteredStats = userStats.filter((stat) => {
-    const matchesName = stat.user_name.toLowerCase().includes(searchName.toLowerCase());
-    const matchesPhone = stat.user_phone.toLowerCase().includes(searchPhone.toLowerCase());
-    return matchesName && matchesPhone;
-  });
+  const filteredStats = useMemo(() => {
+    return userStats.filter((stat) => {
+      const matchesName = stat.user_name.toLowerCase().includes(debouncedSearchName.toLowerCase());
+      const matchesPhone = stat.user_phone.toLowerCase().includes(debouncedSearchPhone.toLowerCase());
+      return matchesName && matchesPhone;
+    });
+  }, [userStats, debouncedSearchName, debouncedSearchPhone]);
 
   return (
     <div className="space-y-6">

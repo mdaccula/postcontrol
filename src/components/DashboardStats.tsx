@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -280,7 +280,9 @@ export const DashboardStats = () => {
       type: 'binary', 
       compression: true 
     });
-    toast.success("Relatório Excel completo exportado com sucesso!");
+    toast.success("Relatório Excel completo exportado com sucesso!", {
+      description: "O arquivo foi baixado para seu computador."
+    });
     setShowExportDialog(false);
   };
 

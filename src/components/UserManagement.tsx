@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Pencil, Save, X } from "lucide-react";
 import { z } from "zod";
 import { CSVImportExport } from "@/components/CSVImportExport";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Profile {
   id: string;
@@ -44,10 +45,19 @@ export const UserManagement = () => {
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [events, setEvents] = useState<any[]>([]);
   const [userEvents, setUserEvents] = useState<Record<string, string[]>>({});
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
   useEffect(() => {
     checkAdminStatus();
   }, []);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Carregar usuários apenas quando isMasterAdmin e currentAgencyId estiverem definidos
   useEffect(() => {
@@ -178,7 +188,9 @@ export const UserManagement = () => {
         setUsers([]);
       }
     } catch (error) {
-      toast.error("Erro ao carregar usuários");
+      toast.error("Erro ao carregar usuários", {
+        description: "Não foi possível carregar a lista de usuários. Tente novamente."
+      });
       console.error("❌ Erro ao carregar usuários:", error);
       setUsers([]);
     }
@@ -260,35 +272,56 @@ export const UserManagement = () => {
       .eq("id", userId);
 
     if (error) {
-      toast.error("Erro ao atualizar usuário");
+      toast.error("Erro ao atualizar usuário", {
+        description: "Não foi possível salvar as alterações. Verifique os dados e tente novamente."
+      });
       console.error(error);
     } else {
-      toast.success("Usuário atualizado com sucesso");
+      toast.success("Usuário atualizado com sucesso", {
+        description: "As informações do usuário foram salvas."
+      });
       await loadUsers();
       cancelEdit();
     }
   };
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.instagram?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone?.includes(searchTerm);
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesSearch =
+        user.full_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        user.instagram?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        user.phone?.includes(debouncedSearchTerm);
 
-    const matchesGender = genderFilter === "all" || user.gender === genderFilter;
+      const matchesGender = genderFilter === "all" || user.gender === genderFilter;
 
-    const matchesEvent =
-      eventFilter === "all" ||
-      userEvents[user.id]?.some((eventTitle) => events.find((e) => e.title === eventTitle)?.id === eventFilter);
+      const matchesEvent =
+        eventFilter === "all" ||
+        userEvents[user.id]?.some((eventTitle) => events.find((e) => e.title === eventTitle)?.id === eventFilter);
 
-    return matchesSearch && matchesGender && matchesEvent;
-  });
+      return matchesSearch && matchesGender && matchesEvent;
+    });
+  }, [users, debouncedSearchTerm, genderFilter, eventFilter, userEvents, events]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <Card className="p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </Card>
       </div>
     );
   }

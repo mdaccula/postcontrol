@@ -162,9 +162,13 @@ export const SubmissionKanban = ({ submissions, onUpdate, userId }: SubmissionKa
 
     if (error) {
       console.error('Error updating status:', error);
-      toast.error("Erro ao atualizar status");
+      toast.error("Erro ao atualizar status", {
+        description: "Não foi possível atualizar o status da submissão. Tente novamente."
+      });
     } else {
-      toast.success(`Status atualizado para ${newStatus === 'approved' ? 'aprovado' : newStatus === 'rejected' ? 'rejeitado' : 'pendente'}`);
+      toast.success(`Status atualizado para ${newStatus === 'approved' ? 'aprovado' : newStatus === 'rejected' ? 'rejeitado' : 'pendente'}`, {
+        description: "A submissão foi movida para a nova coluna."
+      });
       onUpdate();
     }
   };
