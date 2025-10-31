@@ -4,36 +4,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { sb } from "@/lib/supabaseSafe";
-import { Trophy, Users, Target, TrendingUp, FileSpreadsheet, FileText } from "lucide-react";
+import { Trophy, Users, FileSpreadsheet, FileText } from "lucide-react";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface UserStats {
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  user_instagram: string;
-  user_phone: string;
-  user_gender: string;
-  user_followers_range: string;
-  events_participated: number;
-  total_submissions: number;
-  approved_submissions: number;
-  pending_submissions: number;
-  rejected_submissions: number;
-  total_posts_available: number;
-  completion_percentage: number;
-}
+import { 
+  usePerformanceEvents, 
+  useAllUserStats, 
+  useEventUserStats,
+  type UserStats
+} from "@/hooks/useUserPerformance";
 
 export const UserPerformance = () => {
-  const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [userStats, setUserStats] = useState<UserStats[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchName, setSearchName] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
@@ -41,6 +27,26 @@ export const UserPerformance = () => {
   const [isMasterAdmin, setIsMasterAdmin] = useState<boolean>(false);
   const [debouncedSearchName, setDebouncedSearchName] = useState("");
   const [debouncedSearchPhone, setDebouncedSearchPhone] = useState("");
+
+  // Buscar eventos com cache
+  const { data: events = [], isLoading: eventsLoading } = usePerformanceEvents(isMasterAdmin, currentAgencyId);
+
+  // Buscar estatísticas com cache (só quando usuário clicar em buscar)
+  const { data: allStatsData = [], isLoading: allStatsLoading, refetch: refetchAllStats } = useAllUserStats(
+    currentAgencyId,
+    isMasterAdmin,
+    false // disabled por padrão
+  );
+
+  const { data: eventStatsData = [], isLoading: eventStatsLoading, refetch: refetchEventStats } = useEventUserStats(
+    selectedEventId,
+    currentAgencyId,
+    isMasterAdmin,
+    false // disabled por padrão
+  );
+
+  const loading = eventsLoading || allStatsLoading || eventStatsLoading;
+  const userStats = selectedEventId === "all" ? allStatsData : eventStatsData;
 
   useEffect(() => {
     checkAgencyAndLoadEvents();
@@ -66,82 +72,44 @@ export const UserPerformance = () => {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
 
-    // Verificar se é master admin
-    const { data: roleData } = await sb
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'master_admin')
-      .maybeSingle();
-    
-    const isMaster = !!roleData;
-    setIsMasterAdmin(isMaster);
-
-    if (isMaster) {
-      // Master admin vê todos os eventos
-      await loadAllEvents();
-    } else {
-      // Agency admin vê apenas seus eventos
-      const { data: agencyData } = await sb
-        .from('agencies')
+    // Verificar role e agência em paralelo
+    const [roleResult, agencyResult] = await Promise.all([
+      sb.from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'master_admin')
+        .maybeSingle(),
+      sb.from('agencies')
         .select('id')
         .eq('owner_id', user.id)
-        .maybeSingle();
-      
-      const agencyId = agencyData?.id || null;
-      setCurrentAgencyId(agencyId);
-      
-      if (agencyId) {
-        await loadEvents(agencyId);
-      }
-    }
-  };
+        .maybeSingle()
+    ]);
 
-  const loadAllEvents = async () => {
-    const { data } = await sb
-      .from('events')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    setEvents(data || []);
-    if (data && data.length > 0) {
+    const isMaster = !!roleResult.data;
+    setIsMasterAdmin(isMaster);
+
+    const agencyId = agencyResult.data?.id || null;
+    setCurrentAgencyId(agencyId);
+
+    // Setar selectedEventId inicial
+    if (events.length > 0) {
       setSelectedEventId("all");
     }
   };
 
-  const loadEvents = async (agencyId: string) => {
-    const { data } = await sb
-      .from('events')
-      .select('*')
-      .eq('agency_id', agencyId)
-      .order('created_at', { ascending: false });
-    
-    console.log('👤 Loaded events for agency:', data?.length || 0);
-    setEvents(data || []);
-    if (data && data.length > 0) {
-      setSelectedEventId("all");
-    }
-  };
-
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!selectedEventId) {
       toast.error("Por favor, selecione um evento antes de buscar.");
       return;
     }
+    
     setHasSearched(true);
-    loadStats();
-  };
-
-  const loadStats = async () => {
-    setLoading(true);
-    try {
-      if (selectedEventId === "all") {
-        await loadAllStats();
-      } else {
-        await loadEventSpecificStats(selectedEventId);
-      }
-    } finally {
-      setLoading(false);
+    
+    // Trigger refetch com base no selectedEventId
+    if (selectedEventId === "all") {
+      await refetchAllStats();
+    } else {
+      await refetchEventStats();
     }
   };
 
@@ -228,206 +196,6 @@ export const UserPerformance = () => {
     description: "O arquivo foi baixado para seu computador."
   });
 };
-
-  const loadAllStats = async () => {
-    if (!currentAgencyId && !isMasterAdmin) {
-      console.warn('⚠️ No agency ID available');
-      return;
-    }
-
-    // Buscar eventos da agência ou todos se master admin
-    let eventsQuery = sb.from('events').select('id');
-    
-    if (!isMasterAdmin && currentAgencyId) {
-      eventsQuery = eventsQuery.eq('agency_id', currentAgencyId);
-    }
-    
-    const { data: agencyEvents } = await eventsQuery;
-
-    const eventIds = (agencyEvents || []).map(e => e.id);
-
-    if (eventIds.length === 0) {
-      console.log('⚠️ Nenhum evento encontrado para a agência');
-      setUserStats([]);
-      return;
-    }
-
-    // Buscar posts desses eventos
-    const { data: postsData } = await sb
-      .from('posts')
-      .select('id, event_id')
-      .in('event_id', eventIds);
-
-    const postIds = (postsData || []).map(p => p.id);
-
-    if (postIds.length === 0) {
-      console.log('⚠️ Nenhum post encontrado');
-      setUserStats([]);
-      return;
-    }
-
-    // Buscar submissões desses posts
-    const { data: submissionsData } = await sb
-      .from('submissions')
-      .select('user_id, status, post_id')
-      .in('post_id', postIds);
-
-    const uniqueUserIds = Array.from(new Set((submissionsData || []).map(s => s.user_id)));
-
-    if (uniqueUserIds.length === 0) {
-      console.log('⚠️ Nenhum usuário encontrado');
-      setUserStats([]);
-      return;
-    }
-
-    const { data: profilesData } = await sb
-      .from('profiles')
-      .select('id, full_name, email, instagram, phone, gender, followers_range')
-      .in('id', uniqueUserIds);
-
-    const userStatsData: UserStats[] = [];
-
-    for (const profile of profilesData || []) {
-      const { data: userSubmissions } = await sb
-        .from('submissions')
-        .select('post_id, status, posts(event_id)')
-        .eq('user_id', profile.id)
-        .in('post_id', postIds);
-
-      const eventsParticipated = new Set(
-        (userSubmissions || [])
-          .map((s: any) => s.posts?.event_id)
-          .filter(Boolean)
-      ).size;
-
-      const userEventIds = Array.from(new Set(
-        (userSubmissions || [])
-          .map((s: any) => s.posts?.event_id)
-          .filter(Boolean)
-      ));
-
-      let totalPostsAvailable = 0;
-      if (userEventIds.length > 0) {
-        const { count } = await sb
-          .from('posts')
-          .select('*', { count: 'exact', head: true })
-          .in('event_id', userEventIds);
-        totalPostsAvailable = count || 0;
-      }
-
-      const approvedSubmissions = (userSubmissions || []).filter((s: any) => s.status === 'approved').length;
-      const pendingSubmissions = (userSubmissions || []).filter((s: any) => s.status === 'pending').length;
-      const rejectedSubmissions = (userSubmissions || []).filter((s: any) => s.status === 'rejected').length;
-
-      const completionPercentage = totalPostsAvailable > 0 
-        ? Math.round((approvedSubmissions / totalPostsAvailable) * 100)
-        : 0;
-
-      userStatsData.push({
-        user_id: profile.id,
-        user_name: profile.full_name || 'Sem nome',
-        user_email: profile.email || 'Sem email',
-        user_instagram: profile.instagram || 'Sem Instagram',
-        user_phone: profile.phone || 'Sem telefone',
-        user_gender: profile.gender || 'N/A',
-        user_followers_range: profile.followers_range || 'N/A',
-        events_participated: eventsParticipated,
-        total_submissions: (userSubmissions || []).length,
-        approved_submissions: approvedSubmissions,
-        pending_submissions: pendingSubmissions,
-        rejected_submissions: rejectedSubmissions,
-        total_posts_available: totalPostsAvailable,
-        completion_percentage: completionPercentage,
-      });
-    }
-
-    console.log('👤 User stats loaded:', userStatsData.length);
-    setUserStats(userStatsData.filter(u => u.total_submissions > 0));
-  };
-
-  const loadEventSpecificStats = async (eventId: string) => {
-    if (!currentAgencyId && !isMasterAdmin) {
-      console.warn('⚠️ No agency ID available');
-      return;
-    }
-
-    // Verificar se o evento pertence à agência (apenas para agency admin)
-    if (!isMasterAdmin && currentAgencyId) {
-      const { data: eventData } = await sb
-        .from('events')
-        .select('id, agency_id')
-        .eq('id', eventId)
-        .eq('agency_id', currentAgencyId)
-        .maybeSingle();
-
-      if (!eventData) {
-        console.warn('⚠️ Evento não pertence à agência');
-        setUserStats([]);
-        return;
-      }
-    }
-
-    const { data: postsData } = await sb
-      .from('posts')
-      .select('id')
-      .eq('event_id', eventId);
-
-    const postIds = (postsData || []).map((p: any) => p.id);
-    
-    if (postIds.length === 0) {
-      setUserStats([]);
-      return;
-    }
-
-    const { data: submissionsData } = await sb
-      .from('submissions')
-      .select('user_id')
-      .in('post_id', postIds);
-
-    const uniqueUsers = new Set((submissionsData || []).map((s: any) => s.user_id));
-
-    const { data: profilesData } = await sb
-      .from('profiles')
-      .select('id, full_name, email, instagram, phone')
-      .in('id', Array.from(uniqueUsers));
-
-    const userStatsData: UserStats[] = [];
-
-    for (const profile of profilesData || []) {
-      const { data: userSubmissions } = await sb
-        .from('submissions')
-        .select('id, status')
-        .in('post_id', postIds)
-        .eq('user_id', profile.id);
-
-      const approvedSubmissions = (userSubmissions || []).filter((s: any) => s.status === 'approved').length;
-      const pendingSubmissions = (userSubmissions || []).filter((s: any) => s.status === 'pending').length;
-      const rejectedSubmissions = (userSubmissions || []).filter((s: any) => s.status === 'rejected').length;
-
-      const completionPercentage = (postsData || []).length > 0
-        ? Math.round((approvedSubmissions / (postsData || []).length) * 100)
-        : 0;
-
-      userStatsData.push({
-        user_id: profile.id,
-        user_name: profile.full_name || 'Sem nome',
-        user_email: profile.email || 'Sem email',
-        user_instagram: profile.instagram || 'Sem Instagram',
-        user_phone: profile.phone || 'Sem telefone',
-        user_gender: profile.gender || 'N/A',
-        user_followers_range: profile.followers_range || 'N/A',
-        events_participated: 1,
-        total_submissions: (userSubmissions || []).length,
-        approved_submissions: approvedSubmissions,
-        pending_submissions: pendingSubmissions,
-        rejected_submissions: rejectedSubmissions,
-        total_posts_available: (postsData || []).length,
-        completion_percentage: completionPercentage,
-      });
-    }
-
-    setUserStats(userStatsData);
-  };
 
   if (loading) {
     return (
