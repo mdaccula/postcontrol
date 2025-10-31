@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
-  const { setUser, setSession, setLoading, setIsAgencyAdmin, setIsMasterAdmin, checkAgencyAdminStatus, checkMasterAdminStatus } = useAuthStore();
+  const { setUser, setSession, setLoading } = useAuthStore();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -11,19 +11,7 @@ export const useAuth = () => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        setLoading(false); // ✅ Adicionar aqui
-        
-        if (session?.user) {
-          setTimeout(() => {
-            checkAgencyAdminStatus();
-            checkMasterAdminStatus();
-          }, 200); // Aumentar delay para 200ms
-        } else {
-          // Clear admin status on logout
-          setIsAgencyAdmin(false);
-          setIsMasterAdmin(false);
-        }
+        setLoading(false);
       }
     );
 
@@ -32,17 +20,10 @@ export const useAuth = () => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          checkAgencyAdminStatus();
-          checkMasterAdminStatus();
-        }, 200); // Aumentar delay para 200ms
-      }
     });
 
     return () => subscription.unsubscribe();
-  }, [setUser, setSession, setLoading, setIsAgencyAdmin, setIsMasterAdmin]);
+  }, []); // ✅ Array vazio = executa 1x
 
   return useAuthStore();
 };

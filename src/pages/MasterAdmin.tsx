@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Building2, Users, DollarSign, TrendingUp, Plus, Settings, ExternalLink, Copy } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserRole } from "@/hooks/useUserRole";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -44,7 +45,8 @@ interface AgencyStats {
 
 const MasterAdmin = () => {
   const navigate = useNavigate();
-  const { user, isMasterAdmin } = useAuthStore();
+  const { user } = useAuthStore();
+  const { isMasterAdmin } = useUserRole();
   const { toast } = useToast();
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);

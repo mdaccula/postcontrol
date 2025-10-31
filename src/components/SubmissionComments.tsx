@@ -9,6 +9,7 @@ import { MessageSquare, Send, Lock } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -31,7 +32,8 @@ interface SubmissionCommentsProps {
 }
 
 export const SubmissionComments = ({ submissionId, onCommentAdded }: SubmissionCommentsProps) => {
-  const { user, isAgencyAdmin } = useAuthStore();
+  const { user } = useAuthStore();
+  const { isAgencyAdmin } = useUserRole();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);

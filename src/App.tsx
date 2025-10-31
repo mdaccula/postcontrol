@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { RequireAuth } from "@/components/RequireAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import Submit from "./pages/Submit";
 import Auth from "./pages/Auth";
@@ -29,13 +31,41 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/submit" element={<Submit />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/master-admin" element={<MasterAdmin />} />
             <Route path="/agency/:token" element={<AgencySignup />} />
             <Route path="/agencia/:slug" element={<AgencySignupBySlug />} />
+            
+            {/* Protected Routes - Require Authentication */}
+            <Route path="/submit" element={
+              <RequireAuth>
+                <Submit />
+              </RequireAuth>
+            } />
+            
+            <Route path="/dashboard" element={
+              <RequireAuth>
+                <Dashboard />
+              </RequireAuth>
+            } />
+            
+            {/* Agency Admin Routes */}
+            <Route path="/admin" element={
+              <RequireAuth>
+                <ProtectedRoute requireAgencyAdmin>
+                  <Admin />
+                </ProtectedRoute>
+              </RequireAuth>
+            } />
+            
+            {/* Master Admin Routes */}
+            <Route path="/master-admin" element={
+              <RequireAuth>
+                <ProtectedRoute requireMasterAdmin>
+                  <MasterAdmin />
+                </ProtectedRoute>
+              </RequireAuth>
+            } />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

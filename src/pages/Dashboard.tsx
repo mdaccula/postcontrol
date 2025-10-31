@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { Progress } from "@/components/ui/progress";
@@ -53,7 +54,8 @@ interface EventStats {
 }
 
 const Dashboard = () => {
-  const { user, signOut, isAgencyAdmin, isMasterAdmin } = useAuthStore();
+  const { user, signOut } = useAuthStore();
+  const { isAgencyAdmin, isMasterAdmin } = useUserRole();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();

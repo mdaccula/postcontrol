@@ -3,9 +3,11 @@ import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export const AdminTutorialGuide = () => {
-  const { user, isAgencyAdmin } = useAuthStore();
+  const { user } = useAuthStore();
+  const { isAgencyAdmin } = useUserRole();
 
   useEffect(() => {
     const checkAndStartTutorial = async () => {

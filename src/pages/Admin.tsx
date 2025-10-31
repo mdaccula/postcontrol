@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Trash2, Copy, Columns3, Building2, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useNavigate, Link } from "react-router-dom";
 // M2: Lazy loading de componentes pesados
 const EventDialog = lazy(() => import("@/components/EventDialog").then(m => ({ default: m.EventDialog })));
@@ -35,7 +36,8 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 
 const Admin = () => {
-  const { user, isAgencyAdmin, isMasterAdmin, loading, signOut } = useAuthStore();
+  const { user, loading, signOut } = useAuthStore();
+  const { isAgencyAdmin, isMasterAdmin } = useUserRole();
   const navigate = useNavigate();
   const [currentAgency, setCurrentAgency] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -88,12 +90,6 @@ const Admin = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  useEffect(() => {
-    if (!loading && (!user || (!isAgencyAdmin && !isMasterAdmin))) {
-      navigate('/dashboard');
-      toast.error("Acesso negado. Você não tem permissão para acessar esta página.");
-    }
-  }, [user, isAgencyAdmin, isMasterAdmin, loading, navigate]);
 
   // Handle Master Admin viewing specific agency via querystring agencyId
   useEffect(() => {
