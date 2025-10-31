@@ -8,20 +8,24 @@ import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Tras
 import { useAuthStore } from "@/stores/authStore";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNavigate, Link } from "react-router-dom";
-// M2: Lazy loading de componentes pesados
+
+// Lazy loading de componentes pesados
 const EventDialog = lazy(() => import("@/components/EventDialog").then(m => ({ default: m.EventDialog })));
 const PostDialog = lazy(() => import("@/components/PostDialog").then(m => ({ default: m.PostDialog })));
 const AddManualSubmissionDialog = lazy(() => import("@/components/AddManualSubmissionDialog").then(m => ({ default: m.AddManualSubmissionDialog })));
-const DashboardStats = lazy(() => import("@/components/DashboardStats").then(m => ({ default: m.DashboardStats })));
-const UserPerformance = lazy(() => import("@/components/UserPerformance").then(m => ({ default: m.UserPerformance })));
-const UserManagement = lazy(() => import("@/components/UserManagement").then(m => ({ default: m.UserManagement })));
-const AdminSettings = lazy(() => import("@/components/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const AgencyAdminSettings = lazy(() => import("@/components/AgencyAdminSettings").then(m => ({ default: m.AgencyAdminSettings })));
 const AdminTutorialGuide = lazy(() => import("@/components/AdminTutorialGuide").then(m => ({ default: m.AdminTutorialGuide })));
 const SubmissionKanban = lazy(() => import("@/components/SubmissionKanban").then(m => ({ default: m.SubmissionKanban })));
 const SubmissionAuditLog = lazy(() => import("@/components/SubmissionAuditLog").then(m => ({ default: m.SubmissionAuditLog })));
 const SubmissionComments = lazy(() => import("@/components/SubmissionComments").then(m => ({ default: m.SubmissionComments })));
 const SubmissionImageDisplay = lazy(() => import("@/components/SubmissionImageDisplay").then(m => ({ default: m.SubmissionImageDisplay })));
+
+// FASE 2: Componentes memoizados para performance
+const MemoizedDashboardStats = lazy(() => import("@/components/memoized/MemoizedDashboardStats").then(m => ({ default: m.MemoizedDashboardStats })));
+const MemoizedUserManagement = lazy(() => import("@/components/memoized/MemoizedUserManagement").then(m => ({ default: m.MemoizedUserManagement })));
+const MemoizedAdminSettings = lazy(() => import("@/components/memoized/MemoizedAdminSettings").then(m => ({ default: m.MemoizedAdminSettings })));
+const MemoizedUserPerformance = lazy(() => import("@/components/memoized/MemoizedUserPerformance").then(m => ({ default: m.MemoizedUserPerformance })));
+
 import { SubmissionZoomDialog } from "@/components/SubmissionZoomDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
@@ -1702,7 +1706,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
 
           <TabsContent value="users" className="space-y-6">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              <UserManagement />
+              <MemoizedUserManagement />
             </Suspense>
           </TabsContent>
 
@@ -1715,13 +1719,13 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
 
               <TabsContent value="events-stats">
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                  <DashboardStats />
+                  <MemoizedDashboardStats />
                 </Suspense>
               </TabsContent>
 
               <TabsContent value="user-performance">
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                  <UserPerformance />
+                  <MemoizedUserPerformance />
                 </Suspense>
               </TabsContent>
             </Tabs>
@@ -1730,7 +1734,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           <TabsContent value="settings" className="space-y-6">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               {isMasterAdmin ? (
-                <AdminSettings isMasterAdmin={true} />
+                <MemoizedAdminSettings isMasterAdmin={true} />
               ) : (
                 <AgencyAdminSettings />
               )}
