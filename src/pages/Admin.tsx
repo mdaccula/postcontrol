@@ -155,37 +155,96 @@ const Admin = () => {
   const loadCurrentAgency = async () => {
     if (!user) return;
 
+    console.log('🔍 [loadCurrentAgency] Iniciando...');
+
     // Load user profile
-    const { data: profileData } = await sb
+    const { data: profileData, error: profileError } = await sb
       .from('profiles')
-      .select('*, agencies(id, name, slug, logo_url)')
+      .select('*')
       .eq('id', user.id)
       .maybeSingle();
+    
+    if (profileError) {
+      console.error('❌ Erro ao carregar profile:', profileError);
+      return;
+    }
+
+    console.log('✅ Profile carregado:', { 
+      id: profileData?.id, 
+      email: profileData?.email,
+      agency_id: profileData?.agency_id 
+    });
     
     setProfile(profileData);
 
     // If master admin and viewing specific agency, use query param
     const urlParams = new URLSearchParams(window.location.search);
     const agencySlug = urlParams.get('agency');
+    const agencyId = urlParams.get('agencyId');
     
     if (agencySlug) {
-      const { data } = await sb
+      const { data, error } = await sb
         .from('agencies')
         .select('id, name, slug, logo_url, subscription_plan')
         .eq('slug', agencySlug)
         .maybeSingle();
       
-        console.log('🏢 Loaded agency from URL:', data);
-        setCurrentAgency(data);
-        setAgencySlug(data?.slug || "");
+      if (error) {
+        console.error('❌ Erro ao carregar agência por slug:', error);
         return;
+      }
+
+      console.log('🏢 Loaded agency from URL (slug):', data);
+      setCurrentAgency(data);
+      setAgencySlug(data?.slug || "");
+      return;
+    }
+
+    if (agencyId && isMasterAdmin) {
+      const { data, error } = await sb
+        .from('agencies')
+        .select('id, name, slug, logo_url, subscription_plan')
+        .eq('id', agencyId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('❌ Erro ao carregar agência por ID:', error);
+        return;
+      }
+
+      console.log('🏢 Loaded agency from URL (id):', data);
+      setCurrentAgency(data);
+      setAgencySlug(data?.slug || "");
+      return;
     }
 
     // If agency admin, load their own agency
-    if (isAgencyAdmin && !isMasterAdmin && profileData?.agencies) {
-      console.log('🏢 Agency admin profile:', profileData.agencies);
-      setCurrentAgency(profileData.agencies);
-      setAgencySlug(profileData.agencies?.slug || "");
+    if (isAgencyAdmin && !isMasterAdmin && profileData?.agency_id) {
+      console.log('👤 Agency Admin detectado, carregando agência:', profileData.agency_id);
+      
+      const { data: agencyData, error: agencyError } = await sb
+        .from('agencies')
+        .select('id, name, slug, logo_url, subscription_plan')
+        .eq('id', profileData.agency_id)
+        .maybeSingle();
+      
+      if (agencyError) {
+        console.error('❌ Erro ao carregar agência:', agencyError);
+        toast.error('Erro ao carregar dados da agência');
+        return;
+      }
+
+      if (!agencyData) {
+        console.error('❌ Agência não encontrada para ID:', profileData.agency_id);
+        toast.error('Agência não encontrada');
+        return;
+      }
+
+      console.log('✅ Agência carregada:', agencyData);
+      setCurrentAgency(agencyData);
+      setAgencySlug(agencyData?.slug || "");
+    } else if (isMasterAdmin && !agencySlug && !agencyId) {
+      console.log('👑 Master Admin sem filtro de agência - visualizando todos os dados');
     }
   };
 
