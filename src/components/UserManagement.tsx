@@ -437,130 +437,128 @@ export const UserManagement = () => {
         ) : (
           <>
             <div className="space-y-4">
-             {paginatedUsers.map((user) => (
-  <Card key={user.id} className="p-6">
-    {editingUser === user.id ? (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Nome Completo</Label>
-            <Input
-              value={editForm.full_name || ""}
-              onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Email</Label>
-            <Input
-              type="email"
-              value={editForm.email || ""}
-              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Instagram (sem @)</Label>
-            <Input
-              value={editForm.instagram || ""}
-              onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Telefone</Label>
-            <Input
-              value={editForm.phone || ""}
-              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Sexo</Label>
-            <select
-              value={editForm.gender || ""}
-              onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Não definido</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Feminino">Feminino</option>
-              <option value="LGBTQ+">LGBTQ+</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={cancelEdit}>
-            <X className="mr-2 h-4 w-4" /> Cancelar
-          </Button>
-          <Button onClick={() => saveEdit(user.id)} className="bg-gradient-primary">
-            <Save className="mr-2 h-4 w-4" /> Salvar
-          </Button>
-        </div>
+              {paginatedUsers.map((user) => (
+              <Card key={user.id} className="p-6">
+                {editingUser === user.id ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Nome Completo</Label>
+                        <Input
+                          value={editForm.full_name || ""}
+                          onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={editForm.email || ""}
+                          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Instagram (sem @)</Label>
+                        <Input
+                          value={editForm.instagram || ""}
+                          onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Telefone</Label>
+                        <Input
+                          value={editForm.phone || ""}
+                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Sexo</Label>
+                        <select
+                          value={editForm.gender || ""}
+                          onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">Não definido</option>
+                          <option value="Masculino">Masculino</option>
+                          <option value="Feminino">Feminino</option>
+                          <option value="LGBTQ+">LGBTQ+</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={cancelEdit}>
+                        <X className="mr-2 h-4 w-4" />
+                        Cancelar
+                      </Button>
+                      <Button onClick={() => saveEdit(user.id)} className="bg-gradient-primary">
+                        <Save className="mr-2 h-4 w-4" />
+                        Salvar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+  <div className="flex justify-between items-start">
+  <div className="space-y-2">
+    <h3 className="font-bold text-lg">{user.full_name || "Nome não definido"}</h3>
+    <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+      <div>
+        <span className="text-muted-foreground">Email:</span>{" "}
+        <span className="font-medium">{user.email || "Não definido"}</span>
       </div>
-    ) : (
-      <div className="flex justify-between items-start">
-        <div className="space-y-2">
-          <h3 className="font-bold text-lg">{user.full_name || "Nome não definido"}</h3>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-            <div>
-              <span className="text-muted-foreground">Email:</span>{" "}
-              <span className="font-medium">{user.email || "Não definido"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Instagram:</span>{" "}
-              <a
-                href={`https://instagram.com/${user.instagram?.replace("@", "") || ""}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
+      <div>
+        <span className="text-muted-foreground">Instagram:</span>{" "}
+        <a
+          href={`https://instagram.com/${user.instagram?.replace("@", "") || ""}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary hover:underline"
+        >
+          @{user.instagram?.replace("@", "") || "Não definido"}
+        </a>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Telefone:</span>{" "}
+        <span className="font-medium">{user.phone || "Não definido"}</span>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Sexo:</span>{" "}
+        <span className="font-medium">{user.gender || "Não definido"}</span>
+      </div>
+      <div>
+        <span className="text-muted-foreground">Cadastrado em:</span>{" "}
+        <span className="font-medium">
+          {new Date(user.created_at).toLocaleDateString("pt-BR")}
+        </span>
+      </div>
+
+      {userEvents[user.id] && userEvents[user.id].length > 0 && (
+        <div className="col-span-2">
+          <span className="text-muted-foreground">Eventos participando:</span>{" "}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {userEvents[user.id].map((eventTitle, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded"
               >
-                @{user.instagram?.replace("@", "") || "Não definido"}
-              </a>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Telefone:</span>{" "}
-              <span className="font-medium">{user.phone || "Não definido"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Sexo:</span>{" "}
-              <span className="font-medium">{user.gender || "Não definido"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Cadastrado em:</span>{" "}
-              <span className="font-medium">
-                {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                {eventTitle}
               </span>
-            </div>
-
-            {userEvents[user.id] && userEvents[user.id].length > 0 && (
-              <div className="col-span-2">
-                <span className="text-muted-foreground">Eventos participando:</span>{" "}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {userEvents[user.id].map((eventTitle, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded"
-                    >
-                      {eventTitle}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {userSalesCount[user.id] !== undefined && userSalesCount[user.id] > 0 && (
-              <div>
-                <span className="text-muted-foreground">Vendas Aprovadas:</span>{" "}
-                <span className="font-medium text-green-600">
-                  💰 {userSalesCount[user.id]}
-                </span>
-              </div>
-            )}
+            ))}
           </div>
         </div>
+      )}
 
-        <Button variant="ghost" size="sm" onClick={() => startEdit(user)}>
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </div>
-    )}
-  </Card>
-))}
+      {userSalesCount[user.id] !== undefined && userSalesCount[user.id] > 0 && (
+        <div>
+          <span className="text-muted-foreground">Vendas Aprovadas:</span>{" "}
+          <span className="font-medium text-green-600">
+            💰 {userSalesCount[user.id]}
+          </span>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <Button variant="ghost" size="sm" onClick={() => startEdit(user)}>
+    <Pencil className="h-4 w-4" />
+  </Button>
+</div>
