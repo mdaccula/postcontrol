@@ -21,6 +21,7 @@ interface Profile {
   phone: string | null;
   created_at: string;
   gender?: string | null;
+  followers_range?: string | null;
 }
 
 // Validation schema
@@ -30,8 +31,10 @@ const profileUpdateSchema = z.object({
   instagram: z.string().trim().min(1, "Instagram é obrigatório").max(50, "Instagram muito longo"),
   phone: z
     .string()
-    .trim()
-    .regex(/^\(?(\d{2})\)?\s?(\d{4,5})-?(\d{4})$/, "Formato de telefone inválido. Use: (00) 00000-0000")
+    .transform((val) => val.replace(/\D/g, '')) // Remove tudo que não é número
+    .refine((val) => val === '' || val.length === 10 || val.length === 11, {
+      message: "Telefone deve ter 10 ou 11 dígitos"
+    })
     .optional()
     .or(z.literal("")),
 });
@@ -127,7 +130,7 @@ export const UserManagement = () => {
       if (isMasterAdmin) {
         // Master admin vê todos os usuários
         console.log("👑 Master Admin - carregando todos os usuários");
-        const { data, error } = await sb.from("profiles").select("*, gender").order("created_at", { ascending: false });
+        const { data, error } = await sb.from("profiles").select("*, gender, followers_range").order("created_at", { ascending: false });
 
         if (error) throw error;
         console.log(`📊 Loaded ${data?.length || 0} users (master admin)`);
@@ -177,7 +180,7 @@ export const UserManagement = () => {
         // Buscar os perfis desses usuários
         const { data: profilesData, error: profilesError } = await sb
           .from("profiles")
-          .select("*, gender")
+          .select("*, gender, followers_range")
           .in("id", userIds)
           .order("created_at", { ascending: false });
 
@@ -315,14 +318,17 @@ export const UserManagement = () => {
       }
     }
 
+    // Limpar telefone antes de salvar
+    const cleanPhone = editForm.phone ? editForm.phone.replace(/\D/g, '') : '';
+    
     const { error } = await sb
       .from("profiles")
       .update({
         email: editForm.email,
-        phone: editForm.phone,
+        phone: cleanPhone,
         full_name: editForm.full_name,
         instagram: editForm.instagram,
-        gender: editForm.gender, // ADICIONAR ESTA LINHA
+        gender: editForm.gender,
       })
       .eq("id", userId);
 
@@ -465,11 +471,17 @@ export const UserManagement = () => {
                         />
                       </div>
                       <div>
-                        <Label>Telefone</Label>
+                        <Label>Telefone (apenas números)</Label>
                         <Input
                           value={editForm.phone || ""}
-                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/\D/g, '');
+                            setEditForm({ ...editForm, phone: cleaned });
+                          }}
+                          placeholder="11999887766"
+                          maxLength={11}
                         />
+                        <p className="text-xs text-muted-foreground mt-1">Digite apenas números (10 ou 11 dígitos)</p>
                       </div>
                       <div>
                         <Label>Sexo</Label>
@@ -523,6 +535,10 @@ export const UserManagement = () => {
                         <div>
                           <span className="text-muted-foreground">Sexo:</span>{" "}
                           <span className="font-medium">{user.gender || "Não definido"}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Faixa de Seguidores:</span>{" "}
+                          <span className="font-medium">{user.followers_range || "Não informado"}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Cadastrado em:</span>{" "}

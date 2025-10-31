@@ -356,7 +356,7 @@ const Dashboard = () => {
       const avatarUrl = signedData.signedUrl;
       console.log('🔗 URL gerada');
       
-      const { error: updateError } = await sb
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
         .eq('id', user.id);
