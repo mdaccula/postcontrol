@@ -48,6 +48,15 @@ export const UserPerformance = () => {
   const loading = eventsLoading || allStatsLoading || eventStatsLoading;
   const userStats = selectedEventId === "all" ? allStatsData : eventStatsData;
 
+  // IMPORTANTE: filteredStats DEVE vir ANTES de qualquer early return
+  const filteredStats = useMemo(() => {
+    return userStats.filter((stat) => {
+      const matchesName = stat.user_name.toLowerCase().includes(debouncedSearchName.toLowerCase());
+      const matchesPhone = stat.user_phone.toLowerCase().includes(debouncedSearchPhone.toLowerCase());
+      return matchesName && matchesPhone;
+    });
+  }, [userStats, debouncedSearchName, debouncedSearchPhone]);
+
   useEffect(() => {
     checkAgencyAndLoadEvents();
   }, []);
@@ -197,7 +206,7 @@ export const UserPerformance = () => {
   });
 };
 
-  if (loading) {
+  if (loading && !hasSearched) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -218,14 +227,6 @@ export const UserPerformance = () => {
       </div>
     );
   }
-
-  const filteredStats = useMemo(() => {
-    return userStats.filter((stat) => {
-      const matchesName = stat.user_name.toLowerCase().includes(debouncedSearchName.toLowerCase());
-      const matchesPhone = stat.user_phone.toLowerCase().includes(debouncedSearchPhone.toLowerCase());
-      return matchesName && matchesPhone;
-    });
-  }, [userStats, debouncedSearchName, debouncedSearchPhone]);
 
   return (
     <div className="space-y-6">
