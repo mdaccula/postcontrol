@@ -166,12 +166,11 @@ export const DashboardStats = () => {
 const loadStats = async () => {
   setLoading(true);
   try {
-    // Carregar todos os dados em paralelo
-    await Promise.all([
-      selectedEventId === "all" ? loadAllStats() : loadEventSpecificStats(selectedEventId),
-      loadTimelineData(),
-      loadGenderDistribution()
-    ]);
+    if (selectedEventId === "all") {
+      await loadAllStats();
+    } else {
+      await loadEventSpecificStats(selectedEventId);
+    }
   } finally {
     setLoading(false);
   }
