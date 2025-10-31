@@ -29,7 +29,8 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
     password: '',
     instagram: '',
     phone: '',
-    gender: ''
+    gender: '',
+    followers_range: ''
   });
 
   useEffect(() => {
@@ -95,13 +96,17 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
 
       // 2. Atualizar profile (COM agency_id para contagem de divulgadores)
       if (authData.user) {
+        // Limpar telefone antes de salvar
+        const cleanPhone = formData.phone ? formData.phone.replace(/\D/g, '') : null;
+        
         const { error: profileError } = await sb
           .from('profiles')
           .update({
             full_name: formData.fullName,
             instagram: formData.instagram,
-            phone: formData.phone,
+            phone: cleanPhone,
             gender: formData.gender,
+            followers_range: formData.followers_range || null,
             agency_id: agency.id, // Adiciona agency_id para contagem
           })
           .eq('id', authData.user.id);
@@ -269,13 +274,37 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone (apenas números)</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(11) 99999-9999"
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, phone: cleaned });
+                  }}
+                  placeholder="11999999999"
+                  maxLength={11}
                 />
+                <p className="text-xs text-muted-foreground">Digite apenas números (10 ou 11 dígitos)</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="followers">Faixa de Seguidores</Label>
+                <Select 
+                  value={formData.followers_range} 
+                  onValueChange={(value) => setFormData({ ...formData, followers_range: value })}
+                >
+                  <SelectTrigger id="followers">
+                    <SelectValue placeholder="Selecione sua faixa de seguidores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0-1k">0 - 1.000</SelectItem>
+                    <SelectItem value="1k-5k">1.000 - 5.000</SelectItem>
+                    <SelectItem value="5k-10k">5.000 - 10.000</SelectItem>
+                    <SelectItem value="10k-50k">10.000 - 50.000</SelectItem>
+                    <SelectItem value="50k-100k">50.000 - 100.000</SelectItem>
+                    <SelectItem value="100k+">100.000+</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}

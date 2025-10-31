@@ -358,6 +358,7 @@ export const UserManagement = () => {
 
       const matchesEvent =
         eventFilter === "all" ||
+        (eventFilter === "none" && (!userEvents[user.id] || userEvents[user.id].length === 0)) ||
         userEvents[user.id]?.some((eventTitle) => events.find((e) => e.title === eventTitle)?.id === eventFilter);
 
       return matchesSearch && matchesGender && matchesEvent;
@@ -428,6 +429,7 @@ export const UserManagement = () => {
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="all">Todos os eventos</option>
+            <option value="none">Sem evento</option>
             {events.map((event) => (
               <option key={event.id} value={event.id}>
                 {event.title}

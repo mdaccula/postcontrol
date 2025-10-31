@@ -162,13 +162,16 @@ export const AgencyAdminSettings = () => {
     
     setSaving(true);
     try {
+      // Limpar telefone antes de salvar
+      const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+      
       // Update profile
       const { error: profileError } = await sb
         .from('profiles')
         .update({
           full_name: fullName,
           instagram: instagram,
-          phone: phone,
+          phone: cleanPhone,
         })
         .eq('id', userId);
 
@@ -268,6 +271,44 @@ export const AgencyAdminSettings = () => {
             disabled={saving}
           />
         </div>
+        
+        {/* Logo da Agência */}
+        <div className="space-y-3 pt-4 border-t">
+          <Label className="flex items-center gap-2">
+            <ImageIcon className="h-4 w-4" />
+            Logo da Agência
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Este logo aparecerá na página de cadastro da sua agência
+          </p>
+          
+          <div className="flex flex-col gap-3">
+            {(logoPreview || agencyLogoUrl) && (
+              <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                <img 
+                  src={logoPreview || agencyLogoUrl || ''} 
+                  alt="Logo preview" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="max-w-xs"
+              />
+              {logoFile && (
+                <Button onClick={saveLogo} size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Salvar Logo
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </Card>
 
       {/* Personal Data */}
@@ -314,14 +355,19 @@ export const AgencyAdminSettings = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
+            <Label htmlFor="phone">Telefone (apenas números)</Label>
             <Input
               id="phone"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(11) 99999-9999"
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '');
+                setPhone(cleaned);
+              }}
+              placeholder="11999999999"
+              maxLength={11}
               disabled={saving}
             />
+            <p className="text-xs text-muted-foreground">Digite apenas números (10 ou 11 dígitos)</p>
           </div>
         </div>
 

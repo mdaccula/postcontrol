@@ -41,6 +41,7 @@ interface UserProfile {
   agency_id?: string;
   created_at: string;
   roles?: string[];
+  followers_range?: string;
 }
 
 interface Agency {
@@ -161,12 +162,15 @@ export const AllUsersManagement = () => {
     if (!selectedUser) return;
 
     try {
+      // Limpar telefone removendo caracteres especiais
+      const cleanPhone = editForm.phone ? editForm.phone.replace(/\D/g, '') : null;
+      
       const { error } = await sb
         .from("profiles")
         .update({
           full_name: editForm.full_name,
           email: editForm.email,
-          phone: editForm.phone || null,
+          phone: cleanPhone,
           instagram: editForm.instagram || null,
           agency_id: editForm.agency_id || null,
           gender: editForm.gender || null,
@@ -438,14 +442,18 @@ export const AllUsersManagement = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone">Telefone (apenas números)</Label>
               <Input
                 id="phone"
                 value={editForm.phone}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, phone: e.target.value })
-                }
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, '');
+                  setEditForm({ ...editForm, phone: cleaned });
+                }}
+                placeholder="11999887766"
+                maxLength={11}
               />
+              <p className="text-xs text-muted-foreground">Digite apenas números (10 ou 11 dígitos)</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="instagram">Instagram</Label>
