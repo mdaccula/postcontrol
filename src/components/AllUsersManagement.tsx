@@ -74,10 +74,11 @@ export const AllUsersManagement = () => {
     console.log('🔄 Carregando usuários...');
     
     // Load users first
-    const { data: usersData, error: usersError } = await sb
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+const { data: usersData, error: usersError } = await sb
+  .from('profiles')
+  .select('*, gender')
+  .order('created_at', { ascending: false });
+
 
     console.log('📊 Usuários carregados:', usersData?.length, 'Error:', usersError);
 
@@ -311,39 +312,47 @@ export const AllUsersManagement = () => {
         ) : (
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Instagram</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Nível de Acesso</TableHead>
-                  <TableHead>Agência</TableHead>
-                  <TableHead className="text-center">Submissões</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
+<TableHeader>
+  <TableRow>
+    <TableHead>Nome</TableHead>
+    <TableHead>Email</TableHead>
+    <TableHead>Instagram</TableHead>
+    <TableHead>Telefone</TableHead>
+    <TableHead>Sexo</TableHead>
+    <TableHead>Nível de Acesso</TableHead>
+    <TableHead>Agência</TableHead>
+    <TableHead className="text-center">Submissões</TableHead>
+    <TableHead className="text-right">Ações</TableHead>
+  </TableRow>
+</TableHeader>
+
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
-                    <TableCell>{user.email || "—"}</TableCell>
-                    <TableCell>
-                      {user.instagram ? `@${user.instagram}` : "—"}
-                    </TableCell>
-                    <TableCell>{user.phone || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(user.roles)}>
-                        {getUserRole(user.roles)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getAgencyName(user.agency_id)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">
-                        {submissionCounts[user.id] || 0}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
+          {filteredUsers.map((user) => (
+  <TableRow key={user.id}>
+    <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
+    <TableCell>{user.email || "—"}</TableCell>
+    <TableCell>
+      {user.instagram ? `@${user.instagram}` : "—"}
+    </TableCell>
+    <TableCell>{user.phone || "—"}</TableCell>
+    <TableCell>
+      <Badge variant="outline">
+        {user.gender || "Não informado"}
+      </Badge>
+    </TableCell>
+    <TableCell>
+      <Badge variant={getRoleBadgeVariant(user.roles)}>
+        {getUserRole(user.roles)}
+      </Badge>
+    </TableCell>
+    <TableCell>{getAgencyName(user.agency_id)}</TableCell>
+    <TableCell className="text-center">
+      <Badge variant="secondary">
+        {submissionCounts[user.id] || 0}
+      </Badge>
+    </TableCell>
+
+                <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button
                           variant="outline"
