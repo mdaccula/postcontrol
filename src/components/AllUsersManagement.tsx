@@ -53,6 +53,7 @@ export const AllUsersManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [genderOptions, setGenderOptions] = useState<string[]>([]); // ✅ novos gêneros do banco
   const [searchTerm, setSearchTerm] = useState("");
   const [agencyFilter, setAgencyFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -64,6 +65,7 @@ export const AllUsersManagement = () => {
     phone: "",
     instagram: "",
     agency_id: "",
+    gender: "", // ✅ campo novo
   });
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
 
@@ -72,43 +74,40 @@ export const AllUsersManagement = () => {
   }, []);
 
   const loadData = async () => {
-    console.log('🔄 Carregando usuários...');
-    
-    // Load users first
-const { data: usersData, error: usersError } = await sb
-  .from('profiles')
-  .select('*, gender')
-  .order('created_at', { ascending: false });
+    console.log("🔄 Carregando usuários...");
 
+    // Load users
+    const { data: usersData, error: usersError } = await sb
+      .from("profiles")
+      .select("*, gender")
+      .order("created_at", { ascending: false });
 
-    console.log('📊 Usuários carregados:', usersData?.length, 'Error:', usersError);
+    console.log("📊 Usuários carregados:", usersData?.length, "Error:", usersError);
 
     if (usersData) {
-      // Load roles separately for each user
-      const usersWithRoles = await Promise.all(usersData.map(async (user: any) => {
-        const { data: rolesData } = await sb
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
-        
-        return {
-          ...user,
-          roles: rolesData?.map((ur: any) => ur.role) || []
-        };
-      }));
-      
-      console.log('✅ Usuários com roles:', usersWithRoles.length);
-      
+      const usersWithRoles = await Promise.all(
+        usersData.map(async (user: any) => {
+          const { data: rolesData } = await sb
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id);
+
+          return {
+            ...user,
+            roles: rolesData?.map((ur: any) => ur.role) || [],
+          };
+        })
+      );
+
       setUsers(usersWithRoles);
 
-      // Load submission counts for each user
       const counts: Record<string, number> = {};
       await Promise.all(
         usersWithRoles.map(async (user) => {
           const { count } = await sb
-            .from('submissions')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id);
+            .from("submissions")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
           counts[user.id] = count || 0;
         })
       );
@@ -117,12 +116,22 @@ const { data: usersData, error: usersError } = await sb
 
     // Load agencies
     const { data: agenciesData } = await sb
-      .from('agencies')
-      .select('id, name, slug')
-      .order('name', { ascending: true });
+      .from("agencies")
+      .select("id, name, slug")
+      .order("name", { ascending: true });
 
-    if (agenciesData) {
-      setAgencies(agenciesData);
+    if (agenciesData) setAgencies(agenciesData);
+
+    // ✅ Load gender options dynamically
+    const { data: genderData, error: genderError } = await sb
+      .from("profiles")
+      .select("gender", { distinct: true });
+
+    if (!genderError && genderData) {
+      const uniqueGenders = Array.from(
+        new Set(genderData.map((item) => item.gender).filter(Boolean))
+      );
+      setGenderOptions(uniqueGenders);
     }
   };
 
@@ -134,6 +143,7 @@ const { data: usersData, error: usersError } = await sb
       phone: user.phone || "",
       instagram: user.instagram || "",
       agency_id: user.agency_id || "",
+      gender: user.gender || "", // ✅ novo
     });
     setEditDialogOpen(true);
   };
@@ -143,15 +153,16 @@ const { data: usersData, error: usersError } = await sb
 
     try {
       const { error } = await sb
-        .from('profiles')
+        .from("profiles")
         .update({
           full_name: editForm.full_name,
           email: editForm.email,
           phone: editForm.phone || null,
           instagram: editForm.instagram || null,
           agency_id: editForm.agency_id || null,
+          gender: editForm.gender ? editForm.gender.toLowerCase() : null, // ✅ salva o gênero
         })
-        .eq('id', selectedUser.id);
+        .eq("id", selectedUser.id);
 
       if (error) throw error;
 
@@ -173,15 +184,14 @@ const { data: usersData, error: usersError } = await sb
 
   const handleDeleteUser = async (userId: string, userName: string) => {
     const confirm = window.confirm(
-      `⚠️ ATENÇÃO: Deseja realmente excluir o usuário "${userName}"?\n\nTODAS as submissões deste usuário também serão excluídas.\n\nEsta ação NÃO pode ser desfeita.`
+      `⚠️ Deseja realmente excluir o usuário "${userName}"?\n\nTODAS as submissões deste usuário também serão excluídas.\n\nEsta ação NÃO pode ser desfeita.`
     );
 
     if (!confirm) return;
 
     try {
-      // Chamar edge function que tem permissão para deletar usuários
-      const { data, error } = await sb.functions.invoke('delete-user', {
-        body: { userId }
+      const { error } = await sb.functions.invoke("delete-user", {
+        body: { userId },
       });
 
       if (error) throw error;
@@ -231,8 +241,8 @@ const { data: usersData, error: usersError } = await sb
     const matchesAgency =
       agencyFilter === "all" || user.agency_id === agencyFilter;
 
-    const matchesRole = 
-      roleFilter === "all" || 
+    const matchesRole =
+      roleFilter === "all" ||
       (roleFilter === "master_admin" && user.roles?.includes("master_admin")) ||
       (roleFilter === "agency_admin" && user.roles?.includes("agency_admin")) ||
       (roleFilter === "user" && (!user.roles || user.roles.length === 0));
@@ -305,55 +315,57 @@ const { data: usersData, error: usersError } = await sb
         {filteredUsers.length === 0 ? (
           <div className="text-center py-8">
             <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum usuário encontrado</h3>
-            <p className="text-muted-foreground">
-              Tente ajustar os filtros de busca
-            </p>
+            <h3 className="text-lg font-semibold mb-2">
+              Nenhum usuário encontrado
+            </h3>
+            <p className="text-muted-foreground">Tente ajustar os filtros</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
-<TableHeader>
-  <TableRow>
-    <TableHead>Nome</TableHead>
-    <TableHead>Email</TableHead>
-    <TableHead>Instagram</TableHead>
-    <TableHead>Telefone</TableHead>
-    <TableHead>Sexo</TableHead>
-    <TableHead>Nível de Acesso</TableHead>
-    <TableHead>Agência</TableHead>
-    <TableHead className="text-center">Submissões</TableHead>
-    <TableHead className="text-right">Ações</TableHead>
-  </TableRow>
-</TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Instagram</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Sexo</TableHead>
+                  <TableHead>Nível de Acesso</TableHead>
+                  <TableHead>Agência</TableHead>
+                  <TableHead className="text-center">Submissões</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
 
               <TableBody>
-          {filteredUsers.map((user) => (
-  <TableRow key={user.id}>
-    <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
-    <TableCell>{user.email || "—"}</TableCell>
-    <TableCell>
-      {user.instagram ? `@${user.instagram}` : "—"}
-    </TableCell>
-    <TableCell>{user.phone || "—"}</TableCell>
-    <TableCell>
-      <Badge variant="outline">
-        {user.gender || "Não informado"}
-      </Badge>
-    </TableCell>
-    <TableCell>
-      <Badge variant={getRoleBadgeVariant(user.roles)}>
-        {getUserRole(user.roles)}
-      </Badge>
-    </TableCell>
-    <TableCell>{getAgencyName(user.agency_id)}</TableCell>
-    <TableCell className="text-center">
-      <Badge variant="secondary">
-        {submissionCounts[user.id] || 0}
-      </Badge>
-    </TableCell>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
+                      {user.full_name || "—"}
+                    </TableCell>
+                    <TableCell>{user.email || "—"}</TableCell>
+                    <TableCell>
+                      {user.instagram ? `@${user.instagram}` : "—"}
+                    </TableCell>
+                    <TableCell>{user.phone || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {user.gender || "Não informado"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(user.roles)}>
+                        {getUserRole(user.roles)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{getAgencyName(user.agency_id)}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary">
+                        {submissionCounts[user.id] || 0}
+                      </Badge>
+                    </TableCell>
 
-                <TableCell className="text-right">
+                    <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button
                           variant="outline"
@@ -366,7 +378,10 @@ const { data: usersData, error: usersError } = await sb
                           variant="destructive"
                           size="sm"
                           onClick={() =>
-                            handleDeleteUser(user.id, user.full_name || user.email)
+                            handleDeleteUser(
+                              user.id,
+                              user.full_name || user.email
+                            )
                           }
                         >
                           <Trash2 className="w-4 h-4" />
@@ -401,6 +416,7 @@ const { data: usersData, error: usersError } = await sb
                 }
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -412,6 +428,7 @@ const { data: usersData, error: usersError } = await sb
                 }
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
               <Input
@@ -422,6 +439,38 @@ const { data: usersData, error: usersError } = await sb
                 }
               />
             </div>
+
+            {/* ✅ Novo campo dinâmico de gênero */}
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gênero</Label>
+              <Select
+                value={editForm.gender || ""}
+                onValueChange={(value) =>
+                  setEditForm({ ...editForm, gender: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o gênero" />
+                </SelectTrigger>
+                <SelectContent>
+                  {genderOptions.length > 0 ? (
+                    genderOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option.charAt(0).toUpperCase() + option.slice(1)}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </>
+                  )}
+                  <SelectItem value="">Não informar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="instagram">Instagram</Label>
               <Input
@@ -433,12 +482,16 @@ const { data: usersData, error: usersError } = await sb
                 placeholder="@usuario"
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="agency">Agência Vinculada</Label>
               <Select
                 value={editForm.agency_id || "none"}
                 onValueChange={(value) =>
-                  setEditForm({ ...editForm, agency_id: value === "none" ? null : value })
+                  setEditForm({
+                    ...editForm,
+                    agency_id: value === "none" ? null : value,
+                  })
                 }
               >
                 <SelectTrigger>
