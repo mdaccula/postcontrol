@@ -21,6 +21,8 @@ interface Profile {
   phone: string | null;
   created_at: string;
   gender?: string | null;
+    followers_range?: string | null; // ✅ ADICIONAR
+
 }
 
 // Validation schema
@@ -211,7 +213,7 @@ export const UserManagement = () => {
     // Buscar usuários da mesma agência
     const { data: agencyUsers } = await sb
       .from('profiles')
-      .select('*, gender')
+.select('*, gender, followers_range')
       .eq('agency_id', profileData.agency_id)
       .order('created_at', { ascending: false });
     
@@ -497,68 +499,83 @@ export const UserManagement = () => {
                     </div>
                   </div>
                 ) : (
-  <div className="flex justify-between items-start">
-  <div className="space-y-2">
-    <h3 className="font-bold text-lg">{user.full_name || "Nome não definido"}</h3>
-    <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-      <div>
-        <span className="text-muted-foreground">Email:</span>{" "}
-        <span className="font-medium">{user.email || "Não definido"}</span>
-      </div>
-      <div>
-        <span className="text-muted-foreground">Instagram:</span>{" "}
-        <a
-          href={`https://instagram.com/${user.instagram?.replace("@", "") || ""}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-primary hover:underline"
-        >
-          @{user.instagram?.replace("@", "") || "Não definido"}
-        </a>
-      </div>
-      <div>
-        <span className="text-muted-foreground">Telefone:</span>{" "}
-        <span className="font-medium">{user.phone || "Não definido"}</span>
-      </div>
-      <div>
-        <span className="text-muted-foreground">Sexo:</span>{" "}
-        <span className="font-medium">{user.gender || "Não definido"}</span>
-      </div>
-      <div>
-        <span className="text-muted-foreground">Cadastrado em:</span>{" "}
-        <span className="font-medium">
-          {new Date(user.created_at).toLocaleDateString("pt-BR")}
-        </span>
-      </div>
-
-      {userEvents[user.id] && userEvents[user.id].length > 0 && (
-        <div className="col-span-2">
-          <span className="text-muted-foreground">Eventos participando:</span>{" "}
-          <div className="flex flex-wrap gap-1 mt-1">
-            {userEvents[user.id].map((eventTitle, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded"
-              >
-                {eventTitle}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {userSalesCount[user.id] !== undefined && userSalesCount[user.id] > 0 && (
-        <div>
-          <span className="text-muted-foreground">Vendas Aprovadas:</span>{" "}
-          <span className="font-medium text-green-600">
-            💰 {userSalesCount[user.id]}
-          </span>
-        </div>
-      )}
-    </div>
-  </div>
-
-  <Button variant="ghost" size="sm" onClick={() => startEdit(user)}>
-    <Pencil className="h-4 w-4" />
-  </Button>
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-lg">{user.full_name || "Nome não definido"}</h3>
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Email:</span>{" "}
+                          <span className="font-medium">{user.email || "Não definido"}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Instagram:</span>{" "}
+                          <a
+                            href={`https://instagram.com/${user.instagram?.replace("@", "") || ""}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-primary hover:underline"
+                          >
+                            @{user.instagram?.replace("@", "") || "Não definido"}
+                          </a>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Telefone:</span>{" "}
+                          <span className="font-medium">{user.phone || "Não definido"}</span>
+                        </div>
+                     <div>
+  <span className="text-muted-foreground">Sexo:</span>{" "}
+  <span className="font-medium">{user.gender || "Não definido"}</span>
 </div>
+<div>
+  <span className="text-muted-foreground">Seguidores:</span>{" "}
+  <span className="font-medium">{user.followers_range || "Não informado"}</span>
+</div>
+
+                        <span className="text-muted-foreground">Cadastrado em:</span>{" "}
+                          <span className="font-medium">{new Date(user.created_at).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                        {userEvents[user.id] && userEvents[user.id].length > 0 && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Eventos participando:</span>{" "}
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {userEvents[user.id].map((eventTitle, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded"
+                                >
+                                  {eventTitle}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {userSalesCount[user.id] !== undefined && userSalesCount[user.id] > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Vendas Aprovadas:</span>{" "}
+                            <span className="font-medium text-green-600">💰 {userSalesCount[user.id]}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => startEdit(user)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </Card>
+              ))}
+            </div>
+            
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={goToPage}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+            />
+          </>
+        )}
+      </Card>
+    </div>
+  );
+};
