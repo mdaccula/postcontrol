@@ -132,15 +132,18 @@ const Admin = () => {
 
   useEffect(() => {
     if (user && (isAgencyAdmin || isMasterAdmin)) {
+      console.log('🚀 [Admin] Carregando dados iniciais...');
       loadCurrentAgency();
-      loadEvents();
       loadRejectionTemplates();
       loadUsersCount();
     }
   }, [user, isAgencyAdmin, isMasterAdmin]);
 
+  // Recarregar eventos quando currentAgency estiver disponível
   useEffect(() => {
     if (currentAgency) {
+      console.log('✅ [Admin] currentAgency carregado, recarregando eventos...', currentAgency.name);
+      loadEvents();
       loadUsersCount();
     }
   }, [currentAgency]);
@@ -310,6 +313,8 @@ const copySlugUrl = () => {
   const loadEvents = async () => {
     if (!user) return;
 
+    console.log('📊 [loadEvents] Iniciando carregamento de eventos...');
+
     let agencyIdFilter = null;
 
     // Check if Master Admin is viewing specific agency via agencyId querystring
@@ -328,9 +333,10 @@ const copySlugUrl = () => {
     } else if (currentAgency) {
       // Viewing specific agency (master admin or agency admin)
       agencyIdFilter = currentAgency.id;
-      console.log('🏢 Visualizando agência:', currentAgency.name);
+      console.log('🏢 Visualizando agência:', currentAgency.name, 'ID:', agencyIdFilter);
     } else if (isAgencyAdmin) {
       // Agency admin - load their own agency
+      console.log('⚠️ [loadEvents] Agency Admin sem currentAgency, buscando do profile...');
       const { data: profileData } = await sb
         .from('profiles')
         .select('agency_id')
@@ -347,7 +353,7 @@ const copySlugUrl = () => {
       console.log('👤 Agency Admin - agency_id:', agencyIdFilter);
     }
 
-    console.log('🔍 DEBUG ISOLAMENTO:', {
+    console.log('🔍 [loadEvents] DEBUG ISOLAMENTO:', {
       userId: user.id,
       isMasterAdmin,
       isAgencyAdmin,
@@ -361,14 +367,26 @@ const copySlugUrl = () => {
     if (agencyIdFilter) {
       eventsQuery = eventsQuery.eq('agency_id', agencyIdFilter);
     }
-    const { data: eventsData } = await eventsQuery.order('created_at', { ascending: false });
+    const { data: eventsData, error: eventsError } = await eventsQuery.order('created_at', { ascending: false });
+    
+    if (eventsError) {
+      console.error('❌ [loadEvents] Erro ao carregar eventos:', eventsError);
+    } else {
+      console.log(`✅ [loadEvents] ${eventsData?.length || 0} eventos carregados`);
+    }
     
     // Load posts
     let postsQuery = sb.from('posts').select('*, events(title)');
     if (agencyIdFilter) {
       postsQuery = postsQuery.eq('agency_id', agencyIdFilter);
     }
-    const { data: postsData } = await postsQuery.order('created_at', { ascending: false });
+    const { data: postsData, error: postsError } = await postsQuery.order('created_at', { ascending: false });
+
+    if (postsError) {
+      console.error('❌ [loadEvents] Erro ao carregar posts:', postsError);
+    } else {
+      console.log(`✅ [loadEvents] ${postsData?.length || 0} posts carregados`);
+    }
 
     setEvents(eventsData || []);
     setPosts(postsData || []);
