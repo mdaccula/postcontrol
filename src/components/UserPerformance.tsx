@@ -121,24 +121,14 @@ export const UserPerformance = () => {
     }
   };
 
- const handleSearch = async () => { // 🆕 Adicionar async
-  if (!selectedEventId) {
-    toast.error("Por favor, selecione um evento antes de buscar.");
-    return;
-  }
-  
-  // 🆕 Settar loading ANTES de buscar
-  setLoading(true);
-  setHasSearched(true);
-  
-  try {
-    await loadStats(); // 🆕 Adicionar await
-  } catch (error) {
-    console.error('❌ Erro ao carregar estatísticas:', error);
-    toast.error("Erro ao buscar dados. Tente novamente.");
-    setLoading(false); // 🆕 Garantir que loading seja desativado em caso de erro
-  }
-};
+  const handleSearch = () => {
+    if (!selectedEventId) {
+      toast.error("Por favor, selecione um evento antes de buscar.");
+      return;
+    }
+    setHasSearched(true);
+    loadStats();
+  };
 
   const loadStats = async () => {
     setLoading(true);
@@ -187,40 +177,52 @@ export const UserPerformance = () => {
     });
   };
 
-  const exportToPDF = () => {
-    const eventName = selectedEventId === "all" 
-      ? "Todos os Eventos" 
-      : events.find(e => e.id === selectedEventId)?.title || "Evento";
+ const exportToPDF = () => {
+  const doc = new jsPDF();
+  const eventName = events.find(e => e.id === selectedEventId)?.title || 'Todos';
+  
+  // Função para remover acentos
+  const removeAccents = (str: string) => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
 
-    const doc = new jsPDF();
-    
-    // Configurar fonte para UTF-8
-    doc.setFont("helvetica");
-    
-    // Título
-    doc.setFontSize(18);
-    doc.text(`Relatorio de Desempenho - ${eventName}`, 14, 20);
-    doc.setFontSize(11);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+  // Título SEM ACENTOS
+  doc.setFontSize(18);
+  doc.text(removeAccents(`Relatorio de Desempenho - ${eventName}`), 14, 20);
+  doc.setFontSize(11);
+  doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
 
-    // Tabela
-    autoTable(doc, {
-      startY: 35,
-      head: [['Nome', 'Email', 'Instagram', 'Aprovados', 'Pendentes', 'Conclusao (%)']],
-      body: filteredStats.map(stat => [
-        stat.user_name,
-        stat.user_email,
-        stat.user_instagram,
-        stat.approved_submissions.toString(),
-        stat.pending_submissions.toString(),
-        `${stat.completion_percentage}%`
-      ]),
-      styles: { fontSize: 9, font: 'helvetica' },
-      headStyles: { fillColor: [168, 85, 247] }
-    });
+  // Tabela com textos limpos
+  autoTable(doc, {
+    startY: 35,
+    head: [[
+      removeAccents('Nome'), 
+      'Email', 
+      'Instagram', 
+      'Aprovados', 
+      'Pendentes', 
+      removeAccents('Conclusao (%)')
+    ]],
+    body: filteredStats.map(stat => [
+      removeAccents(stat.user_name || ''),
+      stat.user_email,
+      stat.user_instagram,
+      stat.approved_submissions.toString(),
+      stat.pending_submissions.toString(),
+      `${stat.completion_percentage}%`
+    ]),
+    styles: { fontSize: 9, font: 'helvetica' },
+    headStyles: { fillColor: [168, 85, 247] }
+  });
 
-    doc.save(`Relatorio_${eventName}_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("Relatório PDF exportado com sucesso!", {
+  doc.save(`Relatorio_${removeAccents(eventName)}_${new Date().toISOString().split('T')[0]}.pdf`);
+  toast.success("Relatorio PDF exportado com sucesso!", {
+    description: "O arquivo foi baixado para seu computador."
+  });
+};
+
+  
+  toast.success("Relatório PDF exportado com sucesso!", {
       description: "O arquivo foi baixado para seu computador."
     });
   };
@@ -507,8 +509,8 @@ export const UserPerformance = () => {
                 </Select>
               </div>
             </div>
-          <Button onClick={handleSearch} disabled={!selectedEventId || loading} className="w-full md:w-auto">
-    {loading ? (
+            <Button onClick={handleSearch} disabled={!selectedEventId} className="w-full md:w-auto">
+              {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Carregando...
