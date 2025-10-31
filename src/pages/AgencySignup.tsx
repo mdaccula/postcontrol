@@ -270,12 +270,22 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(11) 99999-9999"
-                />
+<Input
+  id="phone"
+  type="tel"
+  value={formData.phone}
+  onChange={(e) => {
+    const cleaned = e.target.value.replace(/\D/g, '');
+    setFormData({ ...formData, phone: cleaned });
+  }}
+  placeholder="11999136884"
+  maxLength={11}
+/>
+<span className="text-xs text-muted-foreground">
+  Apenas números (10 ou 11 dígitos)
+</span>
+
+                
               </div>
             </>
           )}

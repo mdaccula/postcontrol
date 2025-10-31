@@ -29,11 +29,15 @@ const profileUpdateSchema = z.object({
   email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
   instagram: z.string().trim().min(1, "Instagram é obrigatório").max(50, "Instagram muito longo"),
   phone: z
-    .string()
-    .trim()
-    .regex(/^\(?(\d{2})\)?\s?(\d{4,5})-?(\d{4})$/, "Formato de telefone inválido. Use: (00) 00000-0000")
-    .optional()
-    .or(z.literal("")),
+phone: z
+  .string()
+  .trim()
+  .transform((val) => val.replace(/\D/g, '')) // Remove tudo que não é número
+  .refine((val) => val.length === 0 || val.length === 10 || val.length === 11, {
+    message: "Telefone deve ter 10 ou 11 dígitos (somente números)"
+  })
+  .optional()
+  .or(z.literal("")),
 });
 
 export const UserManagement = () => {
@@ -315,16 +319,19 @@ export const UserManagement = () => {
       }
     }
 
-    const { error } = await sb
-      .from("profiles")
-      .update({
-        email: editForm.email,
-        phone: editForm.phone,
-        full_name: editForm.full_name,
-        instagram: editForm.instagram,
-        gender: editForm.gender, // ADICIONAR ESTA LINHA
-      })
-      .eq("id", userId);
+ // Limpar telefone antes de salvar
+const cleanPhone = editForm.phone?.replace(/\D/g, '') || '';
+
+const { error } = await sb
+  .from("profiles")
+  .update({
+    email: editForm.email,
+    phone: cleanPhone, // Salvar apenas números
+    full_name: editForm.full_name,
+    instagram: editForm.instagram,
+    gender: editForm.gender,
+  })
+  .eq("id", userId);
 
     if (error) {
       toast.error("Erro ao atualizar usuário", {
@@ -464,13 +471,22 @@ export const UserManagement = () => {
                           onChange={(e) => setEditForm({ ...editForm, instagram: e.target.value })}
                         />
                       </div>
-                      <div>
-                        <Label>Telefone</Label>
-                        <Input
-                          value={editForm.phone || ""}
-                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                        />
-                      </div>
+                     <div>
+  <Label>Telefone (somente números)</Label>
+  <Input
+    value={editForm.phone || ""}
+    onChange={(e) => {
+      const cleaned = e.target.value.replace(/\D/g, '');
+      setEditForm({ ...editForm, phone: cleaned });
+    }}
+    placeholder="11999136884"
+    maxLength={11}
+  />
+  <span className="text-xs text-muted-foreground">
+    Digite apenas números (10 ou 11 dígitos)
+  </span>
+</div>
+
                       <div>
                         <Label>Sexo</Label>
                         <select
