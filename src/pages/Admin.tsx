@@ -835,16 +835,27 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
       <div className="bg-gradient-primary text-white py-4 px-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {currentAgency?.logo_url && (
-              <img 
-                src={currentAgency.logo_url} 
-                alt={`Logo ${currentAgency.name}`}
-                className="h-12 w-12 object-contain rounded-lg bg-white/10 p-1"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            )}
+            {currentAgency?.logo_url ? (
+              <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                <img 
+                  src={currentAgency.logo_url} 
+                  alt={`Logo ${currentAgency.name}`}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent && currentAgency?.name) {
+                      parent.innerHTML = `<span class="text-lg font-bold text-white">${currentAgency.name.charAt(0).toUpperCase()}</span>`;
+                    }
+                  }}
+                />
+              </div>
+            ) : currentAgency?.name ? (
+              <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-bold text-white">{currentAgency.name.charAt(0).toUpperCase()}</span>
+              </div>
+            ) : null}
             <div>
               <h2 className="text-xl font-bold">
                 {profile?.full_name || 'Admin'}

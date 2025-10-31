@@ -376,7 +376,7 @@ export const AllUsersManagement = () => {
                     <TableHead className="w-[140px] min-w-[140px]">Acesso</TableHead>
                     <TableHead className="w-[150px] min-w-[150px] hidden lg:table-cell">Agência</TableHead>
                     <TableHead className="w-[90px] min-w-[90px] text-center">Posts</TableHead>
-                    <TableHead className="w-[140px] min-w-[140px] sticky right-0 bg-card">Ações</TableHead>
+                    <TableHead className="w-[120px] min-w-[120px] sticky right-0 bg-card">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -419,14 +419,14 @@ export const AllUsersManagement = () => {
                           {submissionCounts[user.id] || 0}
                         </Badge>
                       </TableCell>
-                      <TableCell className="w-[140px] min-w-[140px] sticky right-0 bg-card shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
+                       <TableCell className="w-[120px] min-w-[120px] sticky right-0 bg-card shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
                         <div className="flex gap-1 justify-end">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditUser(user)}
                             title="Editar usuário"
-                            className="h-8"
+                            className="h-7 w-7 p-0"
                           >
                             <Pencil className="w-3 h-3" />
                           </Button>
@@ -440,7 +440,7 @@ export const AllUsersManagement = () => {
                               )
                             }
                             title="Excluir usuário"
-                            className="h-8"
+                            className="h-7 w-7 p-0"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>

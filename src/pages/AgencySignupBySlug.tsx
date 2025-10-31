@@ -53,15 +53,26 @@ export default function AgencySignupBySlug() {
       <div className="w-full bg-gradient-to-r from-primary/10 via-primary/5 to-background border-b">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col items-center gap-4">
-            {agencyLogo && (
-              <img 
-                src={agencyLogo} 
-                alt={`Logo ${agencyName}`}
-                className="h-16 w-auto object-contain drop-shadow-lg"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+            {agencyLogo ? (
+              <div className="relative h-20 w-20 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                <img 
+                  src={agencyLogo} 
+                  alt={`Logo ${agencyName}`}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `<span class="text-2xl font-bold text-muted-foreground">${agencyName.charAt(0).toUpperCase()}</span>`;
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-2xl font-bold text-primary">{agencyName.charAt(0).toUpperCase()}</span>
+              </div>
             )}
             <h1 className="text-2xl md:text-3xl font-bold text-center bg-gradient-primary bg-clip-text text-transparent">
               {agencyName}
