@@ -198,7 +198,7 @@ export const UserManagement = () => {
   const { data: profileData } = await sb
     .from('profiles')
     .select('agency_id')
-    .eq('id', user?.id)
+    .eq('id', users.id)
     .maybeSingle();
   
   if (profileData?.agency_id) {
