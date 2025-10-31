@@ -98,6 +98,74 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_guests: {
+        Row: {
+          accepted_at: string | null
+          access_end_date: string
+          access_start_date: string
+          agency_id: string
+          created_at: string
+          guest_email: string
+          guest_user_id: string | null
+          id: string
+          invite_token: string | null
+          invited_by: string
+          last_accessed_at: string | null
+          notify_before_expiry: boolean | null
+          notify_new_submissions: boolean | null
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          access_end_date: string
+          access_start_date?: string
+          agency_id: string
+          created_at?: string
+          guest_email: string
+          guest_user_id?: string | null
+          id?: string
+          invite_token?: string | null
+          invited_by: string
+          last_accessed_at?: string | null
+          notify_before_expiry?: boolean | null
+          notify_new_submissions?: boolean | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          access_end_date?: string
+          access_start_date?: string
+          agency_id?: string
+          created_at?: string
+          guest_email?: string
+          guest_user_id?: string | null
+          id?: string
+          invite_token?: string | null
+          invited_by?: string
+          last_accessed_at?: string | null
+          notify_before_expiry?: boolean | null
+          notify_new_submissions?: boolean | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_guests_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auto_approval_rules: {
         Row: {
           auto_approve_after_x_approvals: number | null
@@ -353,6 +421,109 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_audit_log: {
+        Row: {
+          action: string
+          action_data: Json | null
+          created_at: string
+          event_id: string | null
+          guest_id: string
+          id: string
+          ip_address: unknown
+          submission_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          action_data?: Json | null
+          created_at?: string
+          event_id?: string | null
+          guest_id: string
+          id?: string
+          ip_address?: unknown
+          submission_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          action_data?: Json | null
+          created_at?: string
+          event_id?: string | null
+          guest_id?: string
+          id?: string
+          ip_address?: unknown
+          submission_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_audit_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_audit_log_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "agency_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_audit_log_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_event_permissions: {
+        Row: {
+          created_at: string
+          daily_approval_limit: number | null
+          event_id: string
+          guest_id: string
+          id: string
+          permission_level: Database["public"]["Enums"]["guest_permission"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_approval_limit?: number | null
+          event_id: string
+          guest_id: string
+          id?: string
+          permission_level?: Database["public"]["Enums"]["guest_permission"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_approval_limit?: number | null
+          event_id?: string
+          guest_id?: string
+          id?: string
+          permission_level?: Database["public"]["Enums"]["guest_permission"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_event_permissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_event_permissions_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "agency_guests"
             referencedColumns: ["id"]
           },
         ]
@@ -936,9 +1107,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      expire_old_guest_invites: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_guest_with_permission: {
+        Args: {
+          _event_id: string
+          _required_permission: Database["public"]["Enums"]["guest_permission"]
           _user_id: string
         }
         Returns: boolean
@@ -951,6 +1131,7 @@ export type Database = {
     }
     Enums: {
       app_role: "user" | "agency_admin" | "master_admin"
+      guest_permission: "viewer" | "moderator" | "manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1079,6 +1260,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "agency_admin", "master_admin"],
+      guest_permission: ["viewer", "moderator", "manager"],
     },
   },
 } as const
