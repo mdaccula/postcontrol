@@ -183,6 +183,7 @@ const Admin = () => {
     if (isAgencyAdmin && !isMasterAdmin && profileData?.agencies) {
       console.log('🏢 Agency admin profile:', profileData.agencies);
       setCurrentAgency(profileData.agencies);
+      setAgencySlug(profileData.agencies?.slug || "");
     }
   };
 

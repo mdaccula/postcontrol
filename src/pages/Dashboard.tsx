@@ -308,25 +308,67 @@ const Dashboard = () => {
     if (!avatarFile || !user) return;
     
     try {
-      const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `avatars/${user.id}.${fileExt}`;
+      console.log('📸 Iniciando upload de avatar...');
       
-      const { error: uploadError } = await supabase.storage
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `avatars/${user.id}_${Date.now()}.${fileExt}`;
+      
+      console.log('📁 Nome do arquivo:', fileName);
+      
+      // Deletar arquivos antigos
+      const { data: oldFiles } = await supabase.storage
+        .from('screenshots')
+        .list('avatars', { search: user.id });
+      
+      if (oldFiles && oldFiles.length > 0) {
+        await Promise.all(
+          oldFiles.map(file => 
+            supabase.storage
+              .from('screenshots')
+              .remove([`avatars/${file.name}`])
+          )
+        );
+        console.log('🗑️ Arquivos antigos removidos');
+      }
+      
+      // Upload
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('screenshots')
         .upload(fileName, avatarFile, { upsert: true });
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('❌ Erro no upload:', uploadError);
+        throw uploadError;
+      }
       
-      const { data: { publicUrl } } = supabase.storage
+      console.log('✅ Upload concluído');
+      
+      // Usar createSignedUrl
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('screenshots')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 31536000); // 1 ano
+      
+      if (signedError) {
+        console.error('❌ Erro ao gerar URL:', signedError);
+        throw signedError;
+      }
+      
+      const avatarUrl = signedData.signedUrl;
+      console.log('🔗 URL gerada');
       
       const { error: updateError } = await sb
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: avatarUrl })
         .eq('id', user.id);
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Erro ao atualizar perfil:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ Perfil atualizado');
+      
+      setAvatarPreview(avatarUrl);
       
       toast({
         title: "Foto atualizada!",
@@ -335,11 +377,11 @@ const Dashboard = () => {
       
       setAvatarFile(null);
       await loadSubmissionsData();
-    } catch (error) {
-      console.error('Erro ao salvar avatar:', error);
+    } catch (error: any) {
+      console.error('❌ Erro completo ao salvar avatar:', error);
       toast({
         title: "Erro ao salvar foto",
-        description: "Tente novamente mais tarde.",
+        description: error.message || "Tente novamente mais tarde.",
         variant: "destructive",
       });
     }

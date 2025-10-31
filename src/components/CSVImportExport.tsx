@@ -16,7 +16,7 @@ export const CSVImportExport = ({ onImportComplete }: CSVImportExportProps) => {
   const handleExport = async () => {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("full_name, email, instagram, phone, created_at")
+      .select("full_name, email, instagram, phone, gender, followers_range, created_at")
       .order("created_at", { ascending: false });
 
     if (!profiles || profiles.length === 0) {
@@ -31,6 +31,8 @@ export const CSVImportExport = ({ onImportComplete }: CSVImportExportProps) => {
       instagram_arroba: profile.instagram ? `@${profile.instagram.replace("@", "")}` : "",
       instagram_https: profile.instagram ? `https://instagram.com/${profile.instagram.replace("@", "")}` : "",
       phone: profile.phone,
+      sexo: profile.gender || "Não informado",
+      faixa_seguidores: profile.followers_range || "Não informado",
       created_at: profile.created_at,
     }));
 

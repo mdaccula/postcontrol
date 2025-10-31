@@ -3,11 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Save, Building2, User, Lock, Calendar, CreditCard } from "lucide-react";
+import { Save, Building2, User, Lock, Calendar, CreditCard, Upload, Image as ImageIcon } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export const AgencyAdminSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,9 @@ export const AgencyAdminSettings = () => {
   // Agency Data
   const [agencyName, setAgencyName] = useState("");
   const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [agencyLogoUrl, setAgencyLogoUrl] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   
   // Personal Data
   const [fullName, setFullName] = useState("");
@@ -66,7 +70,7 @@ export const AgencyAdminSettings = () => {
       if (profileData.agency_id) {
         const { data: agencyData } = await sb
           .from('agencies')
-          .select('name, subscription_plan, plan_expiry_date, subscription_status')
+          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url')
           .eq('id', profileData.agency_id)
           .maybeSingle();
 
@@ -75,11 +79,82 @@ export const AgencyAdminSettings = () => {
           setPlanType(agencyData.subscription_plan || "basic");
           setPlanExpiry(agencyData.plan_expiry_date);
           setSubscriptionStatus(agencyData.subscription_status || "active");
+          setAgencyLogoUrl(agencyData.logo_url);
+          setLogoPreview(agencyData.logo_url);
         }
       }
     }
 
     setLoading(false);
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveLogo = async () => {
+    if (!logoFile || !agencyId) return;
+    
+    try {
+      console.log('📸 Iniciando upload de logo...');
+      
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `agency-logos/${agencyId}_${Date.now()}.${fileExt}`;
+      
+      // Deletar logos antigos
+      const { data: oldFiles } = await supabase.storage
+        .from('screenshots')
+        .list('agency-logos', { search: agencyId });
+      
+      if (oldFiles && oldFiles.length > 0) {
+        await Promise.all(
+          oldFiles.map(file => 
+            supabase.storage
+              .from('screenshots')
+              .remove([`agency-logos/${file.name}`])
+          )
+        );
+      }
+      
+      // Upload
+      const { error: uploadError } = await supabase.storage
+        .from('screenshots')
+        .upload(fileName, logoFile, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Gerar URL assinada
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('screenshots')
+        .createSignedUrl(fileName, 31536000); // 1 ano
+      
+      if (signedError) throw signedError;
+      
+      // Atualizar agência
+      const { error: updateError } = await sb
+        .from('agencies')
+        .update({ logo_url: signedData.signedUrl })
+        .eq('id', agencyId);
+      
+      if (updateError) throw updateError;
+      
+      setAgencyLogoUrl(signedData.signedUrl);
+      setLogoPreview(signedData.signedUrl);
+      
+      toast.success("Logo atualizado com sucesso!");
+      setLogoFile(null);
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar logo:', error);
+      toast.error(error.message || "Erro ao salvar logo");
+    }
   };
 
   const handleSaveProfile = async () => {

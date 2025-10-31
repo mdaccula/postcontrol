@@ -17,6 +17,8 @@ interface UserStats {
   user_email: string;
   user_instagram: string;
   user_phone: string;
+  user_gender: string;
+  user_followers_range: string;
   events_participated: number;
   total_submissions: number;
   approved_submissions: number;
@@ -154,6 +156,8 @@ export const UserPerformance = () => {
         'Email': stat.user_email,
         'Instagram': stat.user_instagram,
         'Telefone': stat.user_phone,
+        'Sexo': stat.user_gender || 'N/A',
+        'Seguidores': stat.user_followers_range || 'N/A',
         'Eventos Participados': stat.events_participated,
         'Total Submissões': stat.total_submissions,
         'Aprovados': stat.approved_submissions,
@@ -198,7 +202,9 @@ export const UserPerformance = () => {
     head: [[
       removeAccents('Nome'), 
       'Email', 
-      'Instagram', 
+      'Instagram',
+      'Sexo',
+      'Seguidores',
       'Aprovados', 
       'Pendentes', 
       removeAccents('Conclusao (%)')
@@ -207,6 +213,8 @@ export const UserPerformance = () => {
       removeAccents(stat.user_name || ''),
       stat.user_email,
       stat.user_instagram,
+      removeAccents(stat.user_gender || 'N/A'),
+      stat.user_followers_range || 'N/A',
       stat.approved_submissions.toString(),
       stat.pending_submissions.toString(),
       `${stat.completion_percentage}%`
@@ -274,7 +282,7 @@ export const UserPerformance = () => {
 
     const { data: profilesData } = await sb
       .from('profiles')
-      .select('id, full_name, email, instagram, phone')
+      .select('id, full_name, email, instagram, phone, gender, followers_range')
       .in('id', uniqueUserIds);
 
     const userStatsData: UserStats[] = [];
@@ -321,6 +329,8 @@ export const UserPerformance = () => {
         user_email: profile.email || 'Sem email',
         user_instagram: profile.instagram || 'Sem Instagram',
         user_phone: profile.phone || 'Sem telefone',
+        user_gender: profile.gender || 'N/A',
+        user_followers_range: profile.followers_range || 'N/A',
         events_participated: eventsParticipated,
         total_submissions: (userSubmissions || []).length,
         approved_submissions: approvedSubmissions,
@@ -404,6 +414,8 @@ export const UserPerformance = () => {
         user_email: profile.email || 'Sem email',
         user_instagram: profile.instagram || 'Sem Instagram',
         user_phone: profile.phone || 'Sem telefone',
+        user_gender: profile.gender || 'N/A',
+        user_followers_range: profile.followers_range || 'N/A',
         events_participated: 1,
         total_submissions: (userSubmissions || []).length,
         approved_submissions: approvedSubmissions,
