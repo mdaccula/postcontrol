@@ -112,6 +112,11 @@ const Dashboard = () => {
     loadDashboardData 
   } = useDashboardData(user?.id, currentAgencyId);
 
+  // ✅ FASE 2: Verificar se usuário tem agência vinculada
+  const hasAgency = useMemo(() => {
+    return userAgencies.length > 0 || currentAgencyId !== null;
+  }, [userAgencies, currentAgencyId]);
+
   // ✅ FASE 1: Loading derivado de múltiplos estados (previne tela cinza)
   const loading = useMemo(() => {
     return isLoadingAgencies || 
@@ -579,13 +584,36 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground break-words">Instagram: {profile?.instagram}</p>
               </div>
             </div>
-            <Link
-              to={`/submit${currentAgencyId ? `?agency=${currentAgencyId}` : ""}`}
-              className="w-full sm:w-auto"
-              id="submit-button"
-            >
-              <Button className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap">Enviar Nova Postagem</Button>
-            </Link>
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <Link
+                to={hasAgency ? `/submit${currentAgencyId ? `?agency=${currentAgencyId}` : ""}` : "#"}
+                className="w-full sm:w-auto"
+                id="submit-button"
+                onClick={(e) => {
+                  if (!hasAgency) {
+                    e.preventDefault();
+                    toast({
+                      title: "Ação não disponível",
+                      description: "Você precisa estar vinculado a uma agência para enviar postagens.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              >
+                <Button 
+                  className="bg-gradient-primary w-full sm:w-auto whitespace-nowrap"
+                  disabled={!hasAgency}
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  {hasAgency ? "Enviar Nova Postagem" : "Cadastre-se em uma Agência"}
+                </Button>
+              </Link>
+              {!hasAgency && (
+                <p className="text-xs text-muted-foreground text-center sm:text-right">
+                  Você precisa estar vinculado a uma agência
+                </p>
+              )}
+            </div>
           </div>
         </Card>
 

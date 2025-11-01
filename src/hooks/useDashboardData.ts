@@ -37,23 +37,45 @@ export const useDashboardData = (userId: string | undefined, currentAgencyId: st
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
-    if (!userId || !currentAgencyId) return;
+    if (!userId) return;
 
     setLoading(true);
 
     try {
+      // Buscar IDs das agências do usuário via user_agencies
+      const { data: userAgencyData } = await sb
+        .from('user_agencies')
+        .select('agency_id')
+        .eq('user_id', userId);
+      
+      const userAgencyIds = userAgencyData?.map(ua => ua.agency_id) || [];
+      
+      // Se não tem nenhuma agência, carregar dados vazios mas não falhar
+      if (userAgencyIds.length === 0 && !currentAgencyId) {
+        setEvents([]);
+        setSubmissions([]);
+        setEventStats([]);
+        setLoading(false);
+        return;
+      }
+
+      // Determinar quais agências buscar
+      const agenciesToFetch = currentAgencyId 
+        ? [currentAgencyId] 
+        : userAgencyIds;
+
       // QUERY OTIMIZADA: Usar Promise.all para carregar em paralelo
       const [eventsData, submissionsData] = await Promise.all([
-        // Query 1: Eventos ativos (usando índice idx_events_agency_active)
+        // Query 1: Eventos ativos das agências do usuário
         sb
           .from("events")
           .select("id, title, total_required_posts, is_approximate_total")
           .eq("is_active", true)
-          .eq("agency_id", currentAgencyId)
+          .in("agency_id", agenciesToFetch)
           .order("event_date", { ascending: false })
           .then(res => res.data),
         
-        // Query 2: Submissões (usando índice idx_submissions_user_status)
+        // Query 2: Submissões com JOIN completo
         sb
           .from("submissions")
           .select(`
@@ -80,7 +102,7 @@ export const useDashboardData = (userId: string | undefined, currentAgencyId: st
           `)
           .eq("user_id", userId)
           .eq("posts.events.is_active", true)
-          .eq("posts.events.agency_id", currentAgencyId)
+          .in("posts.events.agency_id", agenciesToFetch)
           .order("submitted_at", { ascending: false })
           .then(res => res.data)
       ]);
@@ -89,7 +111,6 @@ export const useDashboardData = (userId: string | undefined, currentAgencyId: st
       setSubmissions(submissionsData || []);
 
       // OTIMIZAÇÃO: Calcular estatísticas sem queries adicionais
-      // Os dados já vêm completos do JOIN acima
       if (submissionsData) {
         const eventMap = new Map<
           string,

@@ -45,11 +45,9 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
 
     console.log('🔍 Buscando agência com token:', token);
 
+    // Usar nova função security definer que expõe dados publicamente
     const { data, error } = await sb
-      .from('agencies')
-      .select('*')
-      .eq('signup_token', token)
-      .maybeSingle();
+      .rpc('get_agency_signup_data', { agency_slug_or_token: token });
 
     console.log('📊 Resultado da busca:', { data, error });
 
@@ -62,7 +60,9 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
       });
     }
 
-    if (!data) {
+    const agencyData = data && data.length > 0 ? data[0] : null;
+
+    if (!agencyData) {
       console.warn('⚠️ Agência não encontrada para token:', token);
       toast({
         title: "Agência não encontrada",
@@ -71,7 +71,7 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
       });
     }
 
-    setAgency(data);
+    setAgency(agencyData);
     setLoading(false);
   };
 
