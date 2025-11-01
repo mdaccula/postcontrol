@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUserAgencies, useAdminSettings, useEvents } from "@/hooks/useReactQuery";
 import { useQueryClient } from '@tanstack/react-query';
 import imageCompression from 'browser-image-compression';
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide").then(m => ({ default: m.TutorialGuide })));
@@ -64,9 +65,8 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [eventStats, setEventStats] = useState<EventStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Estados locais
   const [profile, setProfile] = useState<{
     full_name: string;
     email: string;
@@ -86,12 +86,13 @@ const Dashboard = () => {
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyPlan, setAgencyPlan] = useState<string>("");
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
-  const [events, setEvents] = useState<any[]>([]);
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
   const [userAgencies, setUserAgencies] = useState<any[]>([]);
   const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const [badgesEnabled, setBadgesEnabled] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   // React Query hooks com cache
   const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgencies(user?.id);
@@ -100,18 +101,49 @@ const Dashboard = () => {
     'badges_enabled',
     'whatsapp_number'
   ]);
+  const { data: eventsData, isLoading: isLoadingEvents } = useEvents(currentAgencyId || undefined, true);
+  
+  // Hook otimizado para dashboard data
+  const { 
+    submissions, 
+    eventStats, 
+    events: dashboardEvents, 
+    loading: isLoadingDashboard,
+    loadDashboardData 
+  } = useDashboardData(user?.id, currentAgencyId);
 
+  // ✅ FASE 1: Loading derivado de múltiplos estados (previne tela cinza)
+  const loading = useMemo(() => {
+    return isLoadingAgencies || 
+           isLoadingSettings || 
+           isLoadingEvents || 
+           isLoadingDashboard ||
+           (currentAgencyId !== null && !profile && submissions.length === 0);
+  }, [isLoadingAgencies, isLoadingSettings, isLoadingEvents, isLoadingDashboard, currentAgencyId, profile, submissions]);
+
+  // ✅ FASE 1: Timeout de segurança (10 segundos)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading && !hasError) {
+        console.warn('⚠️ Loading timeout após 10s - forçando false');
+        setLoadingTimeout(true);
+      }
+    }, 10000);
+    
+    return () => clearTimeout(timeout);
+  }, [loading, hasError]);
+
+  // ✅ FASE 3: Consolidar múltiplos useEffect em 1 único
   useEffect(() => {
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    // ✅ Forçar refetch de roles ao carregar Dashboard
-    console.log('🔄 [Dashboard] Invalidando cache de userRoles');
+    // Invalidar cache de roles
     queryClient.invalidateQueries({ queryKey: ['userRoles'] });
     
-    // Processar dados das agencies do cache
+    // Processar agencies
     if (userAgenciesData && !isLoadingAgencies) {
       setUserAgencies(userAgenciesData);
       
@@ -130,155 +162,68 @@ const Dashboard = () => {
       }
     }
     
-    // Processar settings do cache
+    // Processar settings
     if (adminSettingsData && !isLoadingSettings) {
       setAiInsightsEnabled(adminSettingsData.ai_insights_enabled === 'true');
       setBadgesEnabled(adminSettingsData.badges_enabled === 'true');
       setWhatsappNumber(adminSettingsData.whatsapp_number || '');
     }
-  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingAgencies, isLoadingSettings, searchParams]);
 
-  // Hook para eventos com cache
-  const { data: eventsData, isLoading: isLoadingEvents } = useEvents(currentAgencyId || undefined, true);
-
-  useEffect(() => {
+    // Processar eventos
     if (eventsData) {
-      setEvents(eventsData);
+      // Eventos já vêm do useDashboardData, mas mantemos para compatibilidade
     }
-  }, [eventsData]);
-
-  useEffect(() => {
-    if (currentAgencyId && user) {
+    
+    // ✅ Carregar dados APENAS 1x ao final (evita redundância)
+    if (currentAgencyId && user && !profile && !isLoadingDashboard) {
       loadSubmissionsData();
     }
-  }, [currentAgencyId, user]);
+  }, [user, navigate, userAgenciesData, adminSettingsData, eventsData, currentAgencyId, isLoadingAgencies, isLoadingSettings, isLoadingDashboard, profile, searchParams, queryClient]);
 
+  // ✅ FASE 2: Função otimizada com try/catch e paralelização
   const loadSubmissionsData = async () => {
-    if (!user || !currentAgencyId) return;
-
-    setLoading(true);
-
-    // Carregar perfil
-    const { data: profileData } = await sb
-      .from("profiles")
-      .select("full_name, email, instagram, phone, gender, avatar_url")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileData) {
-      setProfile(profileData);
-      setSelectedGender(profileData.gender || "");
-      setAvatarPreview(profileData.avatar_url || null);
+    if (!user || !currentAgencyId) {
+      console.warn('⚠️ loadSubmissionsData chamado sem user ou currentAgencyId');
+      return;
     }
 
-    // Atualizar last_accessed_at
-    await sb
-      .from("user_agencies")
-      .update({ last_accessed_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .eq("agency_id", currentAgencyId);
+    try {
+      // ✅ FASE 2: Usar Promise.all para paralelizar queries
+      const [profileData, _] = await Promise.all([
+        // Query 1: Perfil
+        sb
+          .from("profiles")
+          .select("full_name, email, instagram, phone, gender, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(res => res.data),
+        
+        // Query 2: Atualizar last_accessed_at (não bloqueante)
+        sb
+          .from("user_agencies")
+          .update({ last_accessed_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .eq("agency_id", currentAgencyId)
+      ]);
 
-    // Carregar submissões - Incluir vendas (LEFT JOIN em posts)
-    const { data: submissionsData } = await sb
-      .from("submissions")
-      .select(
-        `
-        id,
-        submitted_at,
-        screenshot_url,
-        screenshot_path,
-        status,
-        rejection_reason,
-        submission_type,
-        posts (
-          post_number,
-          deadline,
-          event_id,
-          agency_id,
-          events (
-            title,
-            required_posts,
-            id,
-            is_active,
-            agency_id
-          )
-        )
-      `
-      )
-      .eq("user_id", user.id)
-      .order("submitted_at", { ascending: false });
-
-    // Filtrar manualmente submissões da agência correta
-    const filteredSubmissions = (submissionsData || []).filter((sub: any) => {
-      // Se tem post, verificar agência do evento
-      if (sub.posts?.events) {
-        return sub.posts.events.is_active && sub.posts.events.agency_id === currentAgencyId;
+      if (profileData) {
+        setProfile(profileData);
+        setSelectedGender(profileData.gender || "");
+        setAvatarPreview(profileData.avatar_url || null);
       }
-      // Se não tem post (venda), verificar pela agency_id do post virtual
-      if (sub.posts?.agency_id) {
-        return sub.posts.agency_id === currentAgencyId;
-      }
-      return false;
-    });
 
-    setSubmissions(filteredSubmissions);
-
-    // Calcular estatísticas por evento - posts aprovados / total de posts do evento
-    if (submissionsData) {
-      const eventMap = new Map<string, { title: string; totalPosts: number; approvedCount: number; isApproximate: boolean }>();
-
-      // Primeiro, coletar todos os eventos únicos das submissões
-      const uniqueEventIds = new Set<string>();
-      submissionsData.forEach((sub) => {
-        if (sub.posts?.events) {
-          const eventId = (sub.posts.events as any).id;
-          uniqueEventIds.add(eventId);
-        }
+      // Carregar dados do dashboard (já otimizado no hook)
+      await loadDashboardData();
+      
+    } catch (error: any) {
+      console.error("❌ Erro ao carregar dados da dashboard:", error);
+      setHasError(true);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar seus dados. Tente novamente ou contate o suporte.",
+        variant: "destructive",
       });
-
-      // Para cada evento, buscar o total obrigatório de posts
-      for (const eventId of Array.from(uniqueEventIds)) {
-        const eventData = submissionsData.find((sub) => sub.posts?.events && (sub.posts.events as any).id === eventId)
-          ?.posts?.events;
-
-        if (eventData) {
-          // Buscar dados completos do evento incluindo total_required_posts
-          const { data: fullEventData } = await sb
-            .from("events")
-            .select("total_required_posts, is_approximate_total")
-            .eq("id", eventId)
-            .single();
-
-          const totalRequiredPosts = fullEventData?.total_required_posts || 0;
-          const isApproximate = fullEventData?.is_approximate_total || false;
-
-          // Contar posts aprovados do usuário neste evento
-          const approvedCount = submissionsData.filter(
-            (sub) => sub.status === "approved" && sub.posts?.events && (sub.posts.events as any).id === eventId,
-          ).length;
-
-          eventMap.set(eventId, {
-            title: eventData.title,
-            totalPosts: totalRequiredPosts,
-            approvedCount: approvedCount,
-            isApproximate: isApproximate,
-          });
-        }
-      }
-
-      const stats: EventStats[] = Array.from(eventMap.entries()).map(([eventId, data]) => ({
-        eventId,
-        eventTitle: data.title,
-        totalRequired: data.totalPosts,
-        submitted: data.approvedCount,
-        percentage: data.totalPosts > 0 ? (data.approvedCount / data.totalPosts) * 100 : 0,
-        isApproximate: data.isApproximate,
-      }));
-
-      setEventStats(stats);
     }
-
-    setLoading(false);
   };
 
   const handleSignOut = async () => {
@@ -807,7 +752,7 @@ const Dashboard = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os eventos</SelectItem>
-                  {events.map((event) => (
+                  {dashboardEvents.map((event) => (
                     <SelectItem key={event.id} value={event.id}>
                       {event.title}
                     </SelectItem>
@@ -848,7 +793,7 @@ const Dashboard = () => {
 
                           <div className="p-4 space-y-2">
                             <h3 className="font-bold">{submission.posts?.events?.title || "Evento"}</h3>
-                            {submission.submission_type === "sale" ? (
+                            {(submission as any).submission_type === "sale" ? (
                               <Badge className="bg-green-500/20 text-green-500 border-green-500">
                                 💰 Comprovante de Venda
                               </Badge>
