@@ -396,11 +396,10 @@ const Dashboard = () => {
   const activeEventsCount = events.length;
   const lastSubmission = submissions[0];
 
-  // Filtrar submissões por evento
-  const filteredSubmissions = useMemo(() => {
-    if (selectedHistoryEvent === "all") return submissions;
-    return submissions.filter(s => s.posts?.event_id === selectedHistoryEvent);
-  }, [submissions, selectedHistoryEvent]);
+  // Filtrar submissões por evento (inline, sem useMemo para evitar problemas com early returns)
+  const filteredSubmissions = selectedHistoryEvent === "all" 
+    ? submissions 
+    : submissions.filter(s => s.posts?.event_id === selectedHistoryEvent);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
