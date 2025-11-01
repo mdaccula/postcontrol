@@ -128,76 +128,96 @@ const Submit = () => {
   }, [selectedEvent]);
 
   const loadEvents = async () => {
-    console.log('🔄 Carregando eventos...');
-    
     if (!user) {
-      console.log('❌ Usuário não logado');
       setEvents([]);
       return;
     }
 
-    // 1. Buscar contexto da agência (via URL query param ou última acessada)
-    const urlParams = new URLSearchParams(window.location.search);
-    let contextAgencyId = urlParams.get('agency');
+    try {
+      // 1. Buscar contexto da agência (via URL query param ou última acessada)
+      const urlParams = new URLSearchParams(window.location.search);
+      let contextAgencyId = urlParams.get('agency');
 
-    if (!contextAgencyId) {
-      // Buscar última agência acessada pelo usuário
-      const { data: userAgencies, error: agenciesError } = await sb
-        .from('user_agencies')
-        .select('agency_id')
-        .eq('user_id', user.id)
-        .order('last_accessed_at', { ascending: false })
-        .limit(1);
+      if (!contextAgencyId) {
+        // Buscar última agência acessada pelo usuário
+        const { data: userAgencies, error: agenciesError } = await sb
+          .from('user_agencies')
+          .select('agency_id')
+          .eq('user_id', user.id)
+          .order('last_accessed_at', { ascending: false })
+          .limit(1);
 
-      if (agenciesError) {
-        console.error('❌ Erro ao buscar agências do usuário:', agenciesError);
-        toast({
-          title: "Erro de configuração",
-          description: "Não foi possível carregar suas agências.",
-          variant: "destructive"
-        });
-        return;
+        if (agenciesError) {
+          console.error('❌ Erro ao buscar agências:', agenciesError);
+          toast({
+            title: "Erro de configuração",
+            description: "Não foi possível carregar suas agências.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (!userAgencies || userAgencies.length === 0) {
+          toast({
+            title: "Sem agência vinculada",
+            description: "Você precisa se cadastrar através do link de uma agência.",
+            variant: "destructive"
+          });
+          setEvents([]);
+          return;
+        }
+
+        contextAgencyId = userAgencies[0].agency_id;
       }
 
-      if (!userAgencies || userAgencies.length === 0) {
-        console.warn('⚠️ Usuário sem agência vinculada');
+      setAgencyId(contextAgencyId);
+
+      // 2. Atualizar last_accessed_at
+      await sb
+        .from('user_agencies')
+        .update({ last_accessed_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('agency_id', contextAgencyId);
+
+      // 3. Buscar eventos ATIVOS da agência
+      const { data, error } = await sb
+        .from("events")
+        .select("id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, target_gender")
+        .eq("is_active", true)
+        .eq("agency_id", contextAgencyId)
+        .order("event_date", { ascending: true });
+
+      if (error) {
+        console.error("❌ Erro ao carregar eventos:", error);
         toast({
-          title: "Sem agência vinculada",
-          description: "Você precisa se cadastrar através do link de uma agência.",
+          title: "Erro ao carregar eventos",
+          description: error.message,
           variant: "destructive"
         });
         setEvents([]);
         return;
       }
 
-      contextAgencyId = userAgencies[0].agency_id;
+      if (!data || data.length === 0) {
+        toast({
+          title: "Nenhum evento disponível",
+          description: "Não há eventos ativos no momento. Entre em contato com a agência.",
+          variant: "default"
+        });
+        setEvents([]);
+        return;
+      }
+
+      setEvents(data);
+    } catch (error) {
+      console.error('❌ Erro crítico ao carregar eventos:', error);
+      toast({
+        title: "Erro ao carregar eventos",
+        description: "Tente recarregar a página.",
+        variant: "destructive"
+      });
+      setEvents([]);
     }
-
-    console.log('🏢 Contexto da agência:', contextAgencyId);
-    setAgencyId(contextAgencyId); // ✅ Armazenar agency_id no estado
-
-    // 2. Atualizar last_accessed_at
-    await sb
-      .from('user_agencies')
-      .update({ last_accessed_at: new Date().toISOString() })
-      .eq('user_id', user.id)
-      .eq('agency_id', contextAgencyId);
-
-    // 3. Buscar eventos APENAS da agência no contexto
-    const { data, error } = await sb
-      .from("events")
-      .select("id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, target_gender")
-      .eq("is_active", true)
-      .eq("agency_id", contextAgencyId)
-      .order("event_date", { ascending: true });
-
-    if (error) {
-      console.error("❌ Erro ao carregar eventos:", error);
-      return;
-    }
-
-    console.log(`✅ ${data?.length || 0} eventos carregados da agência ${contextAgencyId}`);
-    setEvents(data || []);
   };
 
   const loadPostsForEvent = async (eventId: string) => {
@@ -794,17 +814,28 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
             <div className="space-y-2">
               <Label htmlFor="event">Escolher Evento *</Label>
               <Select value={selectedEvent} onValueChange={setSelectedEvent} required disabled={isSubmitting}>
-                <SelectTrigger id="event">
-                  <SelectValue placeholder="Selecione o evento" />
+                <SelectTrigger id="event" className="bg-background">
+                  <SelectValue placeholder={events.length === 0 ? "Carregando eventos..." : "Selecione o evento"} />
                 </SelectTrigger>
-                <SelectContent>
-                  {events.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title} {event.event_date && `- ${new Date(event.event_date).toLocaleDateString("pt-BR")}`}
+                <SelectContent className="bg-popover border-border z-50">
+                  {events.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      Nenhum evento disponível
                     </SelectItem>
-                  ))}
+                  ) : (
+                    events.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.title} {event.event_date && `- ${new Date(event.event_date).toLocaleDateString("pt-BR")}`}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              {events.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {events.length} {events.length === 1 ? 'evento disponível' : 'eventos disponíveis'}
+                </p>
+              )}
             </div>
 
             {selectedEvent && selectedEventData && (

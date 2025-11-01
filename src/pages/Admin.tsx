@@ -83,6 +83,7 @@ const Admin = () => {
   const [selectedImageForZoom, setSelectedImageForZoom] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(false);
   const [usersCount, setUsersCount] = useState(0);
   const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
   const [zoomSubmissionIndex, setZoomSubmissionIndex] = useState(0);
@@ -330,216 +331,110 @@ const copySlugUrl = () => {
 };
 
   const loadEvents = async () => {
-    if (!user) {
-      console.log('❌ [loadEvents] User não definido');
-      return;
-    }
+    if (!user) return;
 
-    console.log('📊 [loadEvents] === INÍCIO ===');
-    console.log('📊 [loadEvents] User ID:', user.id);
-    console.log('📊 [loadEvents] isMasterAdmin:', isMasterAdmin);
-    console.log('📊 [loadEvents] isAgencyAdmin:', isAgencyAdmin);
-    console.log('📊 [loadEvents] currentAgency:', currentAgency);
+    setLoadingEvents(true);
 
-    let agencyIdFilter = null;
+    try {
+      let agencyIdFilter = null;
 
-    // Check if Master Admin is viewing specific agency via agencyId querystring
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryAgencyId = urlParams.get('agencyId');
+      // Check if Master Admin is viewing specific agency via agencyId querystring
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryAgencyId = urlParams.get('agencyId');
 
-    console.log('📊 [loadEvents] Query Params:', { queryAgencyId });
-
-    // SIMPLIFICADO: Determine which agency's data to load
-    if (queryAgencyId && isMasterAdmin) {
-      agencyIdFilter = queryAgencyId;
-      console.log('✅ [loadEvents] Cenário 1: Master Admin com queryAgencyId:', agencyIdFilter);
-    } else if (currentAgency?.id) {
-      agencyIdFilter = currentAgency.id;
-      console.log('✅ [loadEvents] Cenário 2: currentAgency.id:', agencyIdFilter);
-    } else if (isAgencyAdmin && profile?.agency_id) {
-      agencyIdFilter = profile.agency_id;
-      console.log('✅ [loadEvents] Cenário 3: Agency Admin com profile.agency_id:', agencyIdFilter);
-    } else if (isAgencyAdmin && !profile) {
-      console.log('⚠️ [loadEvents] Cenário 4: Agency Admin sem profile carregado, buscando...');
-      const { data: profileData, error: profileError } = await sb
-        .from('profiles')
-        .select('agency_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (profileError) {
-        console.error('❌ [loadEvents] Erro ao buscar profile:', profileError);
-        toast.error("Erro ao carregar dados do usuário");
-        return;
-      }
-
-      agencyIdFilter = profileData?.agency_id;
-      console.log('✅ [loadEvents] Profile carregado, agency_id:', agencyIdFilter);
-      
-      if (!agencyIdFilter) {
-        console.error('❌ [loadEvents] Agency Admin sem agency_id no profile');
-        toast.error("Erro: Usuário não está associado a nenhuma agência.");
-        return;
-      }
-    } else if (isMasterAdmin) {
-      agencyIdFilter = null;
-      console.log('✅ [loadEvents] Cenário 5: Master Admin sem filtro (ver todos)');
-    }
-
-    // ========================================================================
-    // CONTEXTO DE AUTENTICAÇÃO COMPLETO
-    // ========================================================================
-    console.log('🔒 [loadEvents] === SECURITY CHECK ===');
-    console.log('🔒 [loadEvents] Verificando se usuário tem sessão ativa...');
-
-    // Verificar se session está ativa
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    console.log('🔒 [loadEvents] Session status:', {
-      hasSession: !!session,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      sessionError: sessionError?.message || null,
-      accessToken: session?.access_token ? 'PRESENTE' : 'AUSENTE',
-      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A'
-    });
-
-    if (!session) {
-      console.error('❌ [loadEvents] SEM SESSION ATIVA!');
-      toast.error('Sessão expirada. Faça login novamente.');
-      return;
-    }
-
-    console.log('✅ [loadEvents] Session ativa, prosseguindo...');
-    
-    console.log('🔐 [loadEvents] === AUTH CONTEXT ===', {
-      userId: user?.id || 'NO_USER',
-      userEmail: user?.email || 'NO_EMAIL',
-      isMasterAdmin,
-      isAgencyAdmin,
-      profileAgencyId: profile?.agency_id || 'NO_PROFILE_AGENCY',
-      currentAgencyName: currentAgency?.name || 'NO_CURRENT_AGENCY',
-      currentAgencyId: currentAgency?.id || 'NO_CURRENT_AGENCY_ID',
-      agencyIdFilter: agencyIdFilter || 'NO_FILTER',
-      willFilterByAgency: !!agencyIdFilter
-    });
-
-    // ========================================================================
-    // QUERY 1: EVENTS
-    // ========================================================================
-    console.log('📡 [loadEvents] === QUERY EVENTOS ===');
-    console.log('🔍 [loadEvents] Construindo query de eventos...');
-    let eventsQuery = supabase.from('events').select('*');
-    
-    if (agencyIdFilter) {
-      console.log('🔧 [loadEvents] ✅ Aplicando filtro .eq(agency_id):', agencyIdFilter);
-      eventsQuery = eventsQuery.eq('agency_id', agencyIdFilter);
-    } else {
-      console.log('🔧 [loadEvents] ⚠️ SEM filtro de agency_id (Master Admin ou erro)');
-    }
-    
-    console.log('⏱️ [loadEvents] Executando query eventos...');
-    const eventsStart = performance.now();
-    const { data: eventsData, error: eventsError } = await eventsQuery.order('created_at', { ascending: false });
-    const eventsEnd = performance.now();
-    
-    console.log('✅ [loadEvents] Query eventos concluída:', {
-      duracao_ms: (eventsEnd - eventsStart).toFixed(2),
-      sucesso: !eventsError,
-      count: eventsData?.length || 0,
-      hasError: !!eventsError,
-      firstEventId: eventsData?.[0]?.id || null,
-      firstEventTitle: eventsData?.[0]?.title || null
-    });
-
-    if (eventsError) {
-      console.error('❌ [loadEvents] !!!! ERRO CRÍTICO AO CARREGAR EVENTOS !!!!', {
-        errorCode: eventsError.code,
-        errorMessage: eventsError.message,
-        errorDetails: eventsError.details || 'N/A',
-        errorHint: eventsError.hint || 'N/A',
-        fullError: eventsError,
-        stackTrace: new Error().stack
-      });
-      toast.error(`Erro ao carregar eventos: ${eventsError.code} - ${eventsError.message}`);
-      return; // Early return para não continuar com dados quebrados
-    }
-    
-    // ========================================================================
-    // QUERY 2: POSTS
-    // ========================================================================
-    console.log('📡 [loadEvents] === QUERY POSTS ===');
-    console.log('🔍 [loadEvents] Construindo query de posts...');
-    let postsQuery = supabase.from('posts').select('*, events(id, title)');
-    
-    if (agencyIdFilter) {
-      console.log('🔧 [loadEvents] ✅ Aplicando filtro .eq(agency_id):', agencyIdFilter);
-      postsQuery = postsQuery.eq('agency_id', agencyIdFilter);
-    } else {
-      console.log('🔧 [loadEvents] ⚠️ SEM filtro de agency_id');
-    }
-    
-    console.log('⏱️ [loadEvents] Executando query posts...');
-    const postsStart = performance.now();
-    const { data: postsData, error: postsError } = await postsQuery.order('created_at', { ascending: false });
-    const postsEnd = performance.now();
-
-    console.log('✅ [loadEvents] Query posts concluída:', {
-      duracao_ms: (postsEnd - postsStart).toFixed(2),
-      sucesso: !postsError,
-      count: postsData?.length || 0,
-      hasError: !!postsError,
-      firstPostId: postsData?.[0]?.id || null,
-      firstPostEventId: postsData?.[0]?.event_id || null,
-      firstPostEventsData: postsData?.[0]?.events || null,
-      fullFirstPost: postsData?.[0] || null
-    });
-
-    if (postsError) {
-      console.error('❌ [loadEvents] !!!! ERRO CRÍTICO AO CARREGAR POSTS !!!!', {
-        errorCode: postsError.code,
-        errorMessage: postsError.message,
-        errorDetails: postsError.details || 'N/A',
-        errorHint: postsError.hint || 'N/A',
-        fullError: postsError,
-        stackTrace: new Error().stack
-      });
-      toast.error(`Erro ao carregar posts: ${postsError.code} - ${postsError.message}`);
-      return; // Early return para não continuar com dados quebrados
-    }
-
-    console.log('✅ [loadEvents] Atualizando state...');
-    
-    // CRÍTICO: Enriquecer posts com dados de eventos
-    const enrichedPosts = postsData?.map(post => {
-      // Se events for null mas event_id existir, fazer lookup manual
-      if (!post.events && post.event_id) {
-        const matchedEvent = eventsData?.find(e => e.id === post.event_id);
-        if (matchedEvent) {
-          console.log(`🔧 [loadEvents] Enriquecendo post #${post.post_number} com evento ${matchedEvent.title}`);
-          return {
-            ...post,
-            events: { id: matchedEvent.id, title: matchedEvent.title }
-          };
+      // Determine which agency's data to load
+      if (queryAgencyId && isMasterAdmin) {
+        agencyIdFilter = queryAgencyId;
+      } else if (currentAgency?.id) {
+        agencyIdFilter = currentAgency.id;
+      } else if (isAgencyAdmin && profile?.agency_id) {
+        agencyIdFilter = profile.agency_id;
+      } else if (isAgencyAdmin && !profile) {
+        const { data: profileData, error: profileError } = await sb
+          .from('profiles')
+          .select('agency_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error('Erro ao buscar profile:', profileError);
+          toast.error("Erro ao carregar dados do usuário");
+          return;
         }
+
+        agencyIdFilter = profileData?.agency_id;
+        
+        if (!agencyIdFilter) {
+          toast.error("Erro: Usuário não está associado a nenhuma agência.");
+          return;
+        }
+      } else if (isMasterAdmin) {
+        agencyIdFilter = null;
       }
-      return post;
-    }) || [];
-    
-    console.log('✅ [loadEvents] Posts enriquecidos:', enrichedPosts.length);
-    setEvents(eventsData || []);
-    setPosts(enrichedPosts);
-    console.log('✅ [loadEvents] === FIM ===');
+
+      // Verify session is active
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      // Build queries
+      let eventsQuery = supabase.from('events').select('*');
+      let postsQuery = supabase.from('posts').select('*, events(id, title)');
+      
+      if (agencyIdFilter) {
+        eventsQuery = eventsQuery.eq('agency_id', agencyIdFilter);
+        postsQuery = postsQuery.eq('agency_id', agencyIdFilter);
+      }
+
+      // Execute queries in parallel
+      const [
+        { data: eventsData, error: eventsError },
+        { data: postsData, error: postsError }
+      ] = await Promise.all([
+        eventsQuery.order('created_at', { ascending: false }),
+        postsQuery.order('created_at', { ascending: false })
+      ]);
+
+      if (eventsError) {
+        console.error('Erro ao carregar eventos:', eventsError);
+        toast.error(`Erro ao carregar eventos: ${eventsError.message}`);
+        return;
+      }
+
+      if (postsError) {
+        console.error('Erro ao carregar posts:', postsError);
+        toast.error(`Erro ao carregar posts: ${postsError.message}`);
+        return;
+      }
+
+      // Enrich posts with event data
+      const enrichedPosts = postsData?.map(post => {
+        if (!post.events && post.event_id) {
+          const matchedEvent = eventsData?.find(e => e.id === post.event_id);
+          if (matchedEvent) {
+            return {
+              ...post,
+              events: { id: matchedEvent.id, title: matchedEvent.title }
+            };
+          }
+        }
+        return post;
+      }) || [];
+
+      setEvents(eventsData || []);
+      setPosts(enrichedPosts);
+    } catch (error) {
+      console.error('Erro crítico ao carregar eventos:', error);
+      toast.error('Erro ao carregar dados da agência');
+    } finally {
+      setLoadingEvents(false);
+    }
   };
 
   const loadSubmissions = async () => {
     if (!user) return;
-
-    console.log('📥 [loadSubmissions] === INÍCIO ===', {
-      submissionEventFilter,
-      currentAgency: currentAgency?.name,
-      isMasterAdmin,
-      isAgencyAdmin
-    });
 
     setLoadingSubmissions(true);
 
