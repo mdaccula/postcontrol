@@ -454,7 +454,7 @@ const copySlugUrl = () => {
     // ========================================================================
     console.log('📡 [loadEvents] === QUERY POSTS ===');
     console.log('🔍 [loadEvents] Construindo query de posts...');
-    let postsQuery = supabase.from('posts').select('*');
+    let postsQuery = supabase.from('posts').select('*, events(id, title)');
     
     if (agencyIdFilter) {
       console.log('🔧 [loadEvents] ✅ Aplicando filtro .eq(agency_id):', agencyIdFilter);
