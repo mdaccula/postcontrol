@@ -550,8 +550,8 @@ const Dashboard = () => {
             <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Eventos Participando</p>
-                  <h3 className="text-3xl font-bold mt-2">{eventStats.length}</h3>
+                  <p className="text-sm text-muted-foreground">Eventos Ativos</p>
+                  <h3 className="text-3xl font-bold mt-2">{activeEventsCount}</h3>
                 </div>
                 <div className="p-4 bg-blue-500/10 rounded-full">
                   <Calendar className="h-8 w-8 text-blue-500" />
@@ -740,8 +740,23 @@ const Dashboard = () => {
                   <div className="space-y-4">
                     <div>
                       <Label>Nome Completo</Label>
-                      <Input value={profile.full_name || ""} disabled />
+                      <Input
+                        value={profile.full_name || ""}
+                        onChange={(e) => {
+                          // Atualizar estado local temporário
+                          setProfile({ ...profile, full_name: e.target.value });
+                        }}
+                        onBlur={async (e) => {
+                          // Salvar ao perder foco
+                          const newName = e.target.value.trim();
+                          if (newName && newName !== profile.full_name) {
+                            await updateProfileMutation.mutateAsync({ full_name: newName });
+                          }
+                        }}
+                        placeholder="Digite seu nome completo"
+                      />
                     </div>
+
                     <div>
                       <Label>Email</Label>
                       <Input value={profile.email || ""} disabled />
