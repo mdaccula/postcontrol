@@ -223,6 +223,15 @@ const Submit = () => {
   const loadPostsForEvent = async (eventId: string) => {
     if (!user) return;
     
+    // Buscar informações do evento para verificar o tipo
+    const { data: eventData } = await sb
+      .from('events')
+      .select('event_purpose')
+      .eq('id', eventId)
+      .maybeSingle();
+
+    const isProfileSelection = eventData?.event_purpose === 'selecao_perfil';
+    
     // 1. Buscar IDs dos posts do evento
     const { data: eventPosts } = await sb
       .from('posts')
@@ -236,25 +245,37 @@ const Submit = () => {
       return;
     }
     
-    // 2. Buscar submissões já enviadas pelo usuário
-    const { data: userSubmissions } = await sb
-      .from('submissions')
-      .select('post_id')
-      .eq('user_id', user.id)
-      .in('post_id', eventPostIds);
+    // 2. Para seleção de perfil, permitir múltiplas submissões
+    // Para divulgação, evitar reenvio de posts já submetidos
+    let submittedPostIds: string[] = [];
+
+    if (!isProfileSelection) {
+      const { data: userSubmissions } = await sb
+        .from('submissions')
+        .select('post_id')
+        .eq('user_id', user.id)
+        .in('post_id', eventPostIds);
+      
+      submittedPostIds = (userSubmissions || []).map((s: any) => s.post_id);
+    }
     
-    const submittedPostIds = (userSubmissions || []).map((s: any) => s.post_id);
-    
-    // 3. Buscar próxima postagem disponível (não enviada, deadline futuro)
+    // 3. Buscar próxima postagem disponível
     let query = sb
       .from('posts')
       .select('id, post_number, deadline, event_id')
-      .eq('event_id', eventId)
-      .gte('deadline', new Date().toISOString())
+      .eq('event_id', eventId);
+
+    // Para seleção de perfil, não verificar deadline (permite envio a qualquer momento)
+    // Para divulgação, verificar deadline
+    if (!isProfileSelection) {
+      query = query.gte('deadline', new Date().toISOString());
+    }
+
+    query = query
       .order('deadline', { ascending: true })
       .limit(1);
     
-    // Excluir posts já enviados
+    // Excluir posts já enviados (apenas para não seleção de perfil)
     if (submittedPostIds.length > 0) {
       query = query.not('id', 'in', `(${submittedPostIds.join(',')})`);
     }
@@ -572,6 +593,22 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
         toast({
           title: "Adicione o print da postagem",
           description: "Por favor, adicione o print de uma postagem sua.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validar que ao menos UM post existe para o evento (mesmo que já enviado)
+      const { data: eventPosts, error: postsError } = await sb
+        .from('posts')
+        .select('id')
+        .eq('event_id', selectedEvent)
+        .limit(1);
+
+      if (postsError || !eventPosts || eventPosts.length === 0) {
+        toast({
+          title: "Evento sem posts configurados",
+          description: "Este evento ainda não possui posts configurados. Entre em contato com o administrador.",
           variant: "destructive",
         });
         return;
@@ -1268,7 +1305,13 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
               type="submit"
               className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
               size="lg"
-              disabled={isSubmitting || !selectedEvent || posts.length === 0}
+              disabled={
+                isSubmitting || 
+                !selectedEvent || 
+                (selectedEventData?.event_purpose !== "selecao_perfil" && 
+                 submissionType === "post" && 
+                 posts.length === 0)
+              }
             >
               {isSubmitting ? "Enviando..." : submissionType === "post" ? "Enviar Postagem" : "Enviar Comprovante"}
             </Button>
