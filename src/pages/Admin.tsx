@@ -370,6 +370,28 @@ const copySlugUrl = () => {
     // ========================================================================
     // CONTEXTO DE AUTENTICAÇÃO COMPLETO
     // ========================================================================
+    console.log('🔒 [loadEvents] === SECURITY CHECK ===');
+    console.log('🔒 [loadEvents] Verificando se usuário tem sessão ativa...');
+
+    // Verificar se session está ativa
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('🔒 [loadEvents] Session status:', {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      sessionError: sessionError?.message || null,
+      accessToken: session?.access_token ? 'PRESENTE' : 'AUSENTE',
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A'
+    });
+
+    if (!session) {
+      console.error('❌ [loadEvents] SEM SESSION ATIVA!');
+      toast.error('Sessão expirada. Faça login novamente.');
+      return;
+    }
+
+    console.log('✅ [loadEvents] Session ativa, prosseguindo...');
+    
     console.log('🔐 [loadEvents] === AUTH CONTEXT ===', {
       userId: user?.id || 'NO_USER',
       userEmail: user?.email || 'NO_EMAIL',
