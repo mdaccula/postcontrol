@@ -1349,6 +1349,70 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button 
+                    variant="outline" 
+                    onClick={async () => {
+                      try {
+                        const XLSX = await import('xlsx');
+                        
+                        // Buscar todas as submissões aprovadas com dados completos
+                        const { data: submissions } = await sb
+                          .from('submissions')
+                          .select(`
+                            *,
+                            posts!inner(post_number, event_id, events!inner(title)),
+                            profiles!inner(full_name, instagram, email, gender, followers_range)
+                          `)
+                          .eq('status', 'approved')
+                          .eq('submission_type', 'post');
+
+                        if (!submissions || submissions.length === 0) {
+                          toast.error('Nenhuma postagem aprovada encontrada');
+                          return;
+                        }
+
+                        // Agrupar por evento e contar postagens
+                        const postsByEvent: Record<string, any[]> = {};
+                        submissions.forEach((sub: any) => {
+                          const eventTitle = sub.posts?.events?.title || 'Sem evento';
+                          if (!postsByEvent[eventTitle]) {
+                            postsByEvent[eventTitle] = [];
+                          }
+                          postsByEvent[eventTitle].push(sub);
+                        });
+
+                        // Preparar dados para exportação
+                        const exportData = Object.entries(postsByEvent).map(([eventTitle, subs]) => {
+                          return subs.map((sub: any) => ({
+                            'Evento': eventTitle,
+                            'Nome': sub.profiles?.full_name || 'N/A',
+                            'Instagram': sub.profiles?.instagram ? `https://instagram.com/${sub.profiles.instagram.replace('@', '')}` : 'N/A',
+                            'Email': sub.profiles?.email || 'N/A',
+                            'Gênero': sub.profiles?.gender || 'N/A',
+                            'Seguidores': sub.profiles?.followers_range || 'N/A',
+                            'Total de Postagens': subs.length,
+                            'Data de Aprovação': new Date(sub.approved_at).toLocaleDateString('pt-BR')
+                          }));
+                        }).flat();
+
+                        // Criar worksheet e workbook
+                        const ws = XLSX.utils.json_to_sheet(exportData);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, 'Postagens');
+
+                        // Download
+                        XLSX.writeFile(wb, `postagens_aprovadas_${new Date().toISOString().split('T')[0]}.xlsx`);
+                        
+                        toast.success('Postagens exportadas com sucesso!');
+                      } catch (error) {
+                        console.error('Erro ao exportar:', error);
+                        toast.error('Erro ao exportar postagens');
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Postagens
+                  </Button>
                   <Button className="bg-gradient-primary w-full sm:w-auto" onClick={() => {
                     setSelectedPost(null);
                     setPostDialogOpen(true);

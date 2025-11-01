@@ -227,7 +227,21 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
 
       if (eventImage) {
         const fileExt = eventImage.name.split('.').pop();
-        const fileName = `events/${Date.now()}.${fileExt}`;
+        // ✅ SPRINT 1 - ITEM 17: Nome único com event ID + UUID para evitar sobrescritas
+        const uniqueId = event?.id || crypto.randomUUID();
+        const fileName = `events/${uniqueId}_${Date.now()}.${fileExt}`;
+        
+        // ✅ Deletar imagem antiga se estiver atualizando
+        if (event?.event_image_url) {
+          try {
+            const oldPath = event.event_image_url.split('/screenshots/')[1]?.split('?')[0];
+            if (oldPath) {
+              await supabase.storage.from('screenshots').remove([oldPath]);
+            }
+          } catch (error) {
+            console.warn('Erro ao deletar imagem antiga:', error);
+          }
+        }
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('screenshots')

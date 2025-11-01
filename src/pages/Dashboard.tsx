@@ -812,22 +812,56 @@ const Dashboard = () => {
                     )}
                     <div>
                       <Label>Gênero</Label>
-                      <Select value={selectedGender} onValueChange={setSelectedGender}>
+                      <Select 
+                        value={selectedGender} 
+                        onValueChange={setSelectedGender}
+                        disabled={isAgencyAdmin}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione seu gênero" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Masculino</SelectItem>
-                          <SelectItem value="female">Feminino</SelectItem>
-                          <SelectItem value="other">Outro</SelectItem>
-                          <SelectItem value="prefer_not_to_say">Prefiro não dizer</SelectItem>
+                          {isAgencyAdmin ? (
+                            <SelectItem value="Agência">Agência</SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="Masculino">Masculino</SelectItem>
+                              <SelectItem value="Feminino">Feminino</SelectItem>
+                              <SelectItem value="LGBTQ+">LGBTQ+</SelectItem>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
+                      {isAgencyAdmin && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Administradores de agência têm gênero fixo como "Agência"
+                        </p>
+                      )}
                       {selectedGender !== (profile.gender || "") && (
                         <Button onClick={saveGender} className="mt-2" size="sm">
                           Salvar Gênero
                         </Button>
                       )}
+                    </div>
+                    <div>
+                      <Label>Faixa de Seguidores</Label>
+                      <Select 
+                        value={profile.followers_range || ""} 
+                        onValueChange={async (value) => {
+                          await updateProfileMutation.mutateAsync({ followers_range: value });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a faixa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0-5k">0 - 5k</SelectItem>
+                          <SelectItem value="5k-10k">5k - 10k</SelectItem>
+                          <SelectItem value="10k-50k">10k - 50k</SelectItem>
+                          <SelectItem value="50k-100k">50k - 100k</SelectItem>
+                          <SelectItem value="100k+">100k+</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </TabsContent>

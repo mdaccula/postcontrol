@@ -415,7 +415,7 @@ const Submit = () => {
 
     const { data, error } = await sb
       .from("profiles")
-      .select("full_name, email, instagram, phone")
+      .select("full_name, email, instagram, phone, followers_range")
       .eq("id", user.id)
       .single();
 
@@ -430,6 +430,14 @@ const Submit = () => {
       setInstagram(data.instagram || data.email?.split("@")[0] || "");
       setPhone(data.phone || "");
       setHasExistingPhone(!!data.phone);
+      // ✅ SPRINT 1 - ITEM 5: Bloquear Instagram se já existe
+      if (data.instagram) {
+        setInstagram(data.instagram);
+      }
+      // ✅ SPRINT 1 - ITEM 5: Bloquear Seguidores se já existe
+      if (data.followers_range) {
+        setFollowersRange(data.followers_range);
+      }
     }
   };
   // 🆕 Função para comprimir imagens
@@ -1253,8 +1261,13 @@ const Submit = () => {
                   value={instagram}
                   onChange={(e) => setInstagram(e.target.value)}
                   required
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !!instagram}
                 />
+                {instagram && (
+                  <p className="text-xs text-muted-foreground">
+                    Instagram bloqueado após o primeiro envio. Entre em contato com o admin para alterações.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1335,7 +1348,12 @@ const Submit = () => {
                   {/* Select de Faixa de Seguidores */}
                   <div className="space-y-2">
                     <Label htmlFor="followersRange">Quantos seguidores você tem? *</Label>
-                    <Select value={followersRange} onValueChange={setFollowersRange} required disabled={isSubmitting}>
+                    <Select 
+                      value={followersRange} 
+                      onValueChange={setFollowersRange} 
+                      required 
+                      disabled={isSubmitting || !!followersRange}
+                    >
                       <SelectTrigger id="followersRange">
                         <SelectValue placeholder="Selecione a faixa de seguidores" />
                       </SelectTrigger>
