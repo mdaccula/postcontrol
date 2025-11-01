@@ -1349,7 +1349,7 @@ const Submit = () => {
                   <div className="space-y-2">
                     <Label htmlFor="followersRange">Quantos seguidores você tem? *</Label>
                     <Select 
-                      value={followersRange} 
+                      value={followersRange || ""} 
                       onValueChange={setFollowersRange} 
                       required 
                       disabled={isSubmitting || !!followersRange}

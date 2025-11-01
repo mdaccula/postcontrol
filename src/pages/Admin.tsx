@@ -1349,70 +1349,6 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button 
-                    variant="outline" 
-                    onClick={async () => {
-                      try {
-                        const XLSX = await import('xlsx');
-                        
-                        // Buscar todas as submissões aprovadas com dados completos
-                        const { data: submissions } = await sb
-                          .from('submissions')
-                          .select(`
-                            *,
-                            posts!inner(post_number, event_id, events!inner(title)),
-                            profiles!inner(full_name, instagram, email, gender, followers_range)
-                          `)
-                          .eq('status', 'approved')
-                          .eq('submission_type', 'post');
-
-                        if (!submissions || submissions.length === 0) {
-                          toast.error('Nenhuma postagem aprovada encontrada');
-                          return;
-                        }
-
-                        // Agrupar por evento e contar postagens
-                        const postsByEvent: Record<string, any[]> = {};
-                        submissions.forEach((sub: any) => {
-                          const eventTitle = sub.posts?.events?.title || 'Sem evento';
-                          if (!postsByEvent[eventTitle]) {
-                            postsByEvent[eventTitle] = [];
-                          }
-                          postsByEvent[eventTitle].push(sub);
-                        });
-
-                        // Preparar dados para exportação
-                        const exportData = Object.entries(postsByEvent).map(([eventTitle, subs]) => {
-                          return subs.map((sub: any) => ({
-                            'Evento': eventTitle,
-                            'Nome': sub.profiles?.full_name || 'N/A',
-                            'Instagram': sub.profiles?.instagram ? `https://instagram.com/${sub.profiles.instagram.replace('@', '')}` : 'N/A',
-                            'Email': sub.profiles?.email || 'N/A',
-                            'Gênero': sub.profiles?.gender || 'N/A',
-                            'Seguidores': sub.profiles?.followers_range || 'N/A',
-                            'Total de Postagens': subs.length,
-                            'Data de Aprovação': new Date(sub.approved_at).toLocaleDateString('pt-BR')
-                          }));
-                        }).flat();
-
-                        // Criar worksheet e workbook
-                        const ws = XLSX.utils.json_to_sheet(exportData);
-                        const wb = XLSX.utils.book_new();
-                        XLSX.utils.book_append_sheet(wb, ws, 'Postagens');
-
-                        // Download
-                        XLSX.writeFile(wb, `postagens_aprovadas_${new Date().toISOString().split('T')[0]}.xlsx`);
-                        
-                        toast.success('Postagens exportadas com sucesso!');
-                      } catch (error) {
-                        console.error('Erro ao exportar:', error);
-                        toast.error('Erro ao exportar postagens');
-                      }
-                    }}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar Postagens
-                  </Button>
                   <Button className="bg-gradient-primary w-full sm:w-auto" onClick={() => {
                     setSelectedPost(null);
                     setPostDialogOpen(true);
@@ -1593,56 +1529,83 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                   </Select>
                 </div>
                 
-                {submissionEventFilter !== "all" && (
-                  <>
-                    <Button 
-                      onClick={() => setAddSubmissionDialogOpen(true)}
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Adicionar Submissão Manual
-                    </Button>
-                    
-                    {/* ✅ Item 11: Export de submissões filtradas */}
-                    <Button 
-                      onClick={async () => {
-                        try {
-                          const XLSX = await import('xlsx');
-                          const eventName = events.find(e => e.id === submissionEventFilter)?.title || 'evento';
-                          
-                          const filteredData = getFilteredSubmissions.map(s => ({
-                            'Data': new Date(s.submitted_at).toLocaleString('pt-BR'),
-                            'Usuário': s.profiles?.full_name || s.profiles?.email || 'N/A',
-                            'Email': s.profiles?.email || 'N/A',
-                            'Instagram': s.profiles?.instagram || 'N/A',
-                            'Evento': getEventTitle(s.posts) || 'N/A',
-                            'Post #': s.posts?.post_number || 'N/A',
-                            'Status': s.status === 'approved' ? 'Aprovado' : s.status === 'rejected' ? 'Rejeitado' : 'Pendente',
-                            'Tipo': s.submission_type === 'post' ? 'Postagem' : 'Venda',
-                          }));
-                          
-                          const ws = XLSX.utils.json_to_sheet(filteredData);
-                          const wb = XLSX.utils.book_new();
-                          XLSX.utils.book_append_sheet(wb, ws, "Submissões");
-                          
-                          XLSX.writeFile(wb, `submissoes_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`);
-                          
-                          toast.success(`Planilha com ${filteredData.length} submissões exportada!`);
-                        } catch (error) {
-                          console.error('Erro ao exportar:', error);
-                          toast.error("Erro ao exportar planilha");
-                        }
-                      }}
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Exportar Submissões ({getFilteredSubmissions.length})
-                    </Button>
-                  </>
-                )}
-              </div>
+                  {submissionEventFilter !== "all" && (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        onClick={async () => {
+                          try {
+                            const XLSX = await import('xlsx');
+                            
+                            // Aplicar TODOS os filtros ativos
+                            let filteredSubmissions = getFilteredSubmissions;
+                            
+                            if (!filteredSubmissions || filteredSubmissions.length === 0) {
+                              toast.error('Nenhuma submissão encontrada com os filtros aplicados');
+                              return;
+                            }
+
+                            // Buscar dados completos das submissões filtradas
+                            const submissionIds = filteredSubmissions.map(s => s.id);
+                            const { data: fullSubmissions } = await sb
+                              .from('submissions')
+                              .select(`
+                                *,
+                                posts!inner(post_number, event_id, events!inner(title)),
+                                profiles!inner(full_name, instagram, email, gender, followers_range)
+                              `)
+                              .in('id', submissionIds);
+
+                            if (!fullSubmissions || fullSubmissions.length === 0) {
+                              toast.error('Erro ao buscar dados completos das submissões');
+                              return;
+                            }
+
+                            // Preparar dados para exportação
+                            const exportData = fullSubmissions.map((sub: any) => ({
+                              'Evento': sub.posts?.events?.title || 'N/A',
+                              'Número da Postagem': sub.posts?.post_number || 'N/A',
+                              'Nome': sub.profiles?.full_name || 'N/A',
+                              'Instagram': sub.profiles?.instagram ? `https://instagram.com/${sub.profiles.instagram.replace('@', '')}` : 'N/A',
+                              'Email': sub.profiles?.email || 'N/A',
+                              'Gênero': sub.profiles?.gender || 'N/A',
+                              'Seguidores': sub.profiles?.followers_range || 'N/A',
+                              'Status': sub.status === 'approved' ? 'Aprovado' : sub.status === 'rejected' ? 'Rejeitado' : 'Pendente',
+                              'Tipo': sub.submission_type === 'post' ? 'Postagem' : 'Venda',
+                              'Data de Envio': new Date(sub.submitted_at).toLocaleDateString('pt-BR'),
+                              'Data de Aprovação': sub.approved_at ? new Date(sub.approved_at).toLocaleDateString('pt-BR') : 'N/A'
+                            }));
+
+                            // Criar worksheet e workbook
+                            const ws = XLSX.utils.json_to_sheet(exportData);
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, ws, 'Submissões');
+
+                            // Download
+                            const eventName = events.find(e => e.id === submissionEventFilter)?.title || 'filtradas';
+                            XLSX.writeFile(wb, `submissoes_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+                            
+                            toast.success(`${exportData.length} submissão(ões) exportada(s) com sucesso!`);
+                          } catch (error) {
+                            console.error('Erro ao exportar:', error);
+                            toast.error('Erro ao exportar submissões');
+                          }
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar Submissões
+                      </Button>
+                      <Button 
+                        onClick={() => setAddSubmissionDialogOpen(true)}
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar Submissão Manual
+                      </Button>
+                    </>
+                  )}
+                </div>
 
               {kanbanView ? (
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>

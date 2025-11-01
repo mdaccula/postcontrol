@@ -59,9 +59,36 @@ const Home = () => {
                 FAQ
               </button>
               {user ? (
-                <Link to="/dashboard">
-                  <Button size="sm" className="bg-gradient-primary">Dashboard</Button>
-                </Link>
+                <>
+                  <Button 
+                    size="sm" 
+                    className="bg-gradient-primary" 
+                    onClick={async () => {
+                      const { data: userAgencies } = await sb
+                        .from('user_agencies')
+                        .select('agencies(slug)')
+                        .eq('user_id', user.id)
+                        .order('last_accessed_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                      
+                      const slug = userAgencies?.agencies?.slug;
+                      window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={async () => {
+                      await sb.auth.signOut();
+                      window.location.href = '/';
+                    }}
+                  >
+                    Sair
+                  </Button>
+                </>
               ) : (
                 <Link to="/auth">
                   <Button size="sm" className="bg-gradient-primary">Entrar</Button>
@@ -109,9 +136,39 @@ const Home = () => {
                 FAQ
               </button>
               {user ? (
-                <Link to="/dashboard" className="w-full">
-                  <Button size="lg" className="bg-gradient-primary w-full">Dashboard</Button>
-                </Link>
+                <>
+                  <Button 
+                    size="lg" 
+                    className="bg-gradient-primary w-full" 
+                    onClick={async () => {
+                      const { data: userAgencies } = await sb
+                        .from('user_agencies')
+                        .select('agencies(slug)')
+                        .eq('user_id', user.id)
+                        .order('last_accessed_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                      
+                      const slug = userAgencies?.agencies?.slug;
+                      window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="w-full"
+                    onClick={async () => {
+                      await sb.auth.signOut();
+                      window.location.href = '/';
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Sair
+                  </Button>
+                </>
               ) : (
                 <Link to="/auth" className="w-full">
                   <Button size="lg" className="bg-gradient-primary w-full">Entrar</Button>
