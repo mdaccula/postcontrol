@@ -108,6 +108,8 @@ const Submit = () => {
   const [profileScreenshotFile, setProfileScreenshotFile] = useState<File | null>(null);
   const [profileScreenshotPreview, setProfileScreenshotPreview] = useState<string | null>(null);
   const [followersRange, setFollowersRange] = useState<string>("");
+  // ✅ FASE 4: Estado para rastrear posts já enviados
+  const [userSubmissions, setUserSubmissions] = useState<string[]>([]);
 
   useEffect(() => {
     loadEvents();
@@ -121,10 +123,13 @@ const Submit = () => {
       setSelectedPost(""); // ✅ Limpar postagem selecionada ao trocar evento
       loadPostsForEvent(selectedEvent);
       loadRequirementsForEvent(selectedEvent);
+      // ✅ FASE 4: Carregar submissions do usuário para este evento
+      loadUserSubmissionsForEvent(selectedEvent);
     } else {
       setPosts([]);
       setRequirements([]);
       setSelectedPost("");
+      setUserSubmissions([]);
     }
   }, [selectedEvent]);
 
@@ -377,6 +382,34 @@ const Submit = () => {
     }
 
     setRequirements(data || []);
+  };
+
+  // ✅ FASE 4: Carregar submissions do usuário para marcar posts já enviados
+  const loadUserSubmissionsForEvent = async (eventId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await sb
+        .from("submissions")
+        .select("post_id, posts!inner(event_id)")
+        .eq("user_id", user.id)
+        .eq("posts.event_id", eventId);
+
+      if (error) {
+        console.error("Erro ao carregar submissions do usuário:", error);
+        return;
+      }
+
+      const submittedPostIds = (data || [])
+        .filter((s: any) => s.post_id)
+        .map((s: any) => s.post_id);
+
+      console.log("✅ Posts já enviados pelo usuário:", submittedPostIds);
+      setUserSubmissions(submittedPostIds);
+    } catch (error) {
+      console.error("Erro ao carregar submissions:", error);
+      setUserSubmissions([]);
+    }
   };
 
   const loadUserProfile = async () => {
@@ -740,6 +773,36 @@ const Submit = () => {
     setIsSubmitting(true);
 
     try {
+      // ✅ FASE 2: Validar duplicata ANTES de inserir
+      if (submissionType === "post" && selectedPost) {
+        const { data: existingSubmission, error: checkError } = await sb
+          .from("submissions")
+          .select("id, status")
+          .eq("user_id", user!.id)
+          .eq("post_id", selectedPost)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error("Erro ao verificar duplicata:", checkError);
+        }
+
+        if (existingSubmission) {
+          const statusMessages: Record<string, string> = {
+            pending: "Você já enviou esta postagem e ela está em análise.",
+            approved: "Você já enviou esta postagem e ela foi aprovada.",
+            rejected: "Você já enviou esta postagem anteriormente. Entre em contato com o administrador.",
+          };
+
+          toast({
+            title: "Postagem já enviada",
+            description: statusMessages[existingSubmission.status] || "Você já enviou esta postagem.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return; // ⛔ BLOQUEIA envio duplicado
+        }
+      }
+
       // Rate limiting check (5 submissions per hour)
       const { data: rateLimitCheck, error: rateLimitError } = await sb.rpc("check_rate_limit", {
         p_user_id: user!.id,
@@ -886,8 +949,8 @@ const Submit = () => {
             : "Seu comprovante de venda foi enviado com sucesso e está em análise.",
       });
 
-      // Redirecionar para dashboard
-      navigate("/dashboard");
+      // ✅ FASE 3: Preservar contexto de agência ao redirecionar
+      navigate(`/dashboard?agency=${agencyId}`);
 
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -1056,16 +1119,39 @@ const Submit = () => {
                               <SelectValue placeholder="Selecione qual postagem você está enviando" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover border-border z-50">
-                              {posts.map((post) => (
-                                <SelectItem key={post.id} value={post.id}>
-                                  Postagem #{post.post_number} - Prazo:{" "}
-                                  {new Date(post.deadline).toLocaleDateString("pt-BR")} às{" "}
-                                  {new Date(post.deadline).toLocaleTimeString("pt-BR", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </SelectItem>
-                              ))}
+                              {posts.map((post) => {
+                                const alreadySubmitted = userSubmissions.includes(post.id);
+                                const isExpired = new Date(post.deadline) < new Date();
+                                
+                                return (
+                                  <SelectItem 
+                                    key={post.id} 
+                                    value={post.id}
+                                    disabled={isExpired || alreadySubmitted}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span>
+                                        Postagem #{post.post_number} - Prazo:{" "}
+                                        {new Date(post.deadline).toLocaleDateString("pt-BR")} às{" "}
+                                        {new Date(post.deadline).toLocaleTimeString("pt-BR", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                      {alreadySubmitted && (
+                                        <Badge variant="secondary" className="text-xs ml-2">
+                                          ✓ Já enviada
+                                        </Badge>
+                                      )}
+                                      {isExpired && (
+                                        <Badge variant="destructive" className="text-xs ml-2">
+                                          ⏰ Prazo expirado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
 

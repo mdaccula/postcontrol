@@ -64,7 +64,6 @@ const Dashboard = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedGender, setSelectedGender] = useState<string>("");
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
-  const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyPlan, setAgencyPlan] = useState<string>("");
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
@@ -79,7 +78,28 @@ const Dashboard = () => {
     'whatsapp_number'
   ]);
 
-  // ✅ Hook unificado para todos os dados do dashboard
+  // ✅ FASE 1: Calcular agencyId SINCRONAMENTE com useMemo (antes do useDashboard)
+  const currentAgencyId = useMemo(() => {
+    if (!userAgenciesData || isLoadingAgencies) return null;
+    
+    // Prioridade 1: Query param ?agency=xxx
+    const urlAgency = searchParams.get("agency");
+    if (urlAgency) {
+      console.log('📍 [Dashboard] Agência detectada via URL:', urlAgency);
+      return urlAgency;
+    }
+    
+    // Prioridade 2: Primeira agência do usuário
+    if (userAgenciesData.length > 0) {
+      console.log('📍 [Dashboard] Usando primeira agência:', userAgenciesData[0].id);
+      return userAgenciesData[0].id;
+    }
+    
+    console.log('⚠️ [Dashboard] Nenhuma agência encontrada');
+    return null;
+  }, [userAgenciesData, isLoadingAgencies, searchParams]);
+
+  // ✅ Hook unificado para todos os dados do dashboard (agora recebe valor síncrono)
   const { data: dashboardData, isLoading: isLoadingDashboard, refetch } = useDashboard(currentAgencyId);
 
   // ✅ Derivar dados do hook unificado
@@ -93,27 +113,31 @@ const Dashboard = () => {
   // Loading consolidado
   const loading = isLoadingAgencies || isLoadingSettings || isLoadingDashboard;
 
-  // ✅ Setup inicial e atualização de agência
+  // ✅ FASE 5: Logs de debug do estado do Dashboard
+  useEffect(() => {
+    console.log('📊 [Dashboard] Estado atual:', {
+      user: user?.id,
+      currentAgencyId,
+      userAgencies: userAgenciesData?.length,
+      loading,
+      hasData: !!dashboardData,
+      profile: dashboardData?.profile?.full_name || '(sem perfil)'
+    });
+  }, [user, currentAgencyId, userAgenciesData, loading, dashboardData]);
+
+  // ✅ Setup inicial
   useEffect(() => {
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    // Processar agencies
-    if (userAgenciesData && !isLoadingAgencies) {
-      let contextAgency = searchParams.get("agency");
-      if (!contextAgency && userAgenciesData.length > 0) {
-        contextAgency = userAgenciesData[0].id;
-      }
-      
-      if (contextAgency) {
-        setCurrentAgencyId(contextAgency);
-        const currentAgency = userAgenciesData.find((a: any) => a.id === contextAgency);
-        if (currentAgency) {
-          setAgencyName(currentAgency.name);
-          setAgencyPlan(currentAgency.subscription_plan);
-        }
+    // Atualizar nome e plano da agência quando mudar
+    if (userAgenciesData && currentAgencyId) {
+      const currentAgency = userAgenciesData.find((a: any) => a.id === currentAgencyId);
+      if (currentAgency) {
+        setAgencyName(currentAgency.name);
+        setAgencyPlan(currentAgency.subscription_plan);
       }
     }
     
@@ -123,7 +147,7 @@ const Dashboard = () => {
       setBadgesEnabled(adminSettingsData.badges_enabled === 'true');
       setWhatsappNumber(adminSettingsData.whatsapp_number || '');
     }
-  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingAgencies, isLoadingSettings, searchParams]);
+  }, [user, navigate, userAgenciesData, currentAgencyId, adminSettingsData, isLoadingSettings]);
 
   // ✅ Atualizar estados locais quando perfil carrega
   useEffect(() => {
@@ -445,7 +469,10 @@ const Dashboard = () => {
 
                 <div className="flex flex-wrap items-center gap-3">
                   {userAgenciesData && userAgenciesData.length > 1 && (
-                    <Select value={currentAgencyId || undefined} onValueChange={setCurrentAgencyId}>
+                    <Select 
+                      value={currentAgencyId || undefined} 
+                      onValueChange={(value) => navigate(`/dashboard?agency=${value}`)}
+                    >
                       <SelectTrigger className="w-[200px]">
                         <SelectValue placeholder="Selecionar agência" />
                       </SelectTrigger>
