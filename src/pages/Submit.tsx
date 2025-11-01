@@ -400,9 +400,7 @@ const Submit = () => {
         return;
       }
 
-      const submittedPostIds = (data || [])
-        .filter((s: any) => s.post_id)
-        .map((s: any) => s.post_id);
+      const submittedPostIds = (data || []).filter((s: any) => s.post_id).map((s: any) => s.post_id);
 
       console.log("✅ Posts já enviados pelo usuário:", submittedPostIds);
       setUserSubmissions(submittedPostIds);
@@ -1122,13 +1120,9 @@ const Submit = () => {
                               {posts.map((post) => {
                                 const alreadySubmitted = userSubmissions.includes(post.id);
                                 const isExpired = new Date(post.deadline) < new Date();
-                                
+
                                 return (
-                                  <SelectItem 
-                                    key={post.id} 
-                                    value={post.id}
-                                    disabled={isExpired || alreadySubmitted}
-                                  >
+                                  <SelectItem key={post.id} value={post.id} disabled={isExpired || alreadySubmitted}>
                                     <div className="flex items-center gap-2">
                                       <span>
                                         Postagem #{post.post_number} - Prazo:{" "}
@@ -1329,7 +1323,7 @@ const Submit = () => {
                     className="block"
                   >
                     <Button type="button" className="w-full bg-green-600 hover:bg-green-700">
-                      Entrar no Grupo WhatsApp
+                      Grupo MDAccula - Resultado da Seleção
                     </Button>
                   </a>
                 </div>
