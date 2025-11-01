@@ -20,16 +20,25 @@ export default function AgencySignupBySlug() {
       return;
     }
 
+    // Usar função security definer para obter apenas dados públicos da agência
     const { data, error } = await sb
-      .from('agencies')
-      .select('signup_token, name, logo_url')
-      .eq('slug', slug)
-      .maybeSingle();
+      .rpc('get_agency_for_signup', { agency_slug: slug });
 
-    if (data?.signup_token) {
-      setToken(data.signup_token);
-      setAgencyName(data.name || "");
-      setAgencyLogo(data.logo_url);
+    if (data && data.length > 0) {
+      const agency = data[0];
+      
+      // Buscar signup_token separadamente (ainda precisa de acesso via RLS)
+      const { data: tokenData } = await sb
+        .from('agencies')
+        .select('signup_token')
+        .eq('id', agency.id)
+        .maybeSingle();
+      
+      if (tokenData?.signup_token) {
+        setToken(tokenData.signup_token);
+        setAgencyName(agency.name || "");
+        setAgencyLogo(agency.logo_url);
+      }
     }
     
     setLoading(false);

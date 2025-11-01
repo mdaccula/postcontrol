@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,18 +14,20 @@ import { sb } from "@/lib/supabaseSafe";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TutorialGuide } from "@/components/TutorialGuide";
-import { BadgeDisplay } from "@/components/BadgeDisplay";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
-import { AIInsights } from "@/components/AIInsights";
-import { SubmissionImageDisplay } from "@/components/SubmissionImageDisplay";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserAgencies, useAdminSettings, useEvents } from "@/hooks/useReactQuery";
 import { useQueryClient } from '@tanstack/react-query';
 import imageCompression from 'browser-image-compression';
+
+// Lazy loading para componentes pesados
+const TutorialGuide = lazy(() => import("@/components/TutorialGuide").then(m => ({ default: m.TutorialGuide })));
+const BadgeDisplay = lazy(() => import("@/components/BadgeDisplay").then(m => ({ default: m.BadgeDisplay })));
+const AIInsights = lazy(() => import("@/components/AIInsights").then(m => ({ default: m.AIInsights })));
+const SubmissionImageDisplay = lazy(() => import("@/components/SubmissionImageDisplay").then(m => ({ default: m.SubmissionImageDisplay })));
 
 interface Submission {
   id: string;
@@ -504,7 +506,9 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-8 px-4">
-      <TutorialGuide />
+      <Suspense fallback={<div className="text-center">Carregando...</div>}>
+        <TutorialGuide />
+      </Suspense>
 
       {/* Card 1: Informações Pessoais */}
       <Card className="max-w-7xl mx-auto mb-6 p-6 bg-gradient-primary text-white">
@@ -641,7 +645,11 @@ const Dashboard = () => {
         </Card>
 
         {/* Badges */}
-        {badgesEnabled && <BadgeDisplay />}
+        {badgesEnabled && (
+          <Suspense fallback={<Skeleton className="h-48 w-full rounded-lg" />}>
+            <BadgeDisplay />
+          </Suspense>
+        )}
 
         {/* Barra de progresso para próximo badge */}
         {badgesEnabled &&
@@ -681,7 +689,9 @@ const Dashboard = () => {
         {/* AI Insights */}
         {aiInsightsEnabled && user && eventStats.length > 0 && (
           <div className="mt-6">
-            <AIInsights eventId={eventStats[0].eventId} userId={user.id} />
+            <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
+              <AIInsights eventId={eventStats[0].eventId} userId={user.id} />
+            </Suspense>
           </div>
         )}
 
@@ -827,12 +837,14 @@ const Dashboard = () => {
                         transition={{ delay: index * 0.05 }}
                       >
                         <Card className="overflow-hidden hover:shadow-glow transition-all">
-                          <SubmissionImageDisplay
-                            screenshotPath={submission.screenshot_path}
-                            screenshotUrl={submission.screenshot_url}
-                            alt="Screenshot da submissão"
-                            className="w-full h-48 object-cover"
-                          />
+                          <Suspense fallback={<Skeleton className="w-full h-48" />}>
+                            <SubmissionImageDisplay
+                              screenshotPath={submission.screenshot_path}
+                              screenshotUrl={submission.screenshot_url}
+                              alt="Screenshot da submissão"
+                              className="w-full h-48 object-cover"
+                            />
+                          </Suspense>
 
                           <div className="p-4 space-y-2">
                             <h3 className="font-bold">{submission.posts?.events?.title || "Evento"}</h3>

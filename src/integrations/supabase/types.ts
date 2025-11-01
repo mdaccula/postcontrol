@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       admin_settings: {
         Row: {
+          agency_id: string | null
           id: string
           setting_key: string
           setting_value: string | null
@@ -23,6 +24,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          agency_id?: string | null
           id?: string
           setting_key: string
           setting_value?: string | null
@@ -30,13 +32,22 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          agency_id?: string | null
           id?: string
           setting_key?: string
           setting_value?: string | null
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "admin_settings_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agencies: {
         Row: {
@@ -1122,6 +1133,15 @@ export type Database = {
         Returns: boolean
       }
       expire_old_guest_invites: { Args: never; Returns: undefined }
+      get_agency_for_signup: {
+        Args: { agency_slug: string }
+        Returns: {
+          id: string
+          logo_url: string
+          name: string
+          slug: string
+        }[]
+      }
       get_current_user_agency_id: { Args: never; Returns: string }
       has_role: {
         Args: {

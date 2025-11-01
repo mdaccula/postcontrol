@@ -12,7 +12,76 @@ serve(async (req) => {
   }
 
   try {
+    // 1. Validar autenticação JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('❌ Token de autenticação não fornecido');
+      return new Response(
+        JSON.stringify({ error: 'Token de autenticação é obrigatório' }), 
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Criar cliente com o token do usuário para validar autenticação
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        },
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    );
+
+    // Verificar se o usuário está autenticado
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('❌ Token inválido ou expirado:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Token inválido ou expirado' }), 
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log(`✅ Usuário autenticado: ${user.id}`);
+
     const { eventId, userId } = await req.json();
+
+    // 2. Validar se o usuário tem permissão (próprio userId ou é admin)
+    const { data: roleData } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['agency_admin', 'master_admin']);
+
+    const isAdmin = roleData && roleData.length > 0;
+    const isOwnData = user.id === userId;
+
+    if (!isAdmin && !isOwnData) {
+      console.error('❌ Usuário sem permissão para acessar dados de outro usuário');
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado. Você só pode ver suas próprias previsões.' }), 
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log('✅ Permissão validada');
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
