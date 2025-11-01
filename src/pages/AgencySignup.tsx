@@ -19,18 +19,18 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
   const navigate = useNavigate();
   const [agency, setAgency] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<'signup' | 'login'>('signup');
+  const [mode, setMode] = useState<"signup" | "login">("signup");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    instagram: '',
-    phone: '',
-    gender: '',
-    followers_range: ''
+    fullName: "",
+    email: "",
+    password: "",
+    instagram: "",
+    phone: "",
+    gender: "",
+    followers_range: "",
   });
 
   useEffect(() => {
@@ -43,31 +43,30 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
       return;
     }
 
-    console.log('🔍 Buscando agência com token:', token);
+    console.log("🔍 Buscando agência com token:", token);
 
     // Usar nova função security definer que expõe dados publicamente
-    const { data, error } = await sb
-      .rpc('get_agency_signup_data', { agency_slug_or_token: token });
+    const { data, error } = await sb.rpc("get_agency_signup_data", { agency_slug_or_token: token });
 
-    console.log('📊 Resultado da busca:', { data, error });
+    console.log("📊 Resultado da busca:", { data, error });
 
     if (error) {
-      console.error('❌ Erro ao buscar agência:', error);
+      console.error("❌ Erro ao buscar agência:", error);
       toast({
         title: "Erro ao buscar agência",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
 
     const agencyData = data && data.length > 0 ? data[0] : null;
 
     if (!agencyData) {
-      console.warn('⚠️ Agência não encontrada para token:', token);
+      console.warn("⚠️ Agência não encontrada para token:", token);
       toast({
         title: "Agência não encontrada",
         description: "Este link de cadastro é inválido ou expirou.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
 
@@ -88,8 +87,8 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             full_name: formData.fullName,
-          }
-        }
+          },
+        },
       });
 
       if (authError) throw authError;
@@ -97,10 +96,10 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
       // 2. Atualizar profile (COM agency_id para contagem de divulgadores)
       if (authData.user) {
         // Limpar telefone antes de salvar
-        const cleanPhone = formData.phone ? formData.phone.replace(/\D/g, '') : null;
-        
+        const cleanPhone = formData.phone ? formData.phone.replace(/\D/g, "") : null;
+
         const { error: profileError } = await sb
-          .from('profiles')
+          .from("profiles")
           .update({
             full_name: formData.fullName,
             instagram: formData.instagram,
@@ -109,21 +108,20 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
             followers_range: formData.followers_range || null,
             agency_id: agency.id, // Adiciona agency_id para contagem
           })
-          .eq('id', authData.user.id);
+          .eq("id", authData.user.id);
 
         if (profileError) throw profileError;
 
         // 3. Criar associação na tabela user_agencies
-        const { error: agencyLinkError } = await sb
-          .from('user_agencies')
-          .insert({
-            user_id: authData.user.id,
-            agency_id: agency.id,
-            joined_at: new Date().toISOString(),
-            last_accessed_at: new Date().toISOString()
-          });
+        const { error: agencyLinkError } = await sb.from("user_agencies").insert({
+          user_id: authData.user.id,
+          agency_id: agency.id,
+          joined_at: new Date().toISOString(),
+          last_accessed_at: new Date().toISOString(),
+        });
 
-        if (agencyLinkError && agencyLinkError.code !== '23505') { // Ignora erro de duplicata
+        if (agencyLinkError && agencyLinkError.code !== "23505") {
+          // Ignora erro de duplicata
           throw agencyLinkError;
         }
       }
@@ -133,15 +131,15 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
         description: `Bem-vindo à ${agency.name}`,
       });
 
-      // Redirecionar para dashboard
+      // ✅ LINHA 137-139 (Cadastro) - NOVO
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate(`/submit?agency=${agency.id}`);
       }, 1000);
     } catch (error: any) {
       toast({
         title: "Erro no cadastro",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -162,18 +160,19 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
 
       // Após login bem-sucedido, adicionar ou atualizar associação com a agência
       if (authData.user) {
-        const { error: agencyLinkError } = await sb
-          .from('user_agencies')
-          .upsert({
+        const { error: agencyLinkError } = await sb.from("user_agencies").upsert(
+          {
             user_id: authData.user.id,
             agency_id: agency.id,
-            last_accessed_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,agency_id'
-          });
+            last_accessed_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,agency_id",
+          },
+        );
 
         if (agencyLinkError) {
-          console.warn('⚠️ Erro ao vincular agência:', agencyLinkError);
+          console.warn("⚠️ Erro ao vincular agência:", agencyLinkError);
         }
       }
 
@@ -182,14 +181,15 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
         description: "Redirecionando...",
       });
 
+      // ✅ LINHA 186 (Login) - NOVO
       setTimeout(() => {
-        navigate(`/dashboard?agency=${agency.id}`);
+        navigate(`/submit?agency=${agency.id}`);
       }, 1000);
     } catch (error: any) {
       toast({
         title: "Erro no login",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -213,7 +213,7 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
           <p className="text-muted-foreground mb-4">
             Verifique o link e tente novamente ou entre em contato com o administrador.
           </p>
-          <Button onClick={() => navigate('/')} variant="outline">
+          <Button onClick={() => navigate("/")} variant="outline">
             Voltar para Home
           </Button>
         </Card>
@@ -226,16 +226,14 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
       <Card className="max-w-md w-full p-8">
         <div className="text-center mb-6">
           <Building2 className="w-12 h-12 mx-auto mb-3 text-primary" />
-          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
-            {agency.name}
-          </h1>
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">{agency.name}</h1>
           <p className="text-muted-foreground">
-            {mode === 'signup' ? 'Cadastre-se como usuário' : 'Faça login para continuar'}
+            {mode === "signup" ? "Cadastre-se como usuário" : "Faça login para continuar"}
           </p>
         </div>
 
-        <form onSubmit={mode === 'signup' ? handleSignup : handleLogin} className="space-y-4">
-          {mode === 'signup' && (
+        <form onSubmit={mode === "signup" ? handleSignup : handleLogin} className="space-y-4">
+          {mode === "signup" && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="fullName">Nome Completo *</Label>
@@ -249,8 +247,8 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="gender">Gênero *</Label>
-                <Select 
-                  value={formData.gender} 
+                <Select
+                  value={formData.gender}
                   onValueChange={(value) => setFormData({ ...formData, gender: value })}
                   disabled={false}
                   required
@@ -280,7 +278,7 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\D/g, '');
+                    const cleaned = e.target.value.replace(/\D/g, "");
                     setFormData({ ...formData, phone: cleaned });
                   }}
                   placeholder="11999999999"
@@ -290,8 +288,8 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="followers">Faixa de Seguidores</Label>
-                <Select 
-                  value={formData.followers_range} 
+                <Select
+                  value={formData.followers_range}
                   onValueChange={(value) => setFormData({ ...formData, followers_range: value })}
                   disabled={false}
                 >
@@ -340,11 +338,11 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
             {submitting ? (
               <div className="flex items-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-background"></div>
-                {mode === 'signup' ? 'Cadastrando...' : 'Entrando...'}
+                {mode === "signup" ? "Cadastrando..." : "Entrando..."}
               </div>
             ) : (
               <>
-                {mode === 'signup' ? (
+                {mode === "signup" ? (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
                     Cadastrar
@@ -362,10 +360,10 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}
+            onClick={() => setMode(mode === "signup" ? "login" : "signup")}
             className="text-sm text-primary hover:underline"
           >
-            {mode === 'signup' ? 'Já tem conta? Faça login' : 'Não tem conta? Cadastre-se'}
+            {mode === "signup" ? "Já tem conta? Faça login" : "Não tem conta? Cadastre-se"}
           </button>
         </div>
 
