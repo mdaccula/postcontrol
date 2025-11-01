@@ -474,7 +474,9 @@ const copySlugUrl = () => {
       count: postsData?.length || 0,
       hasError: !!postsError,
       firstPostId: postsData?.[0]?.id || null,
-      firstPostEventId: postsData?.[0]?.event_id || null
+      firstPostEventId: postsData?.[0]?.event_id || null,
+      firstPostEventsData: postsData?.[0]?.events || null,
+      fullFirstPost: postsData?.[0] || null
     });
 
     if (postsError) {
@@ -491,6 +493,26 @@ const copySlugUrl = () => {
     }
 
     console.log('✅ [loadEvents] Atualizando state...');
+    console.log('📊 [loadEvents] Posts recebidos:', {
+      total: postsData?.length || 0,
+      primeiroPost: postsData?.[0],
+      eventosNoPrimeiroPost: postsData?.[0]?.events,
+      tipoDeEvents: typeof postsData?.[0]?.events,
+      isArray: Array.isArray(postsData?.[0]?.events)
+    });
+    
+    // DEBUG: Log detalhado de todos os posts
+    if (postsData && postsData.length > 0) {
+      console.log('🔍 [loadEvents] TODOS OS POSTS:', postsData.map(p => ({
+        id: p.id,
+        post_number: p.post_number,
+        event_id: p.event_id,
+        events: p.events,
+        events_tipo: typeof p.events,
+        events_isArray: Array.isArray(p.events)
+      })));
+    }
+    
     setEvents(eventsData || []);
     setPosts(postsData || []);
     console.log('✅ [loadEvents] === FIM ===');
@@ -1376,7 +1398,12 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                         <div>
                           <h3 className="font-bold">Postagem #{post.post_number}</h3>
                           <p className="text-sm text-muted-foreground">
-                            Evento: {post.events?.title}
+                            Evento: {
+                              // Suporte para events como objeto ou array
+                              Array.isArray(post.events) 
+                                ? post.events[0]?.title || 'N/A'
+                                : post.events?.title || 'N/A'
+                            }
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
                             Prazo: {new Date(post.deadline).toLocaleString('pt-BR')}
@@ -1734,7 +1761,12 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                                     </p>
                                   )}
                                   <p className="text-xs text-muted-foreground">
-                                    {submission.posts?.events?.title}
+                                    {
+                                      // Suporte para events como objeto ou array
+                                      Array.isArray(submission.posts?.events)
+                                        ? submission.posts?.events[0]?.title || 'N/A'
+                                        : submission.posts?.events?.title || 'N/A'
+                                    }
                                   </p>
                                 </div>
                                 <div className="mt-2">
