@@ -1352,7 +1352,7 @@ const Submit = () => {
                       value={followersRange || ""} 
                       onValueChange={setFollowersRange} 
                       required 
-                      disabled={isSubmitting || !!followersRange}
+                      disabled={isSubmitting}
                     >
                       <SelectTrigger id="followersRange">
                         <SelectValue placeholder="Selecione a faixa de seguidores" />

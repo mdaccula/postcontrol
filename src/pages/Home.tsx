@@ -64,15 +64,20 @@ const Home = () => {
                     size="sm" 
                     className="bg-gradient-primary" 
                     onClick={async () => {
-                      const { data: userAgencies } = await sb
+                      const { data: userAgency } = await sb
                         .from('user_agencies')
-                        .select('agencies(slug)')
+                        .select(`
+                          agency_id,
+                          agencies!inner (
+                            slug
+                          )
+                        `)
                         .eq('user_id', user.id)
                         .order('last_accessed_at', { ascending: false })
                         .limit(1)
                         .maybeSingle();
                       
-                      const slug = userAgencies?.agencies?.slug;
+                      const slug = userAgency?.agencies?.slug;
                       window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
                     }}
                   >
@@ -141,15 +146,20 @@ const Home = () => {
                     size="lg" 
                     className="bg-gradient-primary w-full" 
                     onClick={async () => {
-                      const { data: userAgencies } = await sb
+                      const { data: userAgency } = await sb
                         .from('user_agencies')
-                        .select('agencies(slug)')
+                        .select(`
+                          agency_id,
+                          agencies!inner (
+                            slug
+                          )
+                        `)
                         .eq('user_id', user.id)
                         .order('last_accessed_at', { ascending: false })
                         .limit(1)
                         .maybeSingle();
                       
-                      const slug = userAgencies?.agencies?.slug;
+                      const slug = userAgency?.agencies?.slug;
                       window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
                       setMobileMenuOpen(false);
                     }}

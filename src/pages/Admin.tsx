@@ -1547,6 +1547,12 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
 
                             // Buscar dados completos das submissões filtradas
                             const submissionIds = filteredSubmissions.map(s => s.id);
+                            
+                            if (submissionIds.length === 0) {
+                              toast.error('Nenhuma submissão disponível para exportar');
+                              return;
+                            }
+                            
                             const { data: fullSubmissions } = await sb
                               .from('submissions')
                               .select(`
