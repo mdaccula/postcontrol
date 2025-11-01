@@ -949,10 +949,10 @@ const Dashboard = () => {
                     <SelectValue placeholder="Selecione seu gênero" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="feminino">Feminino</SelectItem>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                    <SelectItem value="prefiro-nao-informar">Prefiro não informar</SelectItem>
+                    <SelectItem value="Feminino">Feminino</SelectItem>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button onClick={saveGender} size="sm" className="mt-2">

@@ -580,17 +580,22 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
 
       const userGender = userProfile?.gender;
 
-      // Verificar se gênero do usuário está na lista de gêneros aceitos
-      const genderCompatible = !userGender || selectedEventData.target_gender.includes(userGender);
+      // Verificar se gênero do usuário está na lista de gêneros aceitos (case-insensitive)
+      const genderCompatible = !userGender || 
+        selectedEventData.target_gender.some(
+          targetG => targetG.toLowerCase() === userGender.toLowerCase()
+        );
 
       if (!genderCompatible) {
         const genderLabels: Record<string, string> = {
           'masculino': 'Masculino',
           'feminino': 'Feminino',
-          'outro': 'Outro'
+          'outro': 'Outro',
+          'lgbtq+': 'LGBTQ+',
+          'lgbtqia+': 'LGBTQ+'
         };
-        const acceptedGenders = selectedEventData.target_gender.map(g => genderLabels[g] || g).join(', ');
-        const userGenderLabel = userGender ? genderLabels[userGender] || userGender : 'Não informado';
+        const acceptedGenders = selectedEventData.target_gender.map(g => genderLabels[g.toLowerCase()] || g).join(', ');
+        const userGenderLabel = userGender ? genderLabels[userGender.toLowerCase()] || userGender : 'Não informado';
         
         toast({
           title: "Gênero Incompatível",
