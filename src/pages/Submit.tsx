@@ -118,6 +118,7 @@ const Submit = () => {
 
   useEffect(() => {
     if (selectedEvent) {
+      setSelectedPost(""); // ✅ Limpar postagem selecionada ao trocar evento
       loadPostsForEvent(selectedEvent);
       loadRequirementsForEvent(selectedEvent);
     } else {
@@ -237,7 +238,8 @@ const Submit = () => {
       eventId,
       eventPurpose: eventData?.event_purpose,
       isProfileSelection,
-      currentTime: new Date().toISOString()
+      currentTime: new Date().toISOString(),
+      currentTimeBR: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     });
     
     // 1. Buscar IDs dos posts do evento
@@ -266,6 +268,14 @@ const Submit = () => {
       
       submittedPostIds = (userSubmissions || []).map((s: any) => s.post_id);
     }
+
+    console.log('🔍 Iniciando busca de posts:', {
+      eventId,
+      isProfileSelection,
+      submittedPostIds,
+      willExcludeSubmitted: submittedPostIds.length > 0 && !isProfileSelection,
+      willApplyLimit: !isProfileSelection
+    });
     
     // 3. Buscar postagens disponíveis
     let query = sb
@@ -291,13 +301,31 @@ const Submit = () => {
     
     const { data, error } = await query;
 
+    console.log('📊 Resultado da query de posts:', {
+      success: !error,
+      error: error?.message || null,
+      postsReturned: data?.length || 0,
+      rawData: data
+    });
+
     if (error) {
-      console.error('Error loading posts:', error);
+      console.error('❌ Erro ao carregar posts:', error);
       toast({
         title: "Erro ao carregar posts",
-        description: "Não foi possível carregar as postagens disponíveis.",
+        description: `Não foi possível carregar as postagens disponíveis. ${error.message}`,
         variant: "destructive",
       });
+      setPosts([]);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('⚠️ Nenhum post encontrado para o evento:', {
+        eventId,
+        isProfileSelection,
+        submittedPostIds
+      });
+      setPosts([]);
       return;
     }
 
@@ -1000,16 +1028,36 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
                 {/* Mostrar seleção de postagem APENAS se tipo for "post" */}
                 {submissionType === "post" && (
                   <div className="space-y-2">
+                    <Label htmlFor="post-select">Escolha a Postagem *</Label>
                     {posts.length > 0 ? (
-                      <div className="bg-primary/10 border border-primary rounded-lg p-4">
-                        <p className="font-semibold text-primary mb-2">📌 Postagem Atual Disponível:</p>
-                        <p className="text-sm">
-                          Postagem #{posts[0].post_number} - Prazo: {new Date(posts[0].deadline).toLocaleDateString("pt-BR")} às {new Date(posts[0].deadline).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Após enviar, a próxima postagem será liberada automaticamente.
-                        </p>
-                      </div>
+                      <>
+                        <Select value={selectedPost} onValueChange={setSelectedPost} disabled={isSubmitting}>
+                          <SelectTrigger id="post-select" className="w-full bg-background">
+                            <SelectValue placeholder="Selecione qual postagem você está enviando" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50">
+                            {posts.map((post) => (
+                              <SelectItem key={post.id} value={post.id}>
+                                Postagem #{post.post_number} - Prazo: {new Date(post.deadline).toLocaleDateString("pt-BR")} às {new Date(post.deadline).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        {selectedPost && (
+                          <div className="bg-primary/10 border border-primary rounded-lg p-4 mt-2">
+                            <p className="font-semibold text-primary mb-1">📌 Postagem Selecionada:</p>
+                            <p className="text-sm">
+                              Postagem #{posts.find(p => p.id === selectedPost)?.post_number}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {selectedEventData?.event_purpose === 'selecao_perfil' 
+                                ? 'Você pode enviar múltiplas submissões para esta postagem.'
+                                : 'Após enviar, a próxima postagem será liberada automaticamente.'}
+                            </p>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="bg-muted/50 border border-border rounded-lg p-4">
                         <p className="text-sm text-muted-foreground text-center">
