@@ -1128,9 +1128,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      convert_to_fixed_timezone: {
+        Args: { input_timestamp: string }
+        Returns: string
+      }
       current_user_has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      display_in_brazil_timezone: {
+        Args: { input_timestamp: string }
+        Returns: string
       }
       expire_old_guest_invites: { Args: never; Returns: undefined }
       get_agency_for_signup: {

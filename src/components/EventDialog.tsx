@@ -64,7 +64,13 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
       if (event) {
         setTitle(event.title || "");
         setDescription(event.description || "");
-        setEventDate(event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : "");
+        // ✅ ITEM 8: Forçar horário fixo sem conversão de timezone
+        if (event.event_date) {
+          const dateStr = new Date(event.event_date).toISOString();
+          setEventDate(dateStr.slice(0, 16));
+        } else {
+          setEventDate("");
+        }
         setLocation(event.location || "");
         setSetor(event.setor || "");
         setNumeroDeVagas(event.numero_de_vagas ? String(event.numero_de_vagas) : "");
@@ -256,7 +262,8 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           .update({
             title,
             description,
-            event_date: eventDate ? new Date(eventDate).toISOString() : null,
+            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
+            event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
             location,
             setor: setor || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
@@ -290,7 +297,8 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           .insert({
             title,
             description,
-            event_date: eventDate ? new Date(eventDate).toISOString() : null,
+            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
+            event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
             location,
             setor: setor || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
