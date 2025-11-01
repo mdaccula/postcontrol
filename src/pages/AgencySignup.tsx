@@ -158,8 +158,14 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
 
       if (error) throw error;
 
-      // Após login bem-sucedido, adicionar ou atualizar associação com a agência
+      // ✅ LINHA 165-178 (Login) - ADICIONAR LOGS
       if (authData.user) {
+        console.log("🔗 Vinculando usuário à agência:", {
+          user_id: authData.user.id,
+          agency_id: agency.id,
+          agency_name: agency.name,
+        });
+
         const { error: agencyLinkError } = await sb.from("user_agencies").upsert(
           {
             user_id: authData.user.id,
@@ -172,10 +178,11 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
         );
 
         if (agencyLinkError) {
-          console.warn("⚠️ Erro ao vincular agência:", agencyLinkError);
+          console.error("❌ Erro ao vincular agência:", agencyLinkError);
+        } else {
+          console.log("✅ Agência vinculada com sucesso!");
         }
       }
-
       toast({
         title: "Login realizado!",
         description: "Redirecionando...",
