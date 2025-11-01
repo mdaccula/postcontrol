@@ -36,8 +36,16 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
   }, [open]);
 
   useEffect(() => {
+    console.log('🎯 [PostDialog] Recebeu post:', post);
+    console.log('🎯 [PostDialog] event_id direto:', post?.event_id);
+    console.log('🎯 [PostDialog] events objeto:', post?.events);
+    
     if (post) {
-      setEventId(post.event_id || "");
+      // CRÍTICO: Tentar event_id primeiro, depois events.id como fallback
+      const resolvedEventId = post.event_id || (Array.isArray(post.events) ? post.events[0]?.id : post.events?.id) || "";
+      console.log('✅ [PostDialog] event_id resolvido:', resolvedEventId);
+      
+      setEventId(resolvedEventId);
       setPostNumber(post.post_number?.toString() || "");
       setDeadline(post.deadline ? new Date(post.deadline).toISOString().slice(0, 16) : "");
     } else {

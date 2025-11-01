@@ -87,6 +87,21 @@ const Admin = () => {
   const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
   const [zoomSubmissionIndex, setZoomSubmissionIndex] = useState(0);
 
+  // Helper para obter título do evento de forma robusta
+  const getEventTitle = (post: any): string => {
+    // Método 1: Tentar pelo objeto events
+    if (post.events?.title) return post.events.title;
+    if (Array.isArray(post.events) && post.events[0]?.title) return post.events[0].title;
+    
+    // Método 2: Lookup manual usando event_id
+    if (post.event_id) {
+      const foundEvent = events.find(e => e.id === post.event_id);
+      if (foundEvent) return foundEvent.title;
+    }
+    
+    return 'Evento não encontrado';
+  };
+
   // Debounce para busca
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -493,28 +508,26 @@ const copySlugUrl = () => {
     }
 
     console.log('✅ [loadEvents] Atualizando state...');
-    console.log('📊 [loadEvents] Posts recebidos:', {
-      total: postsData?.length || 0,
-      primeiroPost: postsData?.[0],
-      eventosNoPrimeiroPost: postsData?.[0]?.events,
-      tipoDeEvents: typeof postsData?.[0]?.events,
-      isArray: Array.isArray(postsData?.[0]?.events)
-    });
     
-    // DEBUG: Log detalhado de todos os posts
-    if (postsData && postsData.length > 0) {
-      console.log('🔍 [loadEvents] TODOS OS POSTS:', postsData.map(p => ({
-        id: p.id,
-        post_number: p.post_number,
-        event_id: p.event_id,
-        events: p.events,
-        events_tipo: typeof p.events,
-        events_isArray: Array.isArray(p.events)
-      })));
-    }
+    // CRÍTICO: Enriquecer posts com dados de eventos
+    const enrichedPosts = postsData?.map(post => {
+      // Se events for null mas event_id existir, fazer lookup manual
+      if (!post.events && post.event_id) {
+        const matchedEvent = eventsData?.find(e => e.id === post.event_id);
+        if (matchedEvent) {
+          console.log(`🔧 [loadEvents] Enriquecendo post #${post.post_number} com evento ${matchedEvent.title}`);
+          return {
+            ...post,
+            events: { id: matchedEvent.id, title: matchedEvent.title }
+          };
+        }
+      }
+      return post;
+    }) || [];
     
+    console.log('✅ [loadEvents] Posts enriquecidos:', enrichedPosts.length);
     setEvents(eventsData || []);
-    setPosts(postsData || []);
+    setPosts(enrichedPosts);
     console.log('✅ [loadEvents] === FIM ===');
   };
 
@@ -1398,12 +1411,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                         <div>
                           <h3 className="font-bold">Postagem #{post.post_number}</h3>
                           <p className="text-sm text-muted-foreground">
-                            Evento: {
-                              // Suporte para events como objeto ou array
-                              Array.isArray(post.events) 
-                                ? post.events[0]?.title || 'N/A'
-                                : post.events?.title || 'N/A'
-                            }
+                            Evento: {getEventTitle(post)}
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
                             Prazo: {new Date(post.deadline).toLocaleString('pt-BR')}
