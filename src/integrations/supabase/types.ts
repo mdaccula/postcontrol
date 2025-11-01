@@ -1122,6 +1122,7 @@ export type Database = {
         Returns: boolean
       }
       expire_old_guest_invites: { Args: never; Returns: undefined }
+      get_current_user_agency_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
