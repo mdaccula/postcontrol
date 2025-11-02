@@ -7,17 +7,20 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Home from "./pages/Home";
-import Submit from "./pages/Submit";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
-import Dashboard from "./pages/Dashboard";
-import MasterAdmin from "./pages/MasterAdmin";
-import AgencySignup from "./pages/AgencySignup";
-import AgencySignupBySlug from "./pages/AgencySignupBySlug";
-import { AcceptInvite } from "./pages/AcceptInvite";
-import { GuestDashboard } from "./pages/GuestDashboard";
-import NotFound from "./pages/NotFound";
+import { lazy, Suspense } from "react";
+
+// Lazy load pages for better performance and reduced Total Blocking Time
+const Home = lazy(() => import("./pages/Home"));
+const Submit = lazy(() => import("./pages/Submit"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MasterAdmin = lazy(() => import("./pages/MasterAdmin"));
+const AgencySignup = lazy(() => import("./pages/AgencySignup"));
+const AgencySignupBySlug = lazy(() => import("./pages/AgencySignupBySlug"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite").then(m => ({ default: m.AcceptInvite })));
+const GuestDashboard = lazy(() => import("./pages/GuestDashboard").then(m => ({ default: m.GuestDashboard })));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -31,53 +34,59 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/agency/:token" element={<AgencySignup />} />
-            <Route path="/agencia/:slug" element={<AgencySignupBySlug />} />
-            <Route path="/accept-invite" element={<AcceptInvite />} />
-            
-            {/* Protected Routes - Require Authentication */}
-            <Route path="/submit" element={
-              <RequireAuth>
-                <Submit />
-              </RequireAuth>
-            } />
-            
-            <Route path="/dashboard" element={
-              <RequireAuth>
-                <Dashboard />
-              </RequireAuth>
-            } />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          }>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/agency/:token" element={<AgencySignup />} />
+              <Route path="/agencia/:slug" element={<AgencySignupBySlug />} />
+              <Route path="/accept-invite" element={<AcceptInvite />} />
+              
+              {/* Protected Routes - Require Authentication */}
+              <Route path="/submit" element={
+                <RequireAuth>
+                  <Submit />
+                </RequireAuth>
+              } />
+              
+              <Route path="/dashboard" element={
+                <RequireAuth>
+                  <Dashboard />
+                </RequireAuth>
+              } />
 
-            <Route path="/guest-dashboard" element={
-              <RequireAuth>
-                <GuestDashboard />
-              </RequireAuth>
-            } />
-            
-            {/* Agency Admin Routes */}
-            <Route path="/admin" element={
-              <RequireAuth>
-                <ProtectedRoute requireAgencyAdmin>
-                  <Admin />
-                </ProtectedRoute>
-              </RequireAuth>
-            } />
-            
-            {/* Master Admin Routes */}
-            <Route path="/master-admin" element={
-              <RequireAuth>
-                <ProtectedRoute requireMasterAdmin>
-                  <MasterAdmin />
-                </ProtectedRoute>
-              </RequireAuth>
-            } />
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/guest-dashboard" element={
+                <RequireAuth>
+                  <GuestDashboard />
+                </RequireAuth>
+              } />
+              
+              {/* Agency Admin Routes */}
+              <Route path="/admin" element={
+                <RequireAuth>
+                  <ProtectedRoute requireAgencyAdmin>
+                    <Admin />
+                  </ProtectedRoute>
+                </RequireAuth>
+              } />
+              
+              {/* Master Admin Routes */}
+              <Route path="/master-admin" element={
+                <RequireAuth>
+                  <ProtectedRoute requireMasterAdmin>
+                    <MasterAdmin />
+                  </ProtectedRoute>
+                </RequireAuth>
+              } />
+              
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
