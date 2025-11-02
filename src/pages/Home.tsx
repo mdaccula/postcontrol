@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { sb } from "@/lib/supabaseSafe";
 const Home = () => {
   const { user } = useAuthStore();
   const [plans, setPlans] = useState<any[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadPlans();
@@ -41,7 +43,9 @@ const Home = () => {
             <Link to="/" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               PostControl
             </Link>
-            <div className="flex items-center gap-6">
+            
+            {/* Menu Desktop */}
+            <div className="hidden md:flex items-center gap-6">
               <button onClick={() => scrollToSection('recursos')} className="text-sm hover:text-primary transition-colors">
                 Recursos
               </button>
@@ -55,18 +59,135 @@ const Home = () => {
                 FAQ
               </button>
               {user ? (
-                <Link to="/dashboard">
-                  <Button size="sm" className="bg-gradient-primary">Dashboard</Button>
-                </Link>
+                <>
+                  <Button 
+                    size="sm" 
+                    className="bg-gradient-primary" 
+                    onClick={async () => {
+                      const { data: userAgency } = await sb
+                        .from('user_agencies')
+                        .select(`
+                          agency_id,
+                          agencies!inner (
+                            slug
+                          )
+                        `)
+                        .eq('user_id', user.id)
+                        .order('last_accessed_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                      
+                      const slug = userAgency?.agencies?.slug;
+                      window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={async () => {
+                      await sb.auth.signOut();
+                      window.location.href = '/';
+                    }}
+                  >
+                    Sair
+                  </Button>
+                </>
               ) : (
                 <Link to="/auth">
                   <Button size="sm" className="bg-gradient-primary">Entrar</Button>
                 </Link>
               )}
             </div>
+            
+            {/* Menu Mobile - Hamburguer */}
+            <div className="md:hidden">
+              <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+            </div>
           </nav>
         </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm">
+          <div className="container mx-auto px-4 py-20">
+            <div className="flex flex-col space-y-6">
+              <button 
+                onClick={() => { scrollToSection('recursos'); setMobileMenuOpen(false); }} 
+                className="text-lg hover:text-primary transition-colors text-left"
+              >
+                Recursos
+              </button>
+              <button 
+                onClick={() => { scrollToSection('como-funciona'); setMobileMenuOpen(false); }} 
+                className="text-lg hover:text-primary transition-colors text-left"
+              >
+                Como Funciona
+              </button>
+              <button 
+                onClick={() => { scrollToSection('precos'); setMobileMenuOpen(false); }} 
+                className="text-lg hover:text-primary transition-colors text-left"
+              >
+                Preços
+              </button>
+              <button 
+                onClick={() => { scrollToSection('faq'); setMobileMenuOpen(false); }} 
+                className="text-lg hover:text-primary transition-colors text-left"
+              >
+                FAQ
+              </button>
+              {user ? (
+                <>
+                  <Button 
+                    size="lg" 
+                    className="bg-gradient-primary w-full" 
+                    onClick={async () => {
+                      const { data: userAgency } = await sb
+                        .from('user_agencies')
+                        .select(`
+                          agency_id,
+                          agencies!inner (
+                            slug
+                          )
+                        `)
+                        .eq('user_id', user.id)
+                        .order('last_accessed_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                      
+                      const slug = userAgency?.agencies?.slug;
+                      window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Dashboard
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="w-full"
+                    onClick={async () => {
+                      await sb.auth.signOut();
+                      window.location.href = '/';
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Sair
+                  </Button>
+                </>
+              ) : (
+                <Link to="/auth" className="w-full">
+                  <Button size="lg" className="bg-gradient-primary w-full">Entrar</Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 px-4">

@@ -2,7 +2,19 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, TrendingUp, Award, Calendar, LogOut, MessageCircle, Building2, ChevronDown, Camera, User, Lock } from "lucide-react";
+import {
+  ArrowLeft,
+  TrendingUp,
+  Award,
+  Calendar,
+  LogOut,
+  MessageCircle,
+  Building2,
+  ChevronDown,
+  Camera,
+  User,
+  Lock,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,15 +31,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserAgencies, useAdminSettings } from "@/hooks/useReactQuery";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import imageCompression from 'browser-image-compression';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import imageCompression from "browser-image-compression";
 import { useDashboard } from "@/hooks/useDashboard";
 
 // Lazy loading para componentes pesados
-const TutorialGuide = lazy(() => import("@/components/TutorialGuide").then(m => ({ default: m.TutorialGuide })));
-const BadgeDisplay = lazy(() => import("@/components/BadgeDisplay").then(m => ({ default: m.BadgeDisplay })));
-const AIInsights = lazy(() => import("@/components/AIInsights").then(m => ({ default: m.AIInsights })));
-const SubmissionImageDisplay = lazy(() => import("@/components/SubmissionImageDisplay").then(m => ({ default: m.SubmissionImageDisplay })));
+const TutorialGuide = lazy(() => import("@/components/TutorialGuide").then((m) => ({ default: m.TutorialGuide })));
+const BadgeDisplay = lazy(() => import("@/components/BadgeDisplay").then((m) => ({ default: m.BadgeDisplay })));
+const AIInsights = lazy(() => import("@/components/AIInsights").then((m) => ({ default: m.AIInsights })));
+const SubmissionImageDisplay = lazy(() =>
+  import("@/components/SubmissionImageDisplay").then((m) => ({ default: m.SubmissionImageDisplay })),
+);
 
 interface Submission {
   id: string;
@@ -54,7 +68,7 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Estados locais
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -64,7 +78,6 @@ const Dashboard = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedGender, setSelectedGender] = useState<string>("");
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
-  const [currentAgencyId, setCurrentAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyPlan, setAgencyPlan] = useState<string>("");
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
@@ -74,12 +87,33 @@ const Dashboard = () => {
   // React Query hooks
   const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgencies(user?.id);
   const { data: adminSettingsData, isLoading: isLoadingSettings } = useAdminSettings([
-    'ai_insights_enabled',
-    'badges_enabled',
-    'whatsapp_number'
+    "ai_insights_enabled",
+    "badges_enabled",
+    "whatsapp_number",
   ]);
 
-  // ✅ Hook unificado para todos os dados do dashboard
+  // ✅ FASE 1: Calcular agencyId SINCRONAMENTE com useMemo (antes do useDashboard)
+  const currentAgencyId = useMemo(() => {
+    if (!userAgenciesData || isLoadingAgencies) return null;
+
+    // Prioridade 1: Query param ?agency=xxx
+    const urlAgency = searchParams.get("agency");
+    if (urlAgency) {
+      console.log("📍 [Dashboard] Agência detectada via URL:", urlAgency);
+      return urlAgency;
+    }
+
+    // Prioridade 2: Primeira agência do usuário
+    if (userAgenciesData.length > 0) {
+      console.log("📍 [Dashboard] Usando primeira agência:", userAgenciesData[0].id);
+      return userAgenciesData[0].id;
+    }
+
+    console.log("⚠️ [Dashboard] Nenhuma agência encontrada");
+    return null;
+  }, [userAgenciesData, isLoadingAgencies, searchParams]);
+
+  // ✅ Hook unificado para todos os dados do dashboard (agora recebe valor síncrono)
   const { data: dashboardData, isLoading: isLoadingDashboard, refetch } = useDashboard(currentAgencyId);
 
   // ✅ Derivar dados do hook unificado
@@ -93,37 +127,41 @@ const Dashboard = () => {
   // Loading consolidado
   const loading = isLoadingAgencies || isLoadingSettings || isLoadingDashboard;
 
-  // ✅ Setup inicial e atualização de agência
+  // ✅ FASE 5: Logs de debug do estado do Dashboard
+  useEffect(() => {
+    console.log("📊 [Dashboard] Estado atual:", {
+      user: user?.id,
+      currentAgencyId,
+      userAgencies: userAgenciesData?.length,
+      loading,
+      hasData: !!dashboardData,
+      profile: dashboardData?.profile?.full_name || "(sem perfil)",
+    });
+  }, [user, currentAgencyId, userAgenciesData, loading, dashboardData]);
+
+  // ✅ Setup inicial
   useEffect(() => {
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    // Processar agencies
-    if (userAgenciesData && !isLoadingAgencies) {
-      let contextAgency = searchParams.get("agency");
-      if (!contextAgency && userAgenciesData.length > 0) {
-        contextAgency = userAgenciesData[0].id;
-      }
-      
-      if (contextAgency) {
-        setCurrentAgencyId(contextAgency);
-        const currentAgency = userAgenciesData.find((a: any) => a.id === contextAgency);
-        if (currentAgency) {
-          setAgencyName(currentAgency.name);
-          setAgencyPlan(currentAgency.subscription_plan);
-        }
+    // Atualizar nome e plano da agência quando mudar
+    if (userAgenciesData && currentAgencyId) {
+      const currentAgency = userAgenciesData.find((a: any) => a.id === currentAgencyId);
+      if (currentAgency) {
+        setAgencyName(currentAgency.name);
+        setAgencyPlan(currentAgency.subscription_plan);
       }
     }
-    
+
     // Processar settings
     if (adminSettingsData && !isLoadingSettings) {
-      setAiInsightsEnabled(adminSettingsData.ai_insights_enabled === 'true');
-      setBadgesEnabled(adminSettingsData.badges_enabled === 'true');
-      setWhatsappNumber(adminSettingsData.whatsapp_number || '');
+      setAiInsightsEnabled(adminSettingsData.ai_insights_enabled === "true");
+      setBadgesEnabled(adminSettingsData.badges_enabled === "true");
+      setWhatsappNumber(adminSettingsData.whatsapp_number || "");
     }
-  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingAgencies, isLoadingSettings, searchParams]);
+  }, [user, navigate, userAgenciesData, currentAgencyId, adminSettingsData, isLoadingSettings]);
 
   // ✅ Atualizar estados locais quando perfil carrega
   useEffect(() => {
@@ -136,32 +174,29 @@ const Dashboard = () => {
   // ✅ Background: Atualizar last_accessed_at (não bloqueia carregamento)
   useEffect(() => {
     if (user && currentAgencyId) {
-      sb.from('user_agencies')
+      sb.from("user_agencies")
         .update({ last_accessed_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('agency_id', currentAgencyId)
-        .then(() => console.log('✅ last_accessed_at atualizado em background'));
+        .eq("user_id", user.id)
+        .eq("agency_id", currentAgencyId)
+        .then(() => console.log("✅ last_accessed_at atualizado em background"));
     }
   }, [user, currentAgencyId]);
 
   // ✅ Mutação otimista para salvar perfil
   const updateProfileMutation = useMutation({
     mutationFn: async (newData: Partial<typeof profile>) => {
-      const { error } = await sb
-        .from('profiles')
-        .update(newData)
-        .eq('id', user!.id);
-      
+      const { error } = await sb.from("profiles").update(newData).eq("id", user!.id);
+
       if (error) throw error;
       return newData;
     },
     onMutate: async (newData) => {
       // Atualizar cache local imediatamente
-      queryClient.setQueryData(['dashboard', user?.id, currentAgencyId], (old: any) => {
+      queryClient.setQueryData(["dashboard", user?.id, currentAgencyId], (old: any) => {
         if (!old) return old;
         return {
           ...old,
-          profile: { ...old.profile, ...newData }
+          profile: { ...old.profile, ...newData },
         };
       });
     },
@@ -172,14 +207,14 @@ const Dashboard = () => {
       });
     },
     onError: (error) => {
-      console.error('Erro ao atualizar perfil:', error);
+      console.error("Erro ao atualizar perfil:", error);
       toast({
         title: "Erro ao salvar",
         description: "Tente novamente mais tarde.",
         variant: "destructive",
       });
       refetch(); // Recarregar em caso de erro
-    }
+    },
   });
 
   const handleSignOut = async () => {
@@ -190,15 +225,15 @@ const Dashboard = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
+
       // Validar com backend
       try {
-        const validation = await sb.functions.invoke('validate-image', {
+        const validation = await sb.functions.invoke("validate-image", {
           body: {
             fileSize: file.size,
             fileType: file.type,
-            fileName: file.name
-          }
+            fileName: file.name,
+          },
         });
 
         if (validation.error || !validation.data?.valid) {
@@ -210,21 +245,23 @@ const Dashboard = () => {
           return;
         }
       } catch (error) {
-        console.error('Erro ao validar imagem:', error);
+        console.error("Erro ao validar imagem:", error);
       }
-      
+
       // Comprimir avatar
       try {
         const options = {
           maxSizeMB: 0.5,
           maxWidthOrHeight: 512,
           useWebWorker: true,
-          fileType: 'image/jpeg'
+          fileType: "image/jpeg",
         };
-        
+
         const compressedFile = await imageCompression(file, options);
-        console.log(`📦 Avatar comprimido: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
-        
+        console.log(
+          `📦 Avatar comprimido: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`,
+        );
+
         setAvatarFile(compressedFile);
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -232,7 +269,7 @@ const Dashboard = () => {
         };
         reader.readAsDataURL(compressedFile);
       } catch (error) {
-        console.error('Erro ao comprimir:', error);
+        console.error("Erro ao comprimir:", error);
         toast({
           title: "Erro ao processar imagem",
           description: "Tente novamente",
@@ -244,60 +281,52 @@ const Dashboard = () => {
 
   const saveAvatar = async () => {
     if (!avatarFile || !user) return;
-    
+
     setUploading(true);
     setUploadProgress(0);
-    
+
     try {
-      console.log('📸 Iniciando upload de avatar...');
-      
-      const fileExt = avatarFile.name.split('.').pop();
+      console.log("📸 Iniciando upload de avatar...");
+
+      const fileExt = avatarFile.name.split(".").pop();
       const fileName = `avatars/${user.id}_${Date.now()}.${fileExt}`;
-      
+
       // Simular progresso
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
+        setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 100);
-      
+
       // Deletar arquivos antigos
-      const { data: oldFiles } = await sb.storage
-        .from('screenshots')
-        .list('avatars', { search: user.id });
-      
+      const { data: oldFiles } = await sb.storage.from("screenshots").list("avatars", { search: user.id });
+
       if (oldFiles && oldFiles.length > 0) {
-        await Promise.all(
-          oldFiles.map(file => 
-            sb.storage
-              .from('screenshots')
-              .remove([`avatars/${file.name}`])
-          )
-        );
+        await Promise.all(oldFiles.map((file) => sb.storage.from("screenshots").remove([`avatars/${file.name}`])));
       }
-      
+
       // Upload
       const { error: uploadError } = await sb.storage
-        .from('screenshots')
+        .from("screenshots")
         .upload(fileName, avatarFile, { upsert: true });
-      
+
       clearInterval(progressInterval);
       setUploadProgress(95);
-      
+
       if (uploadError) throw uploadError;
-      
+
       // Gerar URL assinada
       const { data: signedData, error: signedError } = await sb.storage
-        .from('screenshots')
+        .from("screenshots")
         .createSignedUrl(fileName, 31536000);
-      
+
       if (signedError) throw signedError;
-      
+
       // Atualizar perfil com mutação otimista
       await updateProfileMutation.mutateAsync({ avatar_url: signedData.signedUrl });
-      
+
       setUploadProgress(100);
       setAvatarFile(null);
     } catch (error: any) {
-      console.error('❌ Erro ao salvar avatar:', error);
+      console.error("❌ Erro ao salvar avatar:", error);
       toast({
         title: "Erro ao salvar foto",
         description: error.message || "Tente novamente mais tarde.",
@@ -323,7 +352,7 @@ const Dashboard = () => {
       });
       return;
     }
-    
+
     if (newPassword.length < 6) {
       toast({
         title: "Senha muito curta",
@@ -332,23 +361,23 @@ const Dashboard = () => {
       });
       return;
     }
-    
+
     try {
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password: newPassword,
       });
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "Senha alterada!",
         description: "Sua nova senha já está ativa.",
       });
-      
+
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
-      console.error('Erro ao mudar senha:', error);
+      console.error("Erro ao mudar senha:", error);
       toast({
         title: "Erro ao alterar senha",
         variant: "destructive",
@@ -383,69 +412,65 @@ const Dashboard = () => {
           <p className="text-muted-foreground mb-6">
             Você precisa estar vinculado a uma agência para ver os eventos e enviar postagens.
           </p>
-          <Button onClick={() => navigate("/")}>
-            Voltar para Home
-          </Button>
+          <Button onClick={() => navigate("/")}>Voltar para Home</Button>
         </Card>
       </div>
     );
   }
 
   // Cálculos de estatísticas
-  const approvedSubmissionsCount = submissions.filter(s => s.status === "approved").length;
-  const activeEventsCount = events.length;
+  const approvedSubmissionsCount = submissions.filter((s) => s.status === "approved").length;
+  const activeEventsCount = eventStats.length; // ✅ Item 3: Mostrar apenas eventos com submissão
   const lastSubmission = submissions[0];
 
   // Filtrar submissões por evento (inline, sem useMemo para evitar problemas com early returns)
-  const filteredSubmissions = selectedHistoryEvent === "all" 
-    ? submissions 
-    : submissions.filter(s => s.posts?.event_id === selectedHistoryEvent);
+  const filteredSubmissions =
+    selectedHistoryEvent === "all"
+      ? submissions
+      : submissions.filter((s) => s.posts?.event_id === selectedHistoryEvent);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
       <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
         {/* Header Card */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <Card className="bg-card/80 backdrop-blur-lg border-primary/20 shadow-xl overflow-hidden">
-            <div className="relative p-8 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-lg">
+            <div className="relative p-4 sm:p-6 md:p-8 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full overflow-hidden">
+                  <Avatar className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 ring-4 ring-primary/20 shadow-lg flex-shrink-0">
                     <AvatarImage src={avatarPreview || undefined} alt={profile.full_name} />
                     <AvatarFallback className="text-2xl font-bold bg-primary/10">
                       {profile.full_name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  <div className="space-y-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
                         Olá, {profile.full_name || "Usuário"}!
                       </h1>
                       {isMasterAdmin && (
-                        <Badge variant="default" className="bg-purple-500">Master Admin</Badge>
+                        <Badge variant="default" className="bg-purple-500">
+                          Master Admin
+                        </Badge>
                       )}
                       {isAgencyAdmin && !isMasterAdmin && (
-                        <Badge variant="default" className="bg-blue-500">Agency Admin</Badge>
+                        <Badge variant="default" className="bg-blue-500">
+                          Agency Admin
+                        </Badge>
                       )}
                     </div>
-                    <p className="text-muted-foreground">
-                      {profile.email}
-                    </p>
-                    {profile.instagram && (
-                      <p className="text-sm text-muted-foreground">
-                        📱 @{profile.instagram}
-                      </p>
-                    )}
+                    <p className="text-muted-foreground text-sm sm:text-base break-all">{profile.email}</p>
+                    {profile.instagram && <p className="text-xs sm:text-sm text-muted-foreground">📱 @{profile.instagram}</p>}
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                   {userAgenciesData && userAgenciesData.length > 1 && (
-                    <Select value={currentAgencyId || undefined} onValueChange={setCurrentAgencyId}>
+                    <Select
+                      value={currentAgencyId || undefined}
+                      onValueChange={(value) => navigate(`/dashboard?agency=${value}`)}
+                    >
                       <SelectTrigger className="w-[200px]">
                         <SelectValue placeholder="Selecionar agência" />
                       </SelectTrigger>
@@ -458,29 +483,29 @@ const Dashboard = () => {
                       </SelectContent>
                     </Select>
                   )}
-                  
+
                   <ThemeToggle />
                   <NotificationBell userId={user!.id} />
-                  
+
                   <Button
                     onClick={() => navigate("/submit")}
                     className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
                   >
                     Enviar Nova Postagem
                   </Button>
-                  
+
                   {isMasterAdmin && (
                     <Button onClick={() => navigate("/master-admin")} variant="outline">
                       Master Admin
                     </Button>
                   )}
-                  
+
                   {isAgencyAdmin && (
                     <Button onClick={() => navigate("/admin")} variant="outline">
                       Painel Admin
                     </Button>
                   )}
-                  
+
                   <Button onClick={handleSignOut} variant="ghost" size="icon">
                     <LogOut className="h-5 w-5" />
                   </Button>
@@ -545,9 +570,7 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Última Submissão</p>
                   <h3 className="text-lg font-bold mt-2">
-                    {lastSubmission 
-                      ? new Date(lastSubmission.submitted_at).toLocaleDateString('pt-BR')
-                      : "Nenhuma"}
+                    {lastSubmission ? new Date(lastSubmission.submitted_at).toLocaleDateString("pt-BR") : "Nenhuma"}
                   </h3>
                 </div>
                 <div className="p-4 bg-purple-500/10 rounded-full">
@@ -584,7 +607,8 @@ const Dashboard = () => {
                         <div className="space-y-1">
                           <h3 className="font-semibold text-lg">{stat.eventTitle}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {stat.submitted} de {stat.isApproximate ? '~' : ''}{stat.totalRequired} posts aprovados
+                            {stat.submitted} de {stat.isApproximate ? "~" : ""}
+                            {stat.totalRequired} posts aprovados
                           </p>
                         </div>
                         <Badge variant={stat.percentage >= 100 ? "default" : "secondary"} className="text-lg px-4 py-2">
@@ -595,9 +619,7 @@ const Dashboard = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhum evento ativo no momento
-                  </p>
+                  <p className="text-center text-muted-foreground py-8">Nenhum evento ativo no momento</p>
                 )}
               </div>
             </Card>
@@ -635,27 +657,25 @@ const Dashboard = () => {
                                 submission.status === "approved"
                                   ? "default"
                                   : submission.status === "rejected"
-                                  ? "destructive"
-                                  : "secondary"
+                                    ? "destructive"
+                                    : "secondary"
                               }
                             >
                               {submission.status === "approved"
                                 ? "Aprovado"
                                 : submission.status === "rejected"
-                                ? "Rejeitado"
-                                : "Pendente"}
+                                  ? "Rejeitado"
+                                  : "Pendente"}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(submission.submitted_at).toLocaleString('pt-BR')}
+                              {new Date(submission.submitted_at).toLocaleString("pt-BR")}
                             </span>
                           </div>
                           <p className="font-medium">
                             {submission.posts?.events?.title} - Post #{submission.posts?.post_number}
                           </p>
                           {submission.rejection_reason && (
-                            <p className="text-sm text-destructive">
-                              Motivo: {submission.rejection_reason}
-                            </p>
+                            <p className="text-sm text-destructive">Motivo: {submission.rejection_reason}</p>
                           )}
                         </div>
                         {submission.screenshot_url && (
@@ -668,12 +688,53 @@ const Dashboard = () => {
                           </Suspense>
                         )}
                       </div>
+                      {/* ✅ Item 5: Botão para deletar submissão pendente */}
+                      {submission.status === "pending" && (
+                        <div className="mt-3 pt-3 border-t">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
+                            onClick={async () => {
+                              if (confirm("Tem certeza que deseja deletar esta submissão? Esta ação não pode ser desfeita.")) {
+                                try {
+                                  const { error } = await sb
+                                    .from('submissions')
+                                    .delete()
+                                    .eq('id', submission.id)
+                                    .eq('user_id', user!.id);
+                                  
+                                  if (error) throw error;
+                                  
+                                  toast({
+                                    title: "Submissão deletada",
+                                    description: "A submissão foi removida com sucesso.",
+                                  });
+                                  
+                                  refetch();
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Erro ao deletar",
+                                    description: error.message || "Tente novamente mais tarde.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                              <path d="M3 6h18"></path>
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                            Deletar Submissão
+                          </Button>
+                        </div>
+                      )}
                     </Card>
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma submissão encontrada
-                  </p>
+                  <p className="text-center text-muted-foreground py-8">Nenhuma submissão encontrada</p>
                 )}
               </div>
             </Card>
@@ -693,9 +754,7 @@ const Dashboard = () => {
                   <div className="flex flex-col items-center gap-4 pb-6 border-b">
                     <Avatar className="h-32 w-32 ring-4 ring-primary/20">
                       <AvatarImage src={avatarPreview || undefined} />
-                      <AvatarFallback className="text-3xl">
-                        {profile.full_name?.charAt(0) || "U"}
-                      </AvatarFallback>
+                      <AvatarFallback className="text-3xl">{profile.full_name?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
                     <div className="flex gap-2">
                       <Label htmlFor="avatar-upload" className="cursor-pointer">
@@ -717,17 +776,26 @@ const Dashboard = () => {
                         </Button>
                       )}
                     </div>
-                    {uploading && (
-                      <Progress value={uploadProgress} className="w-full max-w-xs" />
-                    )}
+                    {uploading && <Progress value={uploadProgress} className="w-full max-w-xs" />}
                   </div>
 
                   {/* Profile Info */}
                   <div className="space-y-4">
                     <div>
                       <Label>Nome Completo</Label>
-                      <Input value={profile.full_name || ""} disabled />
+                      <Input
+                        defaultValue={profile.full_name || ""}
+                        onBlur={async (e) => {
+                          // Salvar ao perder foco
+                          const newName = e.target.value.trim();
+                          if (newName && newName !== profile.full_name) {
+                            await updateProfileMutation.mutateAsync({ full_name: newName });
+                          }
+                        }}
+                        placeholder="Digite seu nome completo"
+                      />
                     </div>
+
                     <div>
                       <Label>Email</Label>
                       <Input value={profile.email || ""} disabled />
@@ -744,22 +812,56 @@ const Dashboard = () => {
                     )}
                     <div>
                       <Label>Gênero</Label>
-                      <Select value={selectedGender} onValueChange={setSelectedGender}>
+                      <Select 
+                        value={selectedGender} 
+                        onValueChange={setSelectedGender}
+                        disabled={isAgencyAdmin}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione seu gênero" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Masculino</SelectItem>
-                          <SelectItem value="female">Feminino</SelectItem>
-                          <SelectItem value="other">Outro</SelectItem>
-                          <SelectItem value="prefer_not_to_say">Prefiro não dizer</SelectItem>
+                          {isAgencyAdmin ? (
+                            <SelectItem value="Agência">Agência</SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="Masculino">Masculino</SelectItem>
+                              <SelectItem value="Feminino">Feminino</SelectItem>
+                              <SelectItem value="LGBTQ+">LGBTQ+</SelectItem>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
+                      {isAgencyAdmin && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Administradores de agência têm gênero fixo como "Agência"
+                        </p>
+                      )}
                       {selectedGender !== (profile.gender || "") && (
                         <Button onClick={saveGender} className="mt-2" size="sm">
                           Salvar Gênero
                         </Button>
                       )}
+                    </div>
+                    <div>
+                      <Label>Faixa de Seguidores</Label>
+                      <Select 
+                        value={profile.followers_range || ""} 
+                        onValueChange={async (value) => {
+                          await updateProfileMutation.mutateAsync({ followers_range: value });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a faixa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0-5k">0 - 5k</SelectItem>
+                          <SelectItem value="5k-10k">5k - 10k</SelectItem>
+                          <SelectItem value="10k-50k">10k - 50k</SelectItem>
+                          <SelectItem value="50k-100k">50k - 100k</SelectItem>
+                          <SelectItem value="100k+">100k+</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </TabsContent>
@@ -786,11 +888,7 @@ const Dashboard = () => {
                         placeholder="Digite a senha novamente"
                       />
                     </div>
-                    <Button
-                      onClick={changePassword}
-                      disabled={!newPassword || !confirmPassword}
-                      className="w-full"
-                    >
+                    <Button onClick={changePassword} disabled={!newPassword || !confirmPassword} className="w-full">
                       <Lock className="mr-2 h-4 w-4" />
                       Alterar Senha
                     </Button>
@@ -809,7 +907,7 @@ const Dashboard = () => {
             className="fixed bottom-8 right-8 z-50"
           >
             <Button
-              onClick={() => window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`, '_blank')}
+              onClick={() => window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`, "_blank")}
               size="lg"
               className="rounded-full h-16 w-16 shadow-lg bg-green-500 hover:bg-green-600"
             >

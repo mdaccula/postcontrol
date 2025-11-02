@@ -47,7 +47,13 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
       
       setEventId(resolvedEventId);
       setPostNumber(post.post_number?.toString() || "");
-      setDeadline(post.deadline ? new Date(post.deadline).toISOString().slice(0, 16) : "");
+      // ✅ ITEM 8: Forçar horário fixo sem conversão de timezone
+      if (post.deadline) {
+        const dateStr = new Date(post.deadline).toISOString();
+        setDeadline(dateStr.slice(0, 16));
+      } else {
+        setDeadline("");
+      }
     } else {
       setEventId("");
       setPostNumber("");
@@ -130,7 +136,8 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
           .update({
             event_id: eventId,
             post_number: parseInt(postNumber),
-            deadline: new Date(deadline).toISOString(),
+            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
+            deadline: new Date(deadline + ':00-03:00').toISOString(),
             agency_id: userAgencyId,
           })
           .eq('id', post.id);
@@ -151,7 +158,8 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
           .insert({
             event_id: eventId,
             post_number: parseInt(postNumber),
-            deadline: new Date(deadline).toISOString(),
+            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
+            deadline: new Date(deadline + ':00-03:00').toISOString(),
             created_by: user.id,
             agency_id: userAgencyId,
           });

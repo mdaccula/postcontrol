@@ -64,7 +64,13 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
       if (event) {
         setTitle(event.title || "");
         setDescription(event.description || "");
-        setEventDate(event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : "");
+        // ✅ ITEM 8: Forçar horário fixo sem conversão de timezone
+        if (event.event_date) {
+          const dateStr = new Date(event.event_date).toISOString();
+          setEventDate(dateStr.slice(0, 16));
+        } else {
+          setEventDate("");
+        }
         setLocation(event.location || "");
         setSetor(event.setor || "");
         setNumeroDeVagas(event.numero_de_vagas ? String(event.numero_de_vagas) : "");
@@ -221,7 +227,21 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
 
       if (eventImage) {
         const fileExt = eventImage.name.split('.').pop();
-        const fileName = `events/${Date.now()}.${fileExt}`;
+        // ✅ SPRINT 1 - ITEM 17: Nome único com event ID + UUID para evitar sobrescritas
+        const uniqueId = event?.id || crypto.randomUUID();
+        const fileName = `events/${uniqueId}_${Date.now()}.${fileExt}`;
+        
+        // ✅ Deletar imagem antiga se estiver atualizando
+        if (event?.event_image_url) {
+          try {
+            const oldPath = event.event_image_url.split('/screenshots/')[1]?.split('?')[0];
+            if (oldPath) {
+              await supabase.storage.from('screenshots').remove([oldPath]);
+            }
+          } catch (error) {
+            console.warn('Erro ao deletar imagem antiga:', error);
+          }
+        }
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('screenshots')
@@ -256,7 +276,8 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           .update({
             title,
             description,
-            event_date: eventDate ? new Date(eventDate).toISOString() : null,
+            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
+            event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
             location,
             setor: setor || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
@@ -290,7 +311,8 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           .insert({
             title,
             description,
-            event_date: eventDate ? new Date(eventDate).toISOString() : null,
+            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
+            event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
             location,
             setor: setor || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,

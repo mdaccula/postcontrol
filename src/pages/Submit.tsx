@@ -32,25 +32,25 @@ interface Post {
   event_id: string;
 }
 
-  interface Event {
-    id: string;
-    title: string;
-    description: string | null;
-    event_date: string | null;
-    location: string | null;
-    setor: string | null;
-    numero_de_vagas: number | null;
-    event_image_url: string | null;
-    require_instagram_link: boolean;
-    event_purpose?: string;
-    accept_sales?: boolean;
-    accept_posts?: boolean;
-    require_profile_screenshot?: boolean;
-    require_post_screenshot?: boolean;
-    whatsapp_group_url?: string;
-    whatsapp_group_title?: string;
-    target_gender?: string[];
-  }
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  event_date: string | null;
+  location: string | null;
+  setor: string | null;
+  numero_de_vagas: number | null;
+  event_image_url: string | null;
+  require_instagram_link: boolean;
+  event_purpose?: string;
+  accept_sales?: boolean;
+  accept_posts?: boolean;
+  require_profile_screenshot?: boolean;
+  require_post_screenshot?: boolean;
+  whatsapp_group_url?: string;
+  whatsapp_group_title?: string;
+  target_gender?: string[];
+}
 
 interface EventRequirement {
   id: string;
@@ -78,7 +78,7 @@ const instagramLinkSchema = z
   .min(1, "Link do Instagram é obrigatório")
   .refine(
     (val) => val.includes("instagram.com/") || val.startsWith("@"),
-    "Formato inválido. Use: https://instagram.com/usuario ou @usuario"
+    "Formato inválido. Use: https://instagram.com/usuario ou @usuario",
   );
 
 const Submit = () => {
@@ -108,6 +108,8 @@ const Submit = () => {
   const [profileScreenshotFile, setProfileScreenshotFile] = useState<File | null>(null);
   const [profileScreenshotPreview, setProfileScreenshotPreview] = useState<string | null>(null);
   const [followersRange, setFollowersRange] = useState<string>("");
+  // ✅ FASE 4: Estado para rastrear posts já enviados
+  const [userSubmissions, setUserSubmissions] = useState<string[]>([]);
 
   useEffect(() => {
     loadEvents();
@@ -121,10 +123,13 @@ const Submit = () => {
       setSelectedPost(""); // ✅ Limpar postagem selecionada ao trocar evento
       loadPostsForEvent(selectedEvent);
       loadRequirementsForEvent(selectedEvent);
+      // ✅ FASE 4: Carregar submissions do usuário para este evento
+      loadUserSubmissionsForEvent(selectedEvent);
     } else {
       setPosts([]);
       setRequirements([]);
       setSelectedPost("");
+      setUserSubmissions([]);
     }
   }, [selectedEvent]);
 
@@ -137,32 +142,38 @@ const Submit = () => {
     try {
       // 1. Buscar contexto da agência (via URL query param ou última acessada)
       const urlParams = new URLSearchParams(window.location.search);
-      let contextAgencyId = urlParams.get('agency');
+      let contextAgencyId = urlParams.get("agency");
 
       if (!contextAgencyId) {
         // Buscar última agência acessada pelo usuário
         const { data: userAgencies, error: agenciesError } = await sb
-          .from('user_agencies')
-          .select('agency_id')
-          .eq('user_id', user.id)
-          .order('last_accessed_at', { ascending: false })
+          .from("user_agencies")
+          .select("agency_id")
+          .eq("user_id", user.id)
+          .order("last_accessed_at", { ascending: false })
           .limit(1);
 
         if (agenciesError) {
-          console.error('❌ Erro ao buscar agências:', agenciesError);
+          console.error("❌ Erro ao buscar agências:", agenciesError);
           toast({
             title: "Erro de configuração",
             description: "Não foi possível carregar suas agências.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
 
+        // ✅ LINHA 161-169 (Submit.tsx) - ADICIONAR BOTÃO
         if (!userAgencies || userAgencies.length === 0) {
           toast({
             title: "Sem agência vinculada",
             description: "Você precisa se cadastrar através do link de uma agência.",
-            variant: "destructive"
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+                Voltar para Home
+              </Button>
+            ),
           });
           setEvents([]);
           return;
@@ -173,17 +184,25 @@ const Submit = () => {
 
       setAgencyId(contextAgencyId);
 
+      console.log("✅ Agência detectada:", {
+        agency_id: contextAgencyId,
+        source: urlParams.get("agency") ? "URL query param" : "Última acessada",
+        user_id: user.id,
+      });
+
       // 2. Atualizar last_accessed_at
       await sb
-        .from('user_agencies')
+        .from("user_agencies")
         .update({ last_accessed_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .eq('agency_id', contextAgencyId);
+        .eq("user_id", user.id)
+        .eq("agency_id", contextAgencyId);
 
       // 3. Buscar eventos ATIVOS da agência
       const { data, error } = await sb
         .from("events")
-        .select("id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, target_gender")
+        .select(
+          "id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, target_gender",
+        )
         .eq("is_active", true)
         .eq("agency_id", contextAgencyId)
         .order("event_date", { ascending: true });
@@ -193,7 +212,7 @@ const Submit = () => {
         toast({
           title: "Erro ao carregar eventos",
           description: error.message,
-          variant: "destructive"
+          variant: "destructive",
         });
         setEvents([]);
         return;
@@ -203,19 +222,25 @@ const Submit = () => {
         toast({
           title: "Nenhum evento disponível",
           description: "Não há eventos ativos no momento. Entre em contato com a agência.",
-          variant: "default"
+          variant: "default",
         });
         setEvents([]);
         return;
       }
 
+      console.log("📋 Eventos carregados:", {
+        agency_id: contextAgencyId,
+        total: data?.length || 0,
+        events: data?.map((e) => e.title) || [],
+      });
+
       setEvents(data);
     } catch (error) {
-      console.error('❌ Erro crítico ao carregar eventos:', error);
+      console.error("❌ Erro crítico ao carregar eventos:", error);
       toast({
         title: "Erro ao carregar eventos",
         description: "Tente recarregar a página.",
-        variant: "destructive"
+        variant: "destructive",
       });
       setEvents([]);
     }
@@ -223,93 +248,83 @@ const Submit = () => {
 
   const loadPostsForEvent = async (eventId: string) => {
     if (!user) return;
-    
-    // Buscar informações do evento para verificar o tipo
-    const { data: eventData } = await sb
-      .from('events')
-      .select('event_purpose')
-      .eq('id', eventId)
-      .maybeSingle();
 
-    const isProfileSelection = eventData?.event_purpose === 'selecao_perfil';
-    
+    // Buscar informações do evento para verificar o tipo
+    const { data: eventData } = await sb.from("events").select("event_purpose").eq("id", eventId).maybeSingle();
+
+    const isProfileSelection = eventData?.event_purpose === "selecao_perfil";
+
     // ✅ Log para confirmar tipo do evento
-    console.log('📋 Tipo do evento:', {
+    console.log("📋 Tipo do evento:", {
       eventId,
       eventPurpose: eventData?.event_purpose,
       isProfileSelection,
       currentTime: new Date().toISOString(),
-      currentTimeBR: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      currentTimeBR: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
     });
-    
+
     // 1. Buscar IDs dos posts do evento
-    const { data: eventPosts } = await sb
-      .from('posts')
-      .select('id')
-      .eq('event_id', eventId);
-    
+    const { data: eventPosts } = await sb.from("posts").select("id").eq("event_id", eventId);
+
     const eventPostIds = (eventPosts || []).map((p: any) => p.id);
-    
+
     if (eventPostIds.length === 0) {
       setPosts([]);
       return;
     }
-    
+
     // 2. Para seleção de perfil, permitir múltiplas submissões
     // Para divulgação, evitar reenvio de posts já submetidos
     let submittedPostIds: string[] = [];
 
     if (!isProfileSelection) {
       const { data: userSubmissions } = await sb
-        .from('submissions')
-        .select('post_id')
-        .eq('user_id', user.id)
-        .in('post_id', eventPostIds);
-      
+        .from("submissions")
+        .select("post_id")
+        .eq("user_id", user.id)
+        .in("post_id", eventPostIds);
+
       submittedPostIds = (userSubmissions || []).map((s: any) => s.post_id);
     }
 
-    console.log('🔍 Iniciando busca de posts:', {
+    console.log("🔍 Iniciando busca de posts:", {
       eventId,
       isProfileSelection,
       submittedPostIds,
       willExcludeSubmitted: submittedPostIds.length > 0 && !isProfileSelection,
-      willApplyLimit: !isProfileSelection
+      willApplyLimit: !isProfileSelection,
     });
-    
+
     // 3. Buscar postagens disponíveis
-    let query = sb
-      .from('posts')
-      .select('id, post_number, deadline, event_id')
-      .eq('event_id', eventId);
+    let query = sb.from("posts").select("id, post_number, deadline, event_id").eq("event_id", eventId);
 
     // ✅ TODOS os eventos devem respeitar deadline
-    query = query.gte('deadline', new Date().toISOString());
+    query = query.gte("deadline", new Date().toISOString());
 
     // Excluir posts já enviados (apenas para eventos de divulgação)
     if (submittedPostIds.length > 0 && !isProfileSelection) {
-      query = query.not('id', 'in', `(${submittedPostIds.join(',')})`);
+      query = query.not("id", "in", `(${submittedPostIds.join(",")})`);
     }
 
-    query = query.order('deadline', { ascending: true });
+    query = query.order("deadline", { ascending: true });
 
     // Para divulgação: retornar apenas o primeiro post disponível
     // Para seleção de perfil: retornar TODOS os posts disponíveis
     if (!isProfileSelection) {
       query = query.limit(1);
     }
-    
+
     const { data, error } = await query;
 
-    console.log('📊 Resultado da query de posts:', {
+    console.log("📊 Resultado da query de posts:", {
       success: !error,
       error: error?.message || null,
       postsReturned: data?.length || 0,
-      rawData: data
+      rawData: data,
     });
 
     if (error) {
-      console.error('❌ Erro ao carregar posts:', error);
+      console.error("❌ Erro ao carregar posts:", error);
       toast({
         title: "Erro ao carregar posts",
         description: `Não foi possível carregar as postagens disponíveis. ${error.message}`,
@@ -320,35 +335,35 @@ const Submit = () => {
     }
 
     if (!data || data.length === 0) {
-      console.warn('⚠️ Nenhum post encontrado para o evento:', {
+      console.warn("⚠️ Nenhum post encontrado para o evento:", {
         eventId,
         isProfileSelection,
-        submittedPostIds
+        submittedPostIds,
       });
       setPosts([]);
       return;
     }
 
     // ✅ Log para mostrar posts encontrados
-    console.log('📍 Posts disponíveis:', {
-      eventType: isProfileSelection ? 'Seleção de Perfil' : 'Divulgação',
+    console.log("📍 Posts disponíveis:", {
+      eventType: isProfileSelection ? "Seleção de Perfil" : "Divulgação",
       total: data?.length || 0,
       submittedByUser: submittedPostIds.length,
-      posts: data?.map(p => ({
+      posts: data?.map((p) => ({
         id: p.id,
         number: p.post_number,
         deadline: p.deadline,
-        isPastDeadline: new Date(p.deadline) < new Date()
-      }))
+        isPastDeadline: new Date(p.deadline) < new Date(),
+      })),
     });
 
     setPosts(data || []);
-    
+
     // Auto-selecionar apenas para eventos de divulgação com 1 post
     // Para seleção de perfil, deixar usuário escolher
     if (data && data.length === 1 && !isProfileSelection) {
       setSelectedPost(data[0].id);
-      console.log('✅ Post auto-selecionado:', data[0].post_number);
+      console.log("✅ Post auto-selecionado:", data[0].post_number);
     } else if (data && data.length > 0) {
       console.log(`ℹ️ ${data.length} posts disponíveis. Usuário deve selecionar manualmente.`);
     }
@@ -369,12 +384,38 @@ const Submit = () => {
     setRequirements(data || []);
   };
 
+  // ✅ FASE 4: Carregar submissions do usuário para marcar posts já enviados
+  const loadUserSubmissionsForEvent = async (eventId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await sb
+        .from("submissions")
+        .select("post_id, posts!inner(event_id)")
+        .eq("user_id", user.id)
+        .eq("posts.event_id", eventId);
+
+      if (error) {
+        console.error("Erro ao carregar submissions do usuário:", error);
+        return;
+      }
+
+      const submittedPostIds = (data || []).filter((s: any) => s.post_id).map((s: any) => s.post_id);
+
+      console.log("✅ Posts já enviados pelo usuário:", submittedPostIds);
+      setUserSubmissions(submittedPostIds);
+    } catch (error) {
+      console.error("Erro ao carregar submissions:", error);
+      setUserSubmissions([]);
+    }
+  };
+
   const loadUserProfile = async () => {
     if (!user) return;
 
     const { data, error } = await sb
       .from("profiles")
-      .select("full_name, email, instagram, phone")
+      .select("full_name, email, instagram, phone, followers_range")
       .eq("id", user.id)
       .single();
 
@@ -389,120 +430,132 @@ const Submit = () => {
       setInstagram(data.instagram || data.email?.split("@")[0] || "");
       setPhone(data.phone || "");
       setHasExistingPhone(!!data.phone);
+      // ✅ SPRINT 1 - ITEM 5: Bloquear Instagram se já existe
+      if (data.instagram) {
+        setInstagram(data.instagram);
+      }
+      // ✅ SPRINT 1 - ITEM 5: Bloquear Seguidores se já existe
+      if (data.followers_range) {
+        setFollowersRange(data.followers_range);
+      }
     }
   };
-// 🆕 Função para comprimir imagens
-const compressImage = async (file: File, maxWidth: number = 1080, quality: number = 0.8): Promise<File> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+  // 🆕 Função para comprimir imagens
+  const compressImage = async (file: File, maxWidth: number = 1080, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
 
-        // Redimensionar mantendo proporção
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
+          // Redimensionar mantendo proporção
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
 
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg', // Sempre converter para JPEG
-                lastModified: Date.now(),
-              });
-              console.log(`📦 Imagem comprimida: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
-              resolve(compressedFile);
-            } else {
-              reject(new Error('Erro ao comprimir imagem'));
-            }
-          },
-          'image/jpeg',
-          quality
-        );
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: "image/jpeg", // Sempre converter para JPEG
+                  lastModified: Date.now(),
+                });
+                console.log(
+                  `📦 Imagem comprimida: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`,
+                );
+                resolve(compressedFile);
+              } else {
+                reject(new Error("Erro ao comprimir imagem"));
+              }
+            },
+            "image/jpeg",
+            quality,
+          );
+        };
+        img.onerror = () => reject(new Error("Erro ao carregar imagem"));
       };
-      img.onerror = () => reject(new Error('Erro ao carregar imagem'));
-    };
-    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-  });
-};
+      reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+    });
+  };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, uploadType: 'post' | 'sale' | 'profile' = 'post') => {
-  if (e.target.files && e.target.files[0]) {
-    const file = e.target.files[0];
-    
-    // Validação de tamanho ANTES de comprimir (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "Arquivo muito grande",
-        description: "A imagem deve ter no máximo 10MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validar tipo de arquivo
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      toast({
-        title: "Formato inválido",
-        description: "Use apenas imagens JPG, PNG ou WEBP.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      // 🆕 COMPRIMIR IMAGEM
-      const compressedFile = await compressImage(file, 1080, 0.8);
-      
-      // Suporte para 3 tipos de upload
-      if (uploadType === "post") {
-        setSelectedFile(compressedFile);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result as string);
-        };
-        reader.readAsDataURL(compressedFile);
-      } else if (uploadType === "sale") {
-        setSalesProofFile(compressedFile);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setSalesProofPreview(reader.result as string);
-        };
-        reader.readAsDataURL(compressedFile);
-      } else if (uploadType === "profile") {
-        setProfileScreenshotFile(compressedFile);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfileScreenshotPreview(reader.result as string);
-        };
-        reader.readAsDataURL(compressedFile);
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    uploadType: "post" | "sale" | "profile" = "post",
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+
+      // Validação de tamanho ANTES de comprimir (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "A imagem deve ter no máximo 10MB.",
+          variant: "destructive",
+        });
+        return;
       }
-    } catch (error) {
-      console.error('Erro ao processar imagem:', error);
-      toast({
-        title: "Erro ao processar imagem",
-        description: "Tente novamente ou use outra imagem.",
-        variant: "destructive",
-      });
-    }
-  }
-};
 
-  
-  const handleRemoveImage = (uploadType: 'post' | 'sale' | 'profile' = 'post') => {
+      // Validar tipo de arquivo
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Formato inválido",
+          description: "Use apenas imagens JPG, PNG ou WEBP.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        // 🆕 COMPRIMIR IMAGEM
+        const compressedFile = await compressImage(file, 1080, 0.8);
+
+        // Suporte para 3 tipos de upload
+        if (uploadType === "post") {
+          setSelectedFile(compressedFile);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setPreviewUrl(reader.result as string);
+          };
+          reader.readAsDataURL(compressedFile);
+        } else if (uploadType === "sale") {
+          setSalesProofFile(compressedFile);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setSalesProofPreview(reader.result as string);
+          };
+          reader.readAsDataURL(compressedFile);
+        } else if (uploadType === "profile") {
+          setProfileScreenshotFile(compressedFile);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setProfileScreenshotPreview(reader.result as string);
+          };
+          reader.readAsDataURL(compressedFile);
+        }
+      } catch (error) {
+        console.error("Erro ao processar imagem:", error);
+        toast({
+          title: "Erro ao processar imagem",
+          description: "Tente novamente ou use outra imagem.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleRemoveImage = (uploadType: "post" | "sale" | "profile" = "post") => {
     if (uploadType === "post") {
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -536,7 +589,7 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
           name: "Nome",
           email: "E-mail",
           instagram: "Instagram",
-          phone: "Telefone"
+          phone: "Telefone",
         };
         const fieldName = fieldNames[error.errors[0].path[0] as string] || "Campo";
         toast({
@@ -549,7 +602,7 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
     }
 
     // Validate Instagram link if required
-    const currentEvent = events.find(e => e.id === selectedEvent);
+    const currentEvent = events.find((e) => e.id === selectedEvent);
     if (currentEvent?.require_instagram_link) {
       try {
         instagramLinkSchema.parse(instagramLink);
@@ -569,34 +622,35 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
     if (selectedEventData?.target_gender && selectedEventData.target_gender.length > 0) {
       // Buscar gênero do perfil do usuário
       const { data: userProfile, error: profileError } = await sb
-        .from('profiles')
-        .select('gender')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("gender")
+        .eq("id", user.id)
         .single();
 
       if (profileError) {
-        console.error('Erro ao buscar perfil:', profileError);
+        console.error("Erro ao buscar perfil:", profileError);
       }
 
       const userGender = userProfile?.gender;
 
       // Verificar se gênero do usuário está na lista de gêneros aceitos (case-insensitive)
-      const genderCompatible = !userGender || 
-        selectedEventData.target_gender.some(
-          targetG => targetG.toLowerCase() === userGender.toLowerCase()
-        );
+      const genderCompatible =
+        !userGender ||
+        selectedEventData.target_gender.some((targetG) => targetG.toLowerCase() === userGender.toLowerCase());
 
       if (!genderCompatible) {
         const genderLabels: Record<string, string> = {
-          'masculino': 'Masculino',
-          'feminino': 'Feminino',
-          'outro': 'Outro',
-          'lgbtq+': 'LGBTQ+',
-          'lgbtqia+': 'LGBTQ+'
+          masculino: "Masculino",
+          feminino: "Feminino",
+          outro: "Outro",
+          "lgbtq+": "LGBTQ+",
+          "lgbtqia+": "LGBTQ+",
         };
-        const acceptedGenders = selectedEventData.target_gender.map(g => genderLabels[g.toLowerCase()] || g).join(', ');
-        const userGenderLabel = userGender ? genderLabels[userGender.toLowerCase()] || userGender : 'Não informado';
-        
+        const acceptedGenders = selectedEventData.target_gender
+          .map((g) => genderLabels[g.toLowerCase()] || g)
+          .join(", ");
+        const userGenderLabel = userGender ? genderLabels[userGender.toLowerCase()] || userGender : "Não informado";
+
         toast({
           title: "Gênero Incompatível",
           description: `Este evento aceita apenas submissões de: ${acceptedGenders}. Seu perfil está cadastrado como: ${userGenderLabel}.`,
@@ -627,16 +681,16 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
 
     // ✅ Validar deadline do post selecionado (dupla verificação de segurança)
     if (submissionType === "post" && selectedPost) {
-      const selectedPostData = posts.find(p => p.id === selectedPost);
-      
+      const selectedPostData = posts.find((p) => p.id === selectedPost);
+
       if (selectedPostData) {
         const postDeadline = new Date(selectedPostData.deadline);
         const now = new Date();
-        
+
         if (now > postDeadline) {
           toast({
             title: "⏰ Prazo Expirado",
-            description: `O prazo para a postagem #${selectedPostData.post_number} expirou em ${postDeadline.toLocaleString('pt-BR')}.`,
+            description: `O prazo para a postagem #${selectedPostData.post_number} expirou em ${postDeadline.toLocaleString("pt-BR")}.`,
             variant: "destructive",
           });
           return;
@@ -678,9 +732,9 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
 
       // Validar que ao menos UM post existe para o evento (mesmo que já enviado)
       const { data: eventPosts, error: postsError } = await sb
-        .from('posts')
-        .select('id')
-        .eq('event_id', selectedEvent)
+        .from("posts")
+        .select("id")
+        .eq("event_id", selectedEvent)
         .limit(1);
 
       if (postsError || !eventPosts || eventPosts.length === 0) {
@@ -697,9 +751,10 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
       if (!fileToCheck) {
         toast({
           title: submissionType === "post" ? "Adicione o print" : "Adicione o comprovante",
-          description: submissionType === "post" 
-            ? "Por favor, adicione o print da sua postagem." 
-            : "Por favor, adicione o comprovante de venda.",
+          description:
+            submissionType === "post"
+              ? "Por favor, adicione o print da sua postagem."
+              : "Por favor, adicione o comprovante de venda.",
           variant: "destructive",
         });
         return;
@@ -724,16 +779,46 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
     setIsSubmitting(true);
 
     try {
+      // ✅ FASE 2: Validar duplicata ANTES de inserir
+      if (submissionType === "post" && selectedPost) {
+        const { data: existingSubmission, error: checkError } = await sb
+          .from("submissions")
+          .select("id, status")
+          .eq("user_id", user!.id)
+          .eq("post_id", selectedPost)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error("Erro ao verificar duplicata:", checkError);
+        }
+
+        if (existingSubmission) {
+          const statusMessages: Record<string, string> = {
+            pending: "Você já enviou esta postagem e ela está em análise.",
+            approved: "Você já enviou esta postagem e ela foi aprovada.",
+            rejected: "Você já enviou esta postagem anteriormente. Entre em contato com o administrador.",
+          };
+
+          toast({
+            title: "Postagem já enviada",
+            description: statusMessages[existingSubmission.status] || "Você já enviou esta postagem.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return; // ⛔ BLOQUEIA envio duplicado
+        }
+      }
+
       // Rate limiting check (5 submissions per hour)
-      const { data: rateLimitCheck, error: rateLimitError } = await sb.rpc('check_rate_limit', {
+      const { data: rateLimitCheck, error: rateLimitError } = await sb.rpc("check_rate_limit", {
         p_user_id: user!.id,
-        p_action_type: 'submission',
+        p_action_type: "submission",
         p_max_count: 5,
-        p_window_minutes: 60
+        p_window_minutes: 60,
       });
 
       if (rateLimitError) {
-        console.error('Rate limit check error:', rateLimitError);
+        console.error("Rate limit check error:", rateLimitError);
       }
 
       if (rateLimitCheck === false) {
@@ -786,8 +871,12 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
       }
 
       // 🔄 Upload de screenshot principal
-      const fileToUpload = submissionType === "post" ? selectedFile : 
-                          (selectedEventData?.event_purpose === "selecao_perfil" && selectedEventData.require_post_screenshot ? selectedFile : salesProofFile);
+      const fileToUpload =
+        submissionType === "post"
+          ? selectedFile
+          : selectedEventData?.event_purpose === "selecao_perfil" && selectedEventData.require_post_screenshot
+            ? selectedFile
+            : salesProofFile;
       if (!fileToUpload && selectedEventData?.event_purpose !== "selecao_perfil") throw new Error("No file to upload");
 
       const insertData: any = {
@@ -827,20 +916,16 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
       } else {
         // Para vendas: sem post, mas COM event_id
         insertData.post_id = null;
-        
+
         // ✅ CRÍTICO: Adicionar event_id manualmente para vendas
         if (selectedEvent && agencyId) {
           // Buscar o event_id real para inserir na submission
-          const { data: eventData } = await sb
-            .from('events')
-            .select('id')
-            .eq('id', selectedEvent)
-            .single();
-          
+          const { data: eventData } = await sb.from("events").select("id").eq("id", selectedEvent).single();
+
           if (eventData) {
             // Criar entrada virtual em posts para manter compatibilidade com queries
             const { data: virtualPost } = await sb
-              .from('posts')
+              .from("posts")
               .insert({
                 event_id: eventData.id,
                 post_number: 0, // Número especial para vendas
@@ -850,7 +935,7 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
               })
               .select()
               .single();
-            
+
             if (virtualPost) {
               insertData.post_id = virtualPost.id;
             }
@@ -864,13 +949,14 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
 
       toast({
         title: submissionType === "post" ? "Postagem enviada!" : "Venda enviada!",
-        description: submissionType === "post" 
-          ? "Sua postagem foi enviada com sucesso e está em análise."
-          : "Seu comprovante de venda foi enviado com sucesso e está em análise.",
+        description:
+          submissionType === "post"
+            ? "Sua postagem foi enviada com sucesso e está em análise."
+            : "Seu comprovante de venda foi enviado com sucesso e está em análise.",
       });
 
-      // Redirecionar para dashboard
-      navigate('/dashboard');
+      // ✅ FASE 3: Preservar contexto de agência ao redirecionar
+      navigate(`/dashboard?agency=${agencyId}`);
 
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -897,568 +983,603 @@ const compressImage = async (file: File, maxWidth: number = 1080, quality: numbe
 
   return (
     <TooltipProvider>
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <Link to="/">
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </Link>
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Link to="/">
+            <Button variant="ghost" className="mb-6">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+          </Link>
 
-        <Card className="p-8 shadow-card">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-              Enviar Postagem
-            </h1>
-            <p className="text-muted-foreground">Preencha seus dados e envie o print da sua postagem no Instagram</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {!user && (
-              <div className="bg-muted/50 p-4 rounded-lg border border-border">
-                <p className="text-sm text-muted-foreground text-center">
-                  <Link to="/auth" className="text-primary hover:underline font-medium">
-                    Faça login
-                  </Link>{" "}
-                  para preencher seus dados automaticamente
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="event">Escolher Evento *</Label>
-              <Select value={selectedEvent} onValueChange={setSelectedEvent} required disabled={isSubmitting}>
-                <SelectTrigger id="event" className="bg-background">
-                  <SelectValue placeholder={events.length === 0 ? "Carregando eventos..." : "Selecione o evento"} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border z-50">
-                  {events.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      Nenhum evento disponível
-                    </SelectItem>
-                  ) : (
-                    events.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
-                        {event.title} {event.event_date && `- ${new Date(event.event_date).toLocaleDateString("pt-BR")}`}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {events.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {events.length} {events.length === 1 ? 'evento disponível' : 'eventos disponíveis'}
-                </p>
-              )}
+          <Card className="p-8 shadow-card">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
+                Enviar Postagem
+              </h1>
+              <p className="text-muted-foreground">Preencha seus dados e envie o print da sua postagem no Instagram</p>
             </div>
 
-            {selectedEvent && selectedEventData && (
-              <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
-                {selectedEventData.event_image_url && (
-                  <div className="flex justify-center mb-3">
-                    <img
-                      src={selectedEventData.event_image_url}
-                      alt={selectedEventData.title}
-                      className="w-100 h-100 object-cover rounded-lg border shadow-sm"
-                    />
-                  </div>
-                )}
-                
-                {selectedEventData.description && (
-                  <div className="bg-background/50 rounded-lg p-3 mb-3">
-                    <p className="text-sm whitespace-pre-wrap">{selectedEventData.description}</p>
-                  </div>
-                )}
-                
-                <h2 className="text-2xl font-bold">{selectedEventData.title}</h2>
-                
-                <div className="space-y-2 text-sm">
-                  {selectedEventData.location && (
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-muted-foreground">Local:</span>
-                      <span>{selectedEventData.location}</span>
-                    </div>
-                  )}
-                  {selectedEventData.setor && (
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-muted-foreground">Setor:</span>
-                      <span>{selectedEventData.setor}</span>
-                    </div>
-                  )}
-                  {selectedEventData.numero_de_vagas && (
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-muted-foreground">Vagas:</span>
-                      <span>{selectedEventData.numero_de_vagas} vagas disponíveis</span>
-                    </div>
-                  )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {!user && (
+                <div className="bg-muted/50 p-4 rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground text-center">
+                    <Link to="/auth" className="text-primary hover:underline font-medium">
+                      Faça login
+                    </Link>{" "}
+                    para preencher seus dados automaticamente
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {selectedEvent && (
-              <>
-                {/* Exibir Tipo de Evento de forma destacada */}
-                <div className="space-y-2 bg-muted/50 p-4 rounded-lg border">
-                  <Label>Tipo de Evento *</Label>
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={selectedEventData?.event_purpose === "selecao_perfil" ? "secondary" : "default"}
-                    >
-                      {selectedEventData?.event_purpose === "selecao_perfil" ? "👤 Seleção de Perfil" : "📢 Divulgação"}
-                    </Badge>
-                  </div>
-                </div>
-
-                {(selectedEventData?.accept_posts || selectedEventData?.accept_sales) && (
-                  <div className="space-y-2">
-                    <Label>Tipo de Envio *</Label>
-                    <Select value={submissionType} onValueChange={setSubmissionType} disabled={isSubmitting}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectedEventData?.accept_posts && (
-                          <SelectItem value="post">📸 Enviar Postagem</SelectItem>
-                        )}
-                        {selectedEventData?.accept_sales && (
-                          <SelectItem value="sale">💰 Enviar Comprovante de Venda</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-
-                {/* Mostrar seleção de postagem APENAS se tipo for "post" */}
-                {submissionType === "post" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="post-select">Escolha a Postagem *</Label>
-                    {posts.length > 0 ? (
-                      <>
-                        <Select value={selectedPost} onValueChange={setSelectedPost} disabled={isSubmitting}>
-                          <SelectTrigger id="post-select" className="w-full bg-background">
-                            <SelectValue placeholder="Selecione qual postagem você está enviando" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border z-50">
-                            {posts.map((post) => (
-                              <SelectItem key={post.id} value={post.id}>
-                                Postagem #{post.post_number} - Prazo: {new Date(post.deadline).toLocaleDateString("pt-BR")} às {new Date(post.deadline).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        {selectedPost && (
-                          <div className="bg-primary/10 border border-primary rounded-lg p-4 mt-2">
-                            <p className="font-semibold text-primary mb-1">📌 Postagem Selecionada:</p>
-                            <p className="text-sm">
-                              Postagem #{posts.find(p => p.id === selectedPost)?.post_number}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {selectedEventData?.event_purpose === 'selecao_perfil' 
-                                ? 'Você pode enviar múltiplas submissões para esta postagem.'
-                                : 'Após enviar, a próxima postagem será liberada automaticamente.'}
-                            </p>
-                          </div>
-                        )}
-                      </>
+              <div className="space-y-2">
+                <Label htmlFor="event">Escolher Evento *</Label>
+                <Select value={selectedEvent} onValueChange={setSelectedEvent} required disabled={isSubmitting}>
+                  <SelectTrigger id="event" className="bg-background">
+                    <SelectValue placeholder={events.length === 0 ? "Carregando eventos..." : "Selecione o evento"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    {events.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        Nenhum evento disponível
+                      </SelectItem>
                     ) : (
-                      <div className="bg-muted/50 border border-border rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground text-center">
-                          ⏰ Nenhuma postagem dentro do prazo disponível
-                        </p>
+                      events.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
+                          {event.title}{" "}
+                          {event.event_date && `- ${new Date(event.event_date).toLocaleDateString("pt-BR")}`}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {events.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {events.length} {events.length === 1 ? "evento disponível" : "eventos disponíveis"}
+                  </p>
+                )}
+              </div>
+
+              {selectedEvent && selectedEventData && (
+                <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-3">
+                  {selectedEventData.event_image_url && (
+                    <div className="flex justify-center mb-3">
+                      <img
+                        src={selectedEventData.event_image_url}
+                        alt={selectedEventData.title}
+                        className="w-100 h-100 object-cover rounded-lg border shadow-sm"
+                      />
+                    </div>
+                  )}
+
+                  {selectedEventData.description && (
+                    <div className="bg-background/50 rounded-lg p-3 mb-3">
+                      <p className="text-sm whitespace-pre-wrap">{selectedEventData.description}</p>
+                    </div>
+                  )}
+
+                  <h2 className="text-2xl font-bold">{selectedEventData.title}</h2>
+
+                  <div className="space-y-2 text-sm">
+                    {selectedEventData.location && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium text-muted-foreground">Local:</span>
+                        <span>{selectedEventData.location}</span>
+                      </div>
+                    )}
+                    {selectedEventData.setor && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium text-muted-foreground">Setor:</span>
+                        <span>{selectedEventData.setor}</span>
+                      </div>
+                    )}
+                    {selectedEventData.numero_de_vagas && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium text-muted-foreground">Vagas:</span>
+                        <span>{selectedEventData.numero_de_vagas} vagas disponíveis</span>
                       </div>
                     )}
                   </div>
-                )}
-                
-                {/* Para vendas, mostrar apenas informação */}
-                {submissionType === "sale" && (
-                  <div className="bg-muted/50 border border-border rounded-lg p-4">
-                    <p className="text-sm text-center">
-                      💰 <strong>Envio de Comprovante de Venda</strong><br/>
-                      Vendas não estão vinculadas a números de postagem
-                    </p>
-                  </div>
-                )}
+                </div>
+              )}
 
-                {requirements.length > 0 && (
-                  <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-sm mb-2">Condições para Cortesia:</h3>
-                        <div className="space-y-2">
-                          {requirements.map((req, index) => (
-                            <div key={req.id} className="flex items-center gap-2 text-sm">
-                              <span className="font-medium text-primary">{index > 0 ? "OU" : "•"}</span>
-                              <span>
-                                {req.description || `${req.required_posts} postagens e ${req.required_sales} vendas`}
-                              </span>
+              {selectedEvent && (
+                <>
+                  {/* Exibir Tipo de Evento de forma destacada */}
+                  <div className="space-y-2 bg-muted/50 p-4 rounded-lg border">
+                    <Label>Tipo de Evento *</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={selectedEventData?.event_purpose === "selecao_perfil" ? "secondary" : "default"}>
+                        {selectedEventData?.event_purpose === "selecao_perfil"
+                          ? "👤 Seleção de Perfil"
+                          : "📢 Divulgação"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {(selectedEventData?.accept_posts || selectedEventData?.accept_sales) && (
+                    <div className="space-y-2">
+                      <Label>Tipo de Envio *</Label>
+                      <Select value={submissionType} onValueChange={setSubmissionType} disabled={isSubmitting}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedEventData?.accept_posts && <SelectItem value="post">📸 Enviar Postagem</SelectItem>}
+                          {selectedEventData?.accept_sales && (
+                            <SelectItem value="sale">💰 Enviar Comprovante de Venda</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Mostrar seleção de postagem APENAS se tipo for "post" */}
+                  {submissionType === "post" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="post-select">Escolha a Postagem *</Label>
+                      {posts.length > 0 ? (
+                        <>
+                          <Select value={selectedPost} onValueChange={setSelectedPost} disabled={isSubmitting}>
+                            <SelectTrigger id="post-select" className="w-full bg-background">
+                              <SelectValue placeholder="Selecione qual postagem você está enviando" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border-border z-50">
+                              {posts.map((post) => {
+                                const alreadySubmitted = userSubmissions.includes(post.id);
+                                const isExpired = new Date(post.deadline) < new Date();
+
+                                return (
+                                  <SelectItem key={post.id} value={post.id} disabled={isExpired || alreadySubmitted}>
+                                    <div className="flex items-center gap-2">
+                                      <span>
+                                        Postagem #{post.post_number} - Prazo:{" "}
+                                        {new Date(post.deadline).toLocaleDateString("pt-BR")} às{" "}
+                                        {new Date(post.deadline).toLocaleTimeString("pt-BR", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                      {alreadySubmitted && (
+                                        <Badge variant="secondary" className="text-xs ml-2">
+                                          ✓ Já enviada
+                                        </Badge>
+                                      )}
+                                      {isExpired && (
+                                        <Badge variant="destructive" className="text-xs ml-2">
+                                          ⏰ Prazo expirado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+
+                          {selectedPost && (
+                            <div className="bg-primary/10 border border-primary rounded-lg p-4 mt-2">
+                              <p className="font-semibold text-primary mb-1">📌 Postagem Selecionada:</p>
+                              <p className="text-sm">
+                                Postagem #{posts.find((p) => p.id === selectedPost)?.post_number}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {selectedEventData?.event_purpose === "selecao_perfil"
+                                  ? "Você pode enviar múltiplas submissões para esta postagem."
+                                  : "Após enviar, a próxima postagem será liberada automaticamente."}
+                              </p>
                             </div>
-                          ))}
+                          )}
+                        </>
+                      ) : (
+                        <div className="bg-muted/50 border border-border rounded-lg p-4">
+                          <p className="text-sm text-muted-foreground text-center">
+                            ⏰ Nenhuma postagem dentro do prazo disponível
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Para vendas, mostrar apenas informação */}
+                  {submissionType === "sale" && (
+                    <div className="bg-muted/50 border border-border rounded-lg p-4">
+                      <p className="text-sm text-center">
+                        💰 <strong>Envio de Comprovante de Venda</strong>
+                        <br />
+                        Vendas não estão vinculadas a números de postagem
+                      </p>
+                    </div>
+                  )}
+
+                  {requirements.length > 0 && (
+                    <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-sm mb-2">Condições para Cortesia:</h3>
+                          <div className="space-y-2">
+                            {requirements.map((req, index) => (
+                              <div key={req.id} className="flex items-center gap-2 text-sm">
+                                <span className="font-medium text-primary">{index > 0 ? "OU" : "•"}</span>
+                                <span>
+                                  {req.description || `${req.required_posts} postagens e ${req.required_sales} vendas`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome Completo *</Label>
-              <Input
-                id="name"
-                placeholder="Seu nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isSubmitting || !!user}
-              />
-              {user && <p className="text-xs text-muted-foreground">Email bloqueado quando logado</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="instagram" className="flex items-center gap-2">
-                Instagram *
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-56">Digite apenas seu usuário do Instagram, sem @ e sem espaços. Exemplo: seunome</p>
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="instagram"
-                placeholder="@seuinstagram"
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="flex items-center gap-2">
-                Telefone *
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-56">Digite seu número com DDD. Formato: (00) 00000-0000</p>
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="(00) 00000-0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                disabled={isSubmitting || hasExistingPhone}
-              />
-              {hasExistingPhone && (
-                <p className="text-xs text-muted-foreground">
-                  Telefone bloqueado após o primeiro envio. Entre em contato com o admin para alterações.
-                </p>
+                  )}
+                </>
               )}
-            </div>
 
-            {selectedEventData?.require_instagram_link && (
               <div className="space-y-2">
-                <Label htmlFor="instagramLink">Link do Instagram *</Label>
+                <Label htmlFor="name">Nome Completo *</Label>
                 <Input
-                  id="instagramLink"
-                  placeholder="https://instagram.com/seuusuario ou @seuusuario"
-                  value={instagramLink}
-                  onChange={(e) => setInstagramLink(e.target.value)}
-                  required={selectedEventData.require_instagram_link}
+                  id="name"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                   disabled={isSubmitting}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Insira o link completo do seu perfil ou seu @ do Instagram
-                </p>
               </div>
-            )}
 
-            {/* Grupo WhatsApp com título customizável */}
-            {selectedEventData?.event_purpose === "selecao_perfil" && selectedEventData?.whatsapp_group_url && (
-              <div className="space-y-2 p-4 border-2 border-green-200 rounded-lg bg-green-50 dark:bg-green-950 dark:border-green-800">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">📱</span>
-                  <div className="flex-1">
-                    <Label className="font-semibold">
-                      {selectedEventData.whatsapp_group_title || "Grupo WhatsApp de Resultados"}
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Entre no grupo para receber os resultados da seleção
-                    </p>
-                  </div>
-                </div>
-                <a
-                  href={selectedEventData.whatsapp_group_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button type="button" className="w-full bg-green-600 hover:bg-green-700">
-                    Entrar no Grupo WhatsApp
-                  </Button>
-                </a>
-              </div>
-            )}
-
-            {/* 🆕 Campos específicos para Seleção de Perfil */}
-            {selectedEventData?.event_purpose === "selecao_perfil" && (
-              <>
-                {/* Select de Faixa de Seguidores */}
-                <div className="space-y-2">
-                  <Label htmlFor="followersRange">Quantos seguidores você tem? *</Label>
-                  <Select value={followersRange} onValueChange={setFollowersRange} required disabled={isSubmitting}>
-                    <SelectTrigger id="followersRange">
-                      <SelectValue placeholder="Selecione a faixa de seguidores" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-5k">1.000 a 5.000 seguidores</SelectItem>
-                      <SelectItem value="5-10k">5.000 a 10.000 seguidores</SelectItem>
-                      <SelectItem value="10k+">10.000+ seguidores</SelectItem>
-                      <SelectItem value="50k+">50.000+ seguidores</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Upload do Print do Perfil */}
-                {selectedEventData.require_profile_screenshot && (
-                  <div className="space-y-2">
-                    <Label htmlFor="profileScreenshot">Print do Perfil do Instagram *</Label>
-                    {profileScreenshotPreview ? (
-                      <div className="relative max-w-sm mx-auto">
-                        <AspectRatio ratio={9 / 16}>
-                          <img
-                            src={profileScreenshotPreview}
-                            alt="Preview do perfil"
-                            className="w-full h-full object-cover rounded-lg border"
-                          />
-                        </AspectRatio>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2"
-                          onClick={() => handleRemoveImage('profile')}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <p className="text-sm text-muted-foreground mt-2 text-center">
-                          {profileScreenshotFile?.name}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
-                        <input
-                          id="profileScreenshot"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange(e, 'profile')}
-                          className="hidden"
-                          required
-                        />
-                        <label htmlFor="profileScreenshot" className="cursor-pointer">
-                          <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Clique para fazer upload do print do seu perfil
-                          </p>
-                          <p className="text-xs text-muted-foreground">PNG, JPG ou JPEG (Max. 5MB)</p>
-                        </label>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      📸 Faça um print da página inicial do seu perfil mostrando seu @ e quantidade de seguidores
-                    </p>
-                  </div>
-                )}
-
-                {/* Upload do Print da Postagem (condicional) */}
-                {selectedEventData.require_post_screenshot && (
-                  <div className="space-y-2">
-                    <Label htmlFor="postScreenshot">Print do Post do Evento *</Label>
-                    {previewUrl ? (
-                      <div className="relative max-w-sm mx-auto">
-                        <AspectRatio ratio={9 / 16}>
-                          <img
-                            src={previewUrl}
-                            alt="Preview da postagem"
-                            className="w-full h-full object-cover rounded-lg border"
-                          />
-                        </AspectRatio>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2"
-                          onClick={() => handleRemoveImage('post')}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <p className="text-sm text-muted-foreground mt-2 text-center">
-                          {selectedFile?.name}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
-                        <input
-                          id="postScreenshot"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileChange(e, 'post')}
-                          className="hidden"
-                          required
-                        />
-                        <label htmlFor="postScreenshot" className="cursor-pointer">
-                          <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Clique para fazer upload do print de uma postagem
-                          </p>
-                          <p className="text-xs text-muted-foreground">PNG, JPG ou JPEG (Max. 5MB)</p>
-                        </label>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      📸 Faça um print do post relacionado a este evento
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Upload único para eventos normais (não seleção de perfil) */}
-            {selectedEventData?.event_purpose !== "selecao_perfil" && (
               <div className="space-y-2">
-                <Label htmlFor="screenshot">
-                  {submissionType === "post" ? "Print da Postagem *" : "Comprovante de Venda *"}
+                <Label htmlFor="email">E-mail *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSubmitting || !!user}
+                />
+                {user && <p className="text-xs text-muted-foreground">Email bloqueado quando logado</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instagram" className="flex items-center gap-2">
+                  Instagram *
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="w-56">
+                        Digite apenas seu usuário do Instagram, sem @ e sem espaços. Exemplo: seunome
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </Label>
-                {(submissionType === "post" ? previewUrl : salesProofPreview) ? (
-                <div className="relative max-w-sm mx-auto">
-                  <AspectRatio ratio={9 / 16}>
-                    <img
-                      src={submissionType === "post" ? previewUrl! : salesProofPreview!}
-                      alt={submissionType === "post" ? "Preview da postagem" : "Preview do comprovante"}
-                      className="w-full h-full object-cover rounded-lg border"
-                    />
-                  </AspectRatio>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2"
-                    onClick={() => handleRemoveImage(submissionType === "post" ? "post" : "sale")}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <p className="text-sm text-muted-foreground mt-2 text-center">
-                    {(submissionType === "post" ? selectedFile : salesProofFile)?.name}
+                <Input
+                  id="instagram"
+                  placeholder="@seuinstagram"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  required
+                  disabled={isSubmitting || !!instagram}
+                />
+                {instagram && (
+                  <p className="text-xs text-muted-foreground">
+                    Instagram bloqueado após o primeiro envio. Entre em contato com o admin para alterações.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  Telefone *
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="w-56">Digite seu número com DDD. Formato: (00) 00000-0000</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  disabled={isSubmitting || hasExistingPhone}
+                />
+                {hasExistingPhone && (
+                  <p className="text-xs text-muted-foreground">
+                    Telefone bloqueado após o primeiro envio. Entre em contato com o admin para alterações.
+                  </p>
+                )}
+              </div>
+
+              {selectedEventData?.require_instagram_link && (
+                <div className="space-y-2">
+                  <Label htmlFor="instagramLink">Link do Instagram *</Label>
+                  <Input
+                    id="instagramLink"
+                    placeholder="https://instagram.com/seuusuario ou @seuusuario"
+                    value={instagramLink}
+                    onChange={(e) => setInstagramLink(e.target.value)}
+                    required={selectedEventData.require_instagram_link}
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Insira o link completo do seu perfil ou seu @ do Instagram
                   </p>
                 </div>
-              ) : (
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
-                  <input
-                    id="screenshot"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    required
-                  />
-                  <label htmlFor="screenshot" className="cursor-pointer">
-                    <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {submissionType === "post" ? "Clique para fazer upload do print" : "Clique para fazer upload do comprovante"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">PNG, JPG ou JPEG (Max. 10MB)</p>
-                  </label>
+              )}
+
+              {/* Grupo WhatsApp com título customizável */}
+              {selectedEventData?.event_purpose === "selecao_perfil" && selectedEventData?.whatsapp_group_url && (
+                <div className="space-y-2 p-4 border-2 border-green-200 rounded-lg bg-green-50 dark:bg-green-950 dark:border-green-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">📱</span>
+                    <div className="flex-1">
+                      <Label className="font-semibold">
+                        {selectedEventData.whatsapp_group_title || "Grupo WhatsApp de Resultados"}
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Entre no grupo para receber os resultados da seleção
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={selectedEventData.whatsapp_group_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <Button type="button" className="w-full bg-green-600 hover:bg-green-700">
+                      Grupo MDAccula - Resultado da Seleção
+                    </Button>
+                  </a>
                 </div>
               )}
-              </div>
-            )}
 
-            <Button
-              type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-              size="lg"
-              disabled={
-                isSubmitting || 
-                !selectedEvent || 
-                (selectedEventData?.event_purpose !== "selecao_perfil" && 
-                 submissionType === "post" && 
-                 posts.length === 0)
-              }
-            >
-              {isSubmitting ? "Enviando..." : submissionType === "post" ? "Enviar Postagem" : "Enviar Comprovante"}
-            </Button>
-          </form>
-        </Card>
+              {/* 🆕 Campos específicos para Seleção de Perfil */}
+              {selectedEventData?.event_purpose === "selecao_perfil" && (
+                <>
+                  {/* Select de Faixa de Seguidores */}
+                  <div className="space-y-2">
+                    <Label htmlFor="followersRange">Quantos seguidores você tem? *</Label>
+                    <Select 
+                      value={followersRange || ""} 
+                      onValueChange={setFollowersRange} 
+                      required 
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="followersRange">
+                        <SelectValue placeholder="Selecione a faixa de seguidores" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1-5k">1.000 a 5.000 seguidores</SelectItem>
+                        <SelectItem value="5-10k">5.000 a 10.000 seguidores</SelectItem>
+                        <SelectItem value="10k+">10.000+ seguidores</SelectItem>
+                        <SelectItem value="50k+">50.000+ seguidores</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-        <div className="mt-8 p-6 bg-card/50 backdrop-blur-sm rounded-lg border">
-          <h3 className="font-semibold mb-2">📋 Informações Importantes</h3>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Certifique-se de que o print mostra claramente sua postagem</li>
-            <li>• Cada postagem aprovada vale 1 ponto</li>
-            <li>• Fique atento aos prazos e condições de cada evento</li>
-          </ul>
+                  {/* Upload do Print do Perfil */}
+                  {selectedEventData.require_profile_screenshot && (
+                    <div className="space-y-2">
+                      <Label htmlFor="profileScreenshot">Print do Perfil do Instagram *</Label>
+                      {profileScreenshotPreview ? (
+                        <div className="relative max-w-sm mx-auto">
+                          <AspectRatio ratio={9 / 16}>
+                            <img
+                              src={profileScreenshotPreview}
+                              alt="Preview do perfil"
+                              className="w-full h-full object-cover rounded-lg border"
+                            />
+                          </AspectRatio>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => handleRemoveImage("profile")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <p className="text-sm text-muted-foreground mt-2 text-center">
+                            {profileScreenshotFile?.name}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
+                          <input
+                            id="profileScreenshot"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, "profile")}
+                            className="hidden"
+                            required
+                          />
+                          <label htmlFor="profileScreenshot" className="cursor-pointer">
+                            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Clique para fazer upload do print do seu perfil
+                            </p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG ou JPEG (Max. 5MB)</p>
+                          </label>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        📸 Faça um print da página inicial do seu perfil mostrando seu @ e quantidade de seguidores
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Upload do Print da Postagem (condicional) */}
+                  {selectedEventData.require_post_screenshot && (
+                    <div className="space-y-2">
+                      <Label htmlFor="postScreenshot">Print do Post do Evento *</Label>
+                      {previewUrl ? (
+                        <div className="relative max-w-sm mx-auto">
+                          <AspectRatio ratio={9 / 16}>
+                            <img
+                              src={previewUrl}
+                              alt="Preview da postagem"
+                              className="w-full h-full object-cover rounded-lg border"
+                            />
+                          </AspectRatio>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => handleRemoveImage("post")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <p className="text-sm text-muted-foreground mt-2 text-center">{selectedFile?.name}</p>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
+                          <input
+                            id="postScreenshot"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileChange(e, "post")}
+                            className="hidden"
+                            required
+                          />
+                          <label htmlFor="postScreenshot" className="cursor-pointer">
+                            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Clique para fazer upload do print de uma postagem
+                            </p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG ou JPEG (Max. 5MB)</p>
+                          </label>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        📸 Faça um print do post relacionado a este evento
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Upload único para eventos normais (não seleção de perfil) */}
+              {selectedEventData?.event_purpose !== "selecao_perfil" && (
+                <div className="space-y-2">
+                  <Label htmlFor="screenshot">
+                    {submissionType === "post" ? "Print da Postagem *" : "Comprovante de Venda *"}
+                  </Label>
+                  {(submissionType === "post" ? previewUrl : salesProofPreview) ? (
+                    <div className="relative max-w-sm mx-auto">
+                      <AspectRatio ratio={9 / 16}>
+                        <img
+                          src={submissionType === "post" ? previewUrl! : salesProofPreview!}
+                          alt={submissionType === "post" ? "Preview da postagem" : "Preview do comprovante"}
+                          className="w-full h-full object-cover rounded-lg border"
+                        />
+                      </AspectRatio>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleRemoveImage(submissionType === "post" ? "post" : "sale")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-2 text-center">
+                        {(submissionType === "post" ? selectedFile : salesProofFile)?.name}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
+                      <input
+                        id="screenshot"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        required
+                      />
+                      <label htmlFor="screenshot" className="cursor-pointer">
+                        <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {submissionType === "post"
+                            ? "Clique para fazer upload do print"
+                            : "Clique para fazer upload do comprovante"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG ou JPEG (Max. 10MB)</p>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+                size="lg"
+                disabled={
+                  isSubmitting ||
+                  !selectedEvent ||
+                  (selectedEventData?.event_purpose !== "selecao_perfil" &&
+                    submissionType === "post" &&
+                    posts.length === 0)
+                }
+              >
+                {isSubmitting ? "Enviando..." : submissionType === "post" ? "Enviar Postagem" : "Enviar Comprovante"}
+              </Button>
+            </form>
+          </Card>
+
+          <div className="mt-8 p-6 bg-card/50 backdrop-blur-sm rounded-lg border">
+            <h3 className="font-semibold mb-2">📋 Informações Importantes</h3>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Certifique-se de que o print mostra claramente sua postagem</li>
+              <li>• Cada postagem aprovada vale 1 ponto</li>
+              <li>• Fique atento aos prazos e condições de cada evento</li>
+            </ul>
+          </div>
         </div>
-      </div>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Envio</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Verifique se os dados estão corretos antes de enviar:</p>
-              <div className="bg-muted p-4 rounded-lg space-y-1 text-foreground">
-                <p>
-                  <strong>Nome:</strong> {name}
-                </p>
-                <p>
-                  <strong>E-mail:</strong> {email}
-                </p>
-                <p>
-                  <strong>Instagram:</strong> {instagram}
-                </p>
-                <p>
-                  <strong>Evento:</strong> {selectedEventData?.title}
-                </p>
-                <p>
-                  <strong>Postagem:</strong> #{posts.find((p) => p.id === selectedPost)?.post_number}
-                </p>
-              </div>
-              <p className="text-sm">Deseja confirmar o envio?</p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSubmit}>Confirmar Envio</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Envio</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>Verifique se os dados estão corretos antes de enviar:</p>
+                <div className="bg-muted p-4 rounded-lg space-y-1 text-foreground">
+                  <p>
+                    <strong>Nome:</strong> {name}
+                  </p>
+                  <p>
+                    <strong>E-mail:</strong> {email}
+                  </p>
+                  <p>
+                    <strong>Instagram:</strong> {instagram}
+                  </p>
+                  <p>
+                    <strong>Evento:</strong> {selectedEventData?.title}
+                  </p>
+                  <p>
+                    <strong>Postagem:</strong> #{posts.find((p) => p.id === selectedPost)?.post_number}
+                  </p>
+                </div>
+                <p className="text-sm">Deseja confirmar o envio?</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmSubmit}>Confirmar Envio</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </TooltipProvider>
   );
 };
