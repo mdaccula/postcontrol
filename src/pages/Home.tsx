@@ -214,7 +214,7 @@ const Home = () => {
             Dashboard completo • Aprovação em massa • Controle total • Relatórios automáticos
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center mb-8 md:mb-12 px-4">
+          <div className="flex flex-col sm:flex-row gap-6 md:gap-8 justify-center mb-8 md:mb-12 px-4 py-2">
             {user ? (
               <>
                 <Link to="/dashboard" className="w-full sm:w-auto">
@@ -585,7 +585,7 @@ const Home = () => {
           <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
             Junte-se a dezenas de administradores que já facilitaram o controle de postagens com nossa plataforma
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center py-2">
             <Link to="/auth">
               <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-xl group">
                 Começar 7 Dias Grátis
