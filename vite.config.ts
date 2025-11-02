@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => ({
     target: 'es2015',
     rollupOptions: {
       output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]',
         manualChunks: (id) => {
           // React core
           if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {

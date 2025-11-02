@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { RequireAuth } from "@/components/RequireAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -25,11 +26,12 @@ const App = () => {
   useAuth(); // Inicializa o listener de autenticação
   
   return (
-    <ThemeProvider defaultTheme="system" storageKey="app-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="system" storageKey="app-theme">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <Suspense fallback={
             <div className="flex items-center justify-center min-h-screen">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -86,6 +88,7 @@ const App = () => {
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 };
 
