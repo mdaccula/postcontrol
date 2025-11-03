@@ -1469,7 +1469,7 @@ const Admin = () => {
                               <Card key={post.id} className="p-4 hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start">
                                   <div>
-                                    <h4 className="font-bold">Postagem #{post.post_number}</h4>
+                                    <h4 className="font-bold">{formatPostName(post.post_type, post.post_number)}</h4>
                                     <p className="text-sm text-muted-foreground mt-1">
                                       Prazo: {new Date(post.deadline).toLocaleString("pt-BR")}
                                     </p>
@@ -1560,11 +1560,19 @@ const Admin = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os números</SelectItem>
-                      {getAvailablePostNumbers().map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          Postagem #{num}
-                        </SelectItem>
-                      ))}
+                      {getAvailablePostNumbers().map((num) => {
+                        // Buscar post_type das submissions filtradas
+                        const submission = submissions.find(
+                          s => s.posts?.post_number === num &&
+                          (submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter)
+                        );
+                        const postType = submission?.posts?.post_type || null;
+                        return (
+                          <SelectItem key={num} value={num.toString()}>
+                            {formatPostName(postType, num)}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <Select
@@ -1993,12 +2001,12 @@ const Admin = () => {
                                           {submission.submission_type === "sale" ? (
                                             <div className="flex items-center gap-2">
                                               <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-500 font-medium">
-                                                💰 Comprovante de Venda
+                                                💰 {formatPostName('venda', 0)}
                                               </span>
                                             </div>
                                           ) : (
                                             <p className="text-sm font-medium">
-                                              Postagem #{submission.posts?.post_number}
+                                              {formatPostName(submission.posts?.post_type, submission.posts?.post_number || 0)}
                                             </p>
                                           )}
                                           <p className="text-xs text-muted-foreground">

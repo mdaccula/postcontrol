@@ -581,9 +581,10 @@ const setCachedStats = (key: string, data: any) => {
         startY: yPos,
         head: [[cleanTextForPDF('Genero'), cleanTextForPDF('Quantidade')]],
         body: Array.from(genderMapData.entries())
+          .filter(([gender]) => gender !== 'Não informado') // Filtrar "Não informado"
           .sort((a, b) => b[1] - a[1]) // Ordenar decrescente
           .map(([gender, count]) => [
-            cleanTextForPDF(gender),
+            cleanTextForPDF(GENDER_MAP[gender] || gender),
             count.toString()
           ]),
         styles: { fontSize: 10, cellPadding: 3 },
@@ -744,32 +745,12 @@ const setCachedStats = (key: string, data: any) => {
           .in('id', userIds);
         
         (profilesGender || []).forEach((p: any) => {
-          let displayGender = 'Não Informado';
+          // Usar GENDER_MAP para consistência
+          let displayGender = 'Não informado';
           
-          // ✅ LOG para debug
-          console.log('👤 Gender original:', JSON.stringify(p.gender), 'Length:', p.gender?.length);
-          
-          if (p.gender) {
-            // ✅ Remover espaços, acentos, converter para minúsculas
-            const normalized = p.gender
-              .toLowerCase()
-              .trim()
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
-            
-            console.log('👤 Gender normalizado:', JSON.stringify(normalized));
-            
-            // ✅ Mapeamento mais robusto
-            if (normalized === 'masculino' || normalized === 'male' || normalized === 'm') {
-              displayGender = 'Masculino';
-            } else if (normalized === 'feminino' || normalized === 'female' || normalized === 'f') {
-              displayGender = 'Feminino';
-            } else if (normalized.includes('lgbtq') || normalized.includes('lgbt')) {
-              displayGender = 'LGBTQ+';
-            } else {
-              displayGender = 'Outro';
-              console.warn('⚠️ Valor de gender não mapeado:', p.gender, '→ normalizado:', normalized);
-            }
+          if (p.gender && p.gender.trim()) {
+            // Tentar mapear usando GENDER_MAP primeiro
+            displayGender = GENDER_MAP[p.gender] || 'Outro';
           }
           
           eventSpecificGenderData.set(displayGender, (eventSpecificGenderData.get(displayGender) || 0) + 1);

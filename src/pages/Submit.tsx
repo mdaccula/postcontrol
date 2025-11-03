@@ -703,9 +703,10 @@ const Submit = () => {
         const now = new Date();
 
         if (now > postDeadline) {
+          const postName = formatPostName(selectedEventData?.event_purpose === 'selecao_perfil' ? 'selecao_perfil' : null, selectedPostData.post_number);
           toast({
             title: "⏰ Prazo Expirado",
-            description: `O prazo para a postagem #${selectedPostData.post_number} expirou em ${postDeadline.toLocaleString("pt-BR")}.`,
+            description: `O prazo para ${postName} expirou em ${postDeadline.toLocaleString("pt-BR")}.`,
             variant: "destructive",
           });
           return;
@@ -1200,7 +1201,10 @@ const Submit = () => {
                             <div className="bg-primary/10 border border-primary rounded-lg p-4 mt-2">
                               <p className="font-semibold text-primary mb-1">📌 Postagem Selecionada:</p>
                               <p className="text-sm">
-                                Postagem #{posts.find((p) => p.id === selectedPost)?.post_number}
+                                {formatPostName(
+                                  selectedEventData?.event_purpose === 'selecao_perfil' ? 'selecao_perfil' : null,
+                                  posts.find((p) => p.id === selectedPost)?.post_number || 0
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
                                 {selectedEventData?.event_purpose === "selecao_perfil"
@@ -1606,7 +1610,10 @@ const Submit = () => {
                     <strong>Evento:</strong> {selectedEventData?.title}
                   </p>
                   <p>
-                    <strong>Postagem:</strong> #{posts.find((p) => p.id === selectedPost)?.post_number}
+                    <strong>Postagem:</strong> {formatPostName(
+                      selectedEventData?.event_purpose === 'selecao_perfil' ? 'selecao_perfil' : null,
+                      posts.find((p) => p.id === selectedPost)?.post_number || 0
+                    )}
                   </p>
                 </div>
                 <p className="text-sm">Deseja confirmar o envio?</p>
