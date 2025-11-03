@@ -352,6 +352,16 @@ const setCachedStats = (key: string, data: any) => {
     setShowExportDialog(false);
   };
 
+  // Mapeamento de gênero para exibição
+  const GENDER_MAP: Record<string, string> = {
+    'Masculino': 'Masculino',
+    'Feminino': 'Feminino',
+    'Outro': 'Outro',
+    'LGBTQ+': 'Outro',
+    'Agência': 'Agência',
+    'Não informado': 'Não informado'
+  };
+
   const exportEventStatsToPDF = async () => {
     const eventName = selectedEventId === "all" 
       ? "Todos os Eventos" 

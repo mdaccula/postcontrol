@@ -4,6 +4,7 @@ import { Check, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { SubmissionImageDisplay } from "./SubmissionImageDisplay";
 import { useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatPostName } from "@/lib/postNameFormatter";
 
 interface SubmissionZoomDialogProps {
   open: boolean;
@@ -196,11 +197,9 @@ export const SubmissionZoomDialog = ({
                 )}
               </div>
               <div className="text-left sm:text-right flex-shrink-0">
-                {submission.posts?.post_number && (
-                  <p className="text-xs sm:text-sm font-medium whitespace-nowrap">
-                    Postagem #{submission.posts.post_number}
-                  </p>
-                )}
+            <div className="text-sm text-muted-foreground">
+              Postagem #{submission.posts?.post_number || '?'}
+            </div>
                 {submission.posts?.events?.title && (
                   <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                     {submission.posts.events.title}

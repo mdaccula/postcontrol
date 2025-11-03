@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
+import { formatPostName } from "@/lib/postNameFormatter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1171,7 +1172,7 @@ const Submit = () => {
                                   <SelectItem key={post.id} value={post.id} disabled={isExpired || alreadySubmitted}>
                                     <div className="flex items-center gap-2">
                                       <span>
-                                        Postagem #{post.post_number} - Prazo:{" "}
+                                        {formatPostName(null, post.post_number, null)} - Prazo:{" "}
                                         {new Date(post.deadline).toLocaleDateString("pt-BR")} às{" "}
                                         {new Date(post.deadline).toLocaleTimeString("pt-BR", {
                                           hour: "2-digit",

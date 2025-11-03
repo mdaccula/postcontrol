@@ -1,11 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Users, DollarSign, TrendingUp, Plus, Settings, ExternalLink, Copy } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Building2, Users, DollarSign, TrendingUp, Plus, Settings, ExternalLink, Copy, Calendar } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserRoleQuery } from "@/hooks/useUserRoleQuery";
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 // M2: Lazy loading de componentes pesados
 const PlanManager = lazy(() => import("@/components/PlanManager").then(m => ({ default: m.PlanManager })));
 const AdminManager = lazy(() => import("@/components/AdminManager").then(m => ({ default: m.AdminManager })));
@@ -55,6 +57,8 @@ const MasterAdmin = () => {
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [agencyStats, setAgencyStats] = useState<Record<string, AgencyStats>>({});
   const [plans, setPlans] = useState<any[]>([]);
+  const [selectedAgencyForEvents, setSelectedAgencyForEvents] = useState<string>("");
+  const [agencyEvents, setAgencyEvents] = useState<any[]>([]);
 
   // Form state
   const [newAgency, setNewAgency] = useState({
@@ -138,17 +142,29 @@ const MasterAdmin = () => {
           influencersQuery = influencersQuery.not("id", "in", `(${adminIds.join(",")})`);
         }
 
+        // Buscar influencers ativos (com submissões nos últimos 30 dias)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const { data: activeUsers } = await sb
+          .from("submissions")
+          .select("user_id")
+          .eq("agency_id", agency.id)
+          .gte("created_at", thirtyDaysAgo.toISOString());
+
         const [influencersRes, eventsRes, submissionsRes] = await Promise.all([
           influencersQuery,
           sb.from("events").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
           sb.from("submissions").select("id", { count: "exact", head: true }).eq("agency_id", agency.id),
         ]);
 
+        const uniqueActiveUsers = new Set(activeUsers?.map(u => u.user_id) || []);
+
         stats[agency.id] = {
           totalInfluencers: influencersRes.count || 0,
           totalEvents: eventsRes.count || 0,
           totalSubmissions: submissionsRes.count || 0,
-          activeInfluencers: influencersRes.count || 0,
+          activeInfluencers: uniqueActiveUsers.size,
         };
       }
 
@@ -329,8 +345,9 @@ const MasterAdmin = () => {
 
         {/* Tabs com diferentes áreas */}
         <Tabs defaultValue="agencies" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="agencies">Agências e Administradores</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="agencies">Agências</TabsTrigger>
+            <TabsTrigger value="events">Eventos</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
@@ -341,6 +358,90 @@ const MasterAdmin = () => {
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               <AdminManager />
             </Suspense>
+          </TabsContent>
+
+          <TabsContent value="events" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Eventos por Agência
+                </CardTitle>
+                <CardDescription>
+                  Selecione uma agência para visualizar seus eventos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Label htmlFor="agency-select">Agência:</Label>
+                  <Select
+                    value={selectedAgencyForEvents}
+                    onValueChange={async (value) => {
+                      setSelectedAgencyForEvents(value);
+                      const { data } = await sb
+                        .from('events')
+                        .select('*')
+                        .eq('agency_id', value)
+                        .order('created_at', { ascending: false });
+                      setAgencyEvents(data || []);
+                    }}
+                  >
+                    <SelectTrigger className="w-[300px]">
+                      <SelectValue placeholder="Selecione uma agência" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agencies.map((agency) => (
+                        <SelectItem key={agency.id} value={agency.id}>
+                          {agency.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedAgencyForEvents && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Evento</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Posts Obrigatórios</TableHead>
+                        <TableHead>Vendas Obrigatórias</TableHead>
+                        <TableHead>Data do Evento</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {agencyEvents.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            Nenhum evento encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        agencyEvents.map((event) => (
+                          <TableRow key={event.id}>
+                            <TableCell className="font-medium">{event.title}</TableCell>
+                            <TableCell>
+                              <Badge variant={event.is_active ? "default" : "secondary"}>
+                                {event.is_active ? "Ativo" : "Inativo"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{event.required_posts || 0}</TableCell>
+                            <TableCell>{event.required_sales || 0}</TableCell>
+                            <TableCell>
+                              {event.event_date 
+                                ? new Date(event.event_date).toLocaleDateString('pt-BR')
+                                : 'Não definida'
+                              }
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="users">

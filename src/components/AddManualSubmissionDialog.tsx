@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { formatPostName } from "@/lib/postNameFormatter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -262,7 +263,11 @@ export const AddManualSubmissionDialog = ({
                 <SelectContent>
                   {posts.map((post) => (
                     <SelectItem key={post.id} value={post.id}>
-                      Postagem #{post.post_number}
+                      {post.events?.title} - {formatPostName(
+                        post.post_type,
+                        post.post_number,
+                        post.events?.event_purpose
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
