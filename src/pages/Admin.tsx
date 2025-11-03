@@ -114,8 +114,7 @@ const Admin = () => {
   const [submissionEventFilter, setSubmissionEventFilter] = useState<string>("all");
   const [submissionPostFilter, setSubmissionPostFilter] = useState<string>("all");
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>("all");
-  const [submissionTypeFilter, setSubmissionTypeFilter] = useState<string>("all");
-  const [eventPurposeFilter, setEventPurposeFilter] = useState<string>("all");
+  const [postTypeFilter, setPostTypeFilter] = useState<string>("all"); // ✅ Filtro único unificado
   const [addSubmissionDialogOpen, setAddSubmissionDialogOpen] = useState(false);
   const [postEventFilter, setPostEventFilter] = useState<string>("all");
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
@@ -829,14 +828,12 @@ const Admin = () => {
       filtered = filtered.filter((s: any) => s.status === submissionStatusFilter);
     }
 
-    // Filtro de tipo de submissão
-    if (submissionTypeFilter !== "all") {
-      filtered = filtered.filter((s: any) => s.submission_type === submissionTypeFilter);
-    }
-
-    // Filtro de propósito do evento
-    if (eventPurposeFilter !== "all") {
-      filtered = filtered.filter((s: any) => s.posts?.events?.event_purpose === eventPurposeFilter);
+    // ✅ Filtro único de tipo de postagem (baseado em post_type)
+    if (postTypeFilter !== "all") {
+      filtered = filtered.filter((s: any) => {
+        const postType = s.posts?.post_type || 'divulgacao';
+        return postType === postTypeFilter;
+      });
     }
 
     // Filtro de busca (nome, email, Instagram) - usando debounced search
@@ -877,8 +874,7 @@ const Admin = () => {
     submissionEventFilter,
     submissionPostFilter,
     submissionStatusFilter,
-    submissionTypeFilter,
-    eventPurposeFilter,
+    postTypeFilter,
     debouncedSearch,
     dateFilterStart,
     dateFilterEnd,
@@ -1590,40 +1586,23 @@ const Admin = () => {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <Select
-                    value={submissionTypeFilter}
+                    value={postTypeFilter}
                     onValueChange={(v) => {
-                      setSubmissionTypeFilter(v);
+                      setPostTypeFilter(v);
                       setCurrentPage(1);
                     }}
                     disabled={submissionEventFilter === "all"}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Tipo de Submissão" />
+                      <SelectValue placeholder="Tipo de Postagem" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos os tipos</SelectItem>
-                      <SelectItem value="post">📸 Postagens</SelectItem>
-                      <SelectItem value="sale">💰 Vendas</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={eventPurposeFilter}
-                    onValueChange={(v) => {
-                      setEventPurposeFilter(v);
-                      setCurrentPage(1);
-                    }}
-                    disabled={submissionEventFilter === "all"}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Propósito do Evento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os propósitos</SelectItem>
+                      <SelectItem value="all">Todos os Tipos</SelectItem>
                       <SelectItem value="divulgacao">📢 Divulgação</SelectItem>
-                      <SelectItem value="selecao_perfil">👤 Seleção de Perfil</SelectItem>
+                      <SelectItem value="venda">💰 Vendas</SelectItem>
+                      <SelectItem value="selecao_perfil">🎯 Seleção de Perfil</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

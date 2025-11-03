@@ -43,13 +43,13 @@ export const useUserManagement = () => {
     }
   }, []);
 
-  const loadUserEvents = async (userIds: string[]) => {
-    setLoadingEvents(true); // ✅ ITEM 4: Início do loading
+  const loadUserEvents = useCallback(async (userIds: string[]) => {
+    setLoadingEvents(true);
     
     if (userIds.length === 0) {
       setUserEvents({});
       setUserSalesCount({});
-      setLoadingEvents(false); // ✅ ITEM 4: Fim do loading
+      setLoadingEvents(false);
       return;
     }
 
@@ -73,9 +73,8 @@ export const useUserManagement = () => {
     const eventsMap: Record<string, string[]> = {};
     const salesMap: Record<string, number> = {};
 
-    // ✅ CORRIGIDO: Inicializar TODOS os usuários (não apenas com submissões)
     userIds.forEach(userId => {
-      eventsMap[userId] = [];  // ✅ Garante que TODOS têm array vazio
+      eventsMap[userId] = [];
       salesMap[userId] = 0;
     });
 
@@ -85,7 +84,6 @@ export const useUserManagement = () => {
         const eventTitle = submission.posts?.events?.title;
         const postType = submission.posts?.post_type || submission.posts?.events?.event_purpose || 'divulgacao';
         
-        // ✅ ITEM 6: Criar identificador único: "EventTitle (Tipo)"
         const typeLabel = postType === 'venda' ? 'Vendas' : postType === 'selecao_perfil' ? 'Seleção' : 'Divulgação';
         const eventKey = eventTitle ? `${eventTitle} (${typeLabel})` : null;
         
@@ -104,8 +102,8 @@ export const useUserManagement = () => {
 
     setUserEvents(eventsMap);
     setUserSalesCount(salesMap);
-    setLoadingEvents(false); // ✅ ITEM 4: Fim do loading
-  };
+    setLoadingEvents(false);
+  }, []); // ✅ Função estável sem dependências
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -172,7 +170,7 @@ export const useUserManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [isMasterAdmin, currentAgencyId, loadUserEvents]);
+  }, [isMasterAdmin, currentAgencyId]); // ✅ Removido loadUserEvents para evitar loop
 
   return {
     users,

@@ -735,25 +735,36 @@ const setCachedStats = (key: string, data: any) => {
         (profilesGender || []).forEach((p: any) => {
           let displayGender = 'Não Informado';
           
+          // ✅ LOG para debug
+          console.log('👤 Gender original:', JSON.stringify(p.gender), 'Length:', p.gender?.length);
+          
           if (p.gender) {
-            const normalized = p.gender.toLowerCase().trim();
+            // ✅ Remover espaços, acentos, converter para minúsculas
+            const normalized = p.gender
+              .toLowerCase()
+              .trim()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
             
-            // Normalizar valores incluindo inglês
-            if (normalized === 'masculino' || normalized === 'male') {
+            console.log('👤 Gender normalizado:', JSON.stringify(normalized));
+            
+            // ✅ Mapeamento mais robusto
+            if (normalized === 'masculino' || normalized === 'male' || normalized === 'm') {
               displayGender = 'Masculino';
-            } else if (normalized === 'feminino' || normalized === 'female') {
+            } else if (normalized === 'feminino' || normalized === 'female' || normalized === 'f') {
               displayGender = 'Feminino';
-            } else if (normalized === 'lgbtq+' || normalized === 'lgbt' || normalized === 'lgbtqia+') {
+            } else if (normalized.includes('lgbtq') || normalized.includes('lgbt')) {
               displayGender = 'LGBTQ+';
             } else {
-              // Valores desconhecidos/erros viram "Outro"
               displayGender = 'Outro';
-              console.warn('⚠️ Valor de gender desconhecido:', p.gender);
+              console.warn('⚠️ Valor de gender não mapeado:', p.gender, '→ normalizado:', normalized);
             }
           }
           
           allGenderData.set(displayGender, (allGenderData.get(displayGender) || 0) + 1);
         });
+        
+        console.log('📊 Distribuição de gênero FINAL:', Array.from(allGenderData.entries()));
         
         console.log('📊 Distribuição de gênero:', Array.from(allGenderData.entries()));
         

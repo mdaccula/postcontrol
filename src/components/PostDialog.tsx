@@ -75,7 +75,7 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
 
     const isMaster = !!roleData;
 
-    let query = sb.from('events').select('id, title, agency_id');
+    let query = sb.from('events').select('id, title, agency_id, event_purpose, accept_sales');
 
     // If not master admin, filter by agency
     if (!isMaster) {
@@ -230,30 +230,53 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
             </Select>
           </div>
           
-          {eventId && events.find(e => e.id === eventId) && (
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm">
-                <strong>Tipo:</strong>{' '}
-                {(() => {
-                  const event = events.find(e => e.id === eventId);
-                  // Assume que vamos buscar event_purpose via query ou já está no evento
-                  return '📢 Divulgação (usuário envia 1 imagem por postagem)';
-                })()}
-              </p>
-            </div>
-          )}
+          {eventId && (() => {
+            const event = events.find(e => e.id === eventId);
+            if (!event) return null;
+            
+            const eventPurpose = (event as any).event_purpose || 'divulgacao';
+            const typeInfo = eventPurpose === 'venda' 
+              ? { emoji: '💰', label: 'Comprovante de Vendas', desc: 'usuários podem enviar múltiplas vezes' }
+              : eventPurpose === 'selecao_perfil'
+              ? { emoji: '🎯', label: 'Seleção de Perfil', desc: 'usuário envia 1x: post + perfil' }
+              : { emoji: '📢', label: 'Divulgação', desc: 'usuário envia 1 imagem por postagem' };
+            
+            return (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm">
+                  <strong>Tipo:</strong> {typeInfo.emoji} {typeInfo.label} ({typeInfo.desc})
+                </p>
+              </div>
+            );
+          })()}
           
           <div className="space-y-2">
-            <Label htmlFor="postNumber">Número da Postagem *</Label>
+            <Label htmlFor="postNumber">
+              {(() => {
+                const event = events.find(e => e.id === eventId);
+                const eventPurpose = (event as any)?.event_purpose || 'divulgacao';
+                return eventPurpose === 'venda' 
+                  ? 'Número (sempre 0 para vendas)'
+                  : eventPurpose === 'selecao_perfil'
+                  ? 'Número da Seleção (1, 2, 3...)'
+                  : 'Número da Postagem (1, 2, 3...)';
+              })()} *
+            </Label>
             <Input
               id="postNumber"
               type="number"
-              value={postNumber}
+              value={(() => {
+                const event = events.find(e => e.id === eventId);
+                return (event as any)?.event_purpose === 'venda' ? '0' : postNumber;
+              })()}
               onChange={(e) => setPostNumber(e.target.value)}
-              placeholder="1, 2, 3..."
+              placeholder={(() => {
+                const event = events.find(e => e.id === eventId);
+                return (event as any)?.event_purpose === 'venda' ? '0' : '1, 2, 3...';
+              })()}
               required
               min="0"
-              disabled={loading}
+              disabled={loading || events.find(e => e.id === eventId && (e as any).event_purpose === 'venda') !== undefined}
             />
           </div>
           <div className="space-y-2">
