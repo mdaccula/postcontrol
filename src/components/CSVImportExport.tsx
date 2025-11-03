@@ -8,18 +8,24 @@ import { useRef } from "react";
 
 interface CSVImportExportProps {
   onImportComplete?: () => void;
-  users?: any[]; // ✅ Item 13: Aceitar usuários filtrados
+  users?: any[];
   currentAgencyId?: string | null;
   isMasterAdmin?: boolean;
+  eventFilter?: string; // 🆕 ITEM 8: Filtro de evento
 }
 
-export const CSVImportExport = ({ onImportComplete, users, currentAgencyId, isMasterAdmin }: CSVImportExportProps) => {
+export const CSVImportExport = ({ 
+  onImportComplete, 
+  users, 
+  currentAgencyId, 
+  isMasterAdmin,
+  eventFilter = "all" // 🆕 ITEM 8: Default
+}: CSVImportExportProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
     let profilesToExport;
     
-    // ✅ Item 13: Usar users filtrados se fornecidos, senão buscar do DB
     if (users && users.length > 0) {
       profilesToExport = users;
     } else {
@@ -36,17 +42,47 @@ export const CSVImportExport = ({ onImportComplete, users, currentAgencyId, isMa
       return;
     }
 
+    // 🔧 ITEM 8: Buscar contagem de posts por usuário se filtro de evento ativo
+    const userIds = profilesToExport.map(p => p.id).filter(Boolean);
+    let postsCountMap: Record<string, number> = {};
+    
+    if (userIds.length > 0 && eventFilter !== "all" && eventFilter !== "no_event") {
+      const { data: submissions } = await supabase
+        .from('submissions')
+        .select('user_id, posts!inner(event_id)')
+        .in('user_id', userIds)
+        .eq('submission_type', 'post')
+        .eq('status', 'approved')
+        .eq('posts.event_id', eventFilter);
+      
+      (submissions || []).forEach((sub: any) => {
+        postsCountMap[sub.user_id] = (postsCountMap[sub.user_id] || 0) + 1;
+      });
+    }
+
     // Formatar dados para export
-    const formattedProfiles = profilesToExport.map((profile) => ({
-      full_name: profile.full_name,
-      email: profile.email,
-      instagram_arroba: profile.instagram ? `@${profile.instagram.replace("@", "")}` : "",
-      instagram_https: profile.instagram ? `https://instagram.com/${profile.instagram.replace("@", "")}` : "",
-      phone: profile.phone,
-      sexo: profile.gender || "Não informado",
-      faixa_seguidores: profile.followers_range || "Não informado",
-      created_at: profile.created_at,
-    }));
+    const formattedProfiles = profilesToExport.map((profile) => {
+      const baseData = {
+        full_name: profile.full_name,
+        email: profile.email,
+        instagram_arroba: profile.instagram ? `@${profile.instagram.replace("@", "")}` : "",
+        instagram_https: profile.instagram ? `https://instagram.com/${profile.instagram.replace("@", "")}` : "",
+        phone: profile.phone,
+        sexo: profile.gender || "Não informado",
+        faixa_seguidores: profile.followers_range || "Não informado",
+        created_at: profile.created_at,
+      };
+      
+      // 🔧 ITEM 8: Adicionar contagem de posts quando filtro ativo
+      if (eventFilter !== "all" && eventFilter !== "no_event") {
+        return {
+          ...baseData,
+          total_posts_evento: postsCountMap[profile.id] || 0
+        };
+      }
+      
+      return baseData;
+    });
 
     const csv = Papa.unparse(formattedProfiles);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

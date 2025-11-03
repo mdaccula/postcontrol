@@ -224,64 +224,73 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
       console.log('👤 User creating event:', { userId: user.id, agencyId: userAgencyId });
 
       let imageUrl = eventImageUrl;
+      let oldImagePath: string | null = null;
 
+      // 🔧 ITEM 10 - PASSO 1: Extrair path da imagem antiga ANTES de qualquer operação
+      if (event?.event_image_url) {
+        try {
+          const url = new URL(event.event_image_url);
+          const pathMatch = url.pathname.match(/\/screenshots\/(.+?)(\?|$)/);
+          if (pathMatch) {
+            oldImagePath = pathMatch[1];
+            console.log('🗑️ Imagem antiga detectada:', oldImagePath);
+          }
+        } catch (error) {
+          console.warn('⚠️ Erro ao extrair path da imagem antiga:', error);
+        }
+      }
+
+      // 🔧 ITEM 10 - PASSO 2: Upload da nova imagem (se houver)
       if (eventImage) {
         const fileExt = eventImage.name.split('.').pop();
-        // ✅ SPRINT 1 - ITEM 17: Nome único com event ID + UUID para evitar sobrescritas
-        const uniqueId = event?.id || crypto.randomUUID();
-        const fileName = `events/${uniqueId}_${Date.now()}.${fileExt}`;
         
-        // ✅ Deletar imagem antiga se estiver atualizando
-        if (event?.event_image_url) {
-          try {
-            const oldPath = event.event_image_url.split('/screenshots/')[1]?.split('?')[0];
-            if (oldPath) {
-              await supabase.storage.from('screenshots').remove([oldPath]);
-            }
-          } catch (error) {
-            console.warn('Erro ao deletar imagem antiga:', error);
-          }
-        }
+        // 🔧 CORREÇÃO: Garantir nome ABSOLUTAMENTE único
+        const eventIdPart = event?.id || 'new';
+        const timestampPart = Date.now();
+        const randomPart = crypto.randomUUID().slice(0, 8);
+        const fileName = `events/${eventIdPart}_${timestampPart}_${randomPart}.${fileExt}`;
+        
+        console.log('📤 Fazendo upload para:', fileName);
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('screenshots')
           .upload(fileName, eventImage, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false // 🔧 IMPORTANTE: Nunca sobrescrever
           });
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
+          console.error('❌ Upload error:', uploadError);
           throw new Error(`Erro ao fazer upload da imagem: ${uploadError.message}`);
         }
 
-        // Get signed URL with 10 years expiry for permanent event images
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        console.log('✅ Upload bem-sucedido:', uploadData);
+
+        // Gerar URL assinada
+        const { data: signedData, error: signedError } = await supabase.storage
           .from('screenshots')
-          .createSignedUrl(fileName, 315360000); // 10 years in seconds
+          .createSignedUrl(fileName, 31536000); // 1 ano
 
-        if (signedUrlError) {
-          console.error('Signed URL error:', signedUrlError);
-          throw new Error(`Erro ao gerar URL da imagem: ${signedUrlError.message}`);
-        }
+        if (signedError) throw signedError;
 
-        imageUrl = signedUrlData.signedUrl;
+        imageUrl = signedData.signedUrl;
+        console.log('✅ URL assinada gerada:', imageUrl);
       }
 
       let eventId = event?.id;
 
+      // 🔧 ITEM 10 - PASSO 3: Salvar evento no banco ANTES de deletar imagem antiga
       if (event) {
         const { error } = await sb
           .from('events')
           .update({
             title,
             description,
-            // ✅ ITEM 8: Adicionar offset -03:00 antes de converter para ISO
             event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
             location,
             setor: setor || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
-            event_image_url: imageUrl || null,
+            event_image_url: imageUrl || null, // 🆕 Nova URL
             is_active: isActive,
             target_gender: targetGender,
             require_instagram_link: requireInstagramLink,
@@ -299,6 +308,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           .eq('id', event.id);
 
         if (error) throw error;
+        console.log('✅ Evento atualizado no banco');
 
         // Delete old requirements
         await sb
@@ -342,6 +352,23 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         }
         console.log('✅ Event created successfully:', newEvent);
         eventId = newEvent.id;
+      }
+
+      // 🔧 ITEM 10 - PASSO 4: Deletar imagem antiga APENAS APÓS sucesso
+      if (oldImagePath && eventImage) {
+        try {
+          const { error: deleteError } = await supabase.storage
+            .from('screenshots')
+            .remove([oldImagePath]);
+          
+          if (deleteError) {
+            console.warn('⚠️ Erro ao deletar imagem antiga (não crítico):', deleteError);
+          } else {
+            console.log('✅ Imagem antiga deletada:', oldImagePath);
+          }
+        } catch (error) {
+          console.warn('⚠️ Exceção ao deletar imagem antiga (não crítico):', error);
+        }
       }
 
       // Insert new requirements

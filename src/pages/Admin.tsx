@@ -1553,34 +1553,59 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                               return;
                             }
                             
-                            const { data: fullSubmissions } = await sb
-                              .from('submissions')
-                              .select(`
-                                *,
-                                posts!inner(post_number, event_id, events!inner(title)),
-                                profiles!inner(full_name, instagram, email, gender, followers_range)
-                              `)
-                              .in('id', submissionIds);
+                            // 🔧 ITEM 7: Buscar submissions E posts separadamente para evitar erro com vendas
+                            const [submissionsResult, postsResult] = await Promise.all([
+                              // Buscar submissões com profiles
+                              sb.from('submissions')
+                                .select(`
+                                  *,
+                                  profiles(full_name, instagram, email, gender, followers_range)
+                                `)
+                                .in('id', submissionIds),
+                              
+                              // Buscar posts com eventos (apenas para submissões que têm post_id)
+                              sb.from('submissions')
+                                .select('id, post_id, posts!inner(post_number, event_id, events!inner(title))')
+                                .in('id', submissionIds)
+                                .not('post_id', 'is', null)
+                            ]);
 
-                            if (!fullSubmissions || fullSubmissions.length === 0) {
-                              toast.error('Erro ao buscar dados completos das submissões');
+                            if (submissionsResult.error) {
+                              console.error('Erro ao buscar submissões:', submissionsResult.error);
+                              toast.error('Erro ao buscar submissões');
                               return;
                             }
 
+                            // Criar map de posts para lookup rápido
+                            const postsMap: Record<string, any> = {};
+                            (postsResult.data || []).forEach((item: any) => {
+                              postsMap[item.id] = item.posts;
+                            });
+
                             // Preparar dados para exportação
-                            const exportData = fullSubmissions.map((sub: any) => ({
-                              'Evento': sub.posts?.events?.title || 'N/A',
-                              'Número da Postagem': sub.posts?.post_number || 'N/A',
-                              'Nome': sub.profiles?.full_name || 'N/A',
-                              'Instagram': sub.profiles?.instagram ? `https://instagram.com/${sub.profiles.instagram.replace('@', '')}` : 'N/A',
-                              'Email': sub.profiles?.email || 'N/A',
-                              'Gênero': sub.profiles?.gender || 'N/A',
-                              'Seguidores': sub.profiles?.followers_range || 'N/A',
-                              'Status': sub.status === 'approved' ? 'Aprovado' : sub.status === 'rejected' ? 'Rejeitado' : 'Pendente',
-                              'Tipo': sub.submission_type === 'post' ? 'Postagem' : 'Venda',
-                              'Data de Envio': new Date(sub.submitted_at).toLocaleDateString('pt-BR'),
-                              'Data de Aprovação': sub.approved_at ? new Date(sub.approved_at).toLocaleDateString('pt-BR') : 'N/A'
-                            }));
+                            const exportData = (submissionsResult.data || []).map((sub: any) => {
+                              const postData = sub.post_id ? postsMap[sub.id] : null;
+                              
+                              return {
+                                'Tipo': sub.submission_type === 'post' ? 'Postagem' : 'Venda',
+                                'Evento': postData?.events?.title || 'N/A',
+                                'Número da Postagem': postData?.post_number || 'N/A',
+                                'Nome': sub.profiles?.full_name || 'N/A',
+                                'Instagram': sub.profiles?.instagram 
+                                  ? `https://instagram.com/${sub.profiles.instagram.replace('@', '')}` 
+                                  : 'N/A',
+                                'Email': sub.profiles?.email || 'N/A',
+                                'Gênero': sub.profiles?.gender || 'N/A',
+                                'Seguidores': sub.profiles?.followers_range || 'N/A',
+                                'Status': sub.status === 'approved' 
+                                  ? 'Aprovado' 
+                                  : sub.status === 'rejected' 
+                                    ? 'Rejeitado' 
+                                    : 'Pendente',
+                                'Data de Envio': new Date(sub.submitted_at).toLocaleString('pt-BR'),
+                                'Motivo Rejeição': sub.rejection_reason || 'N/A'
+                              };
+                            });
 
                             // Criar worksheet e workbook
                             const ws = XLSX.utils.json_to_sheet(exportData);

@@ -92,18 +92,10 @@ const Dashboard = () => {
     "whatsapp_number",
   ]);
 
-  // ✅ FASE 1: Calcular agencyId SINCRONAMENTE com useMemo (antes do useDashboard)
+  // 🔧 ITEM 1: Remover query params, usar apenas primeira agência do usuário
   const currentAgencyId = useMemo(() => {
     if (!userAgenciesData || isLoadingAgencies) return null;
 
-    // Prioridade 1: Query param ?agency=xxx
-    const urlAgency = searchParams.get("agency");
-    if (urlAgency) {
-      console.log("📍 [Dashboard] Agência detectada via URL:", urlAgency);
-      return urlAgency;
-    }
-
-    // Prioridade 2: Primeira agência do usuário
     if (userAgenciesData.length > 0) {
       console.log("📍 [Dashboard] Usando primeira agência:", userAgenciesData[0].id);
       return userAgenciesData[0].id;
@@ -111,7 +103,7 @@ const Dashboard = () => {
 
     console.log("⚠️ [Dashboard] Nenhuma agência encontrada");
     return null;
-  }, [userAgenciesData, isLoadingAgencies, searchParams]);
+  }, [userAgenciesData, isLoadingAgencies]);
 
   // ✅ Hook unificado para todos os dados do dashboard (agora recebe valor síncrono)
   const { data: dashboardData, isLoading: isLoadingDashboard, refetch } = useDashboard(currentAgencyId);
@@ -466,24 +458,6 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  {userAgenciesData && userAgenciesData.length > 1 && (
-                    <Select
-                      value={currentAgencyId || undefined}
-                      onValueChange={(value) => navigate(`/dashboard?agency=${value}`)}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Selecionar agência" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userAgenciesData.map((agency: any) => (
-                          <SelectItem key={agency.id} value={agency.id}>
-                            {agency.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-
                   <ThemeToggle />
                   <NotificationBell userId={user!.id} />
 

@@ -140,53 +140,44 @@ const Submit = () => {
     }
 
     try {
-      // 1. Buscar contexto da agência (via URL query param ou última acessada)
-      const urlParams = new URLSearchParams(window.location.search);
-      let contextAgencyId = urlParams.get("agency");
+      // 🔧 ITEM 1: Buscar sempre última agência acessada (sem query param)
+      const { data: userAgencies, error: agenciesError } = await sb
+        .from("user_agencies")
+        .select("agency_id")
+        .eq("user_id", user.id)
+        .order("last_accessed_at", { ascending: false })
+        .limit(1);
 
-      if (!contextAgencyId) {
-        // Buscar última agência acessada pelo usuário
-        const { data: userAgencies, error: agenciesError } = await sb
-          .from("user_agencies")
-          .select("agency_id")
-          .eq("user_id", user.id)
-          .order("last_accessed_at", { ascending: false })
-          .limit(1);
-
-        if (agenciesError) {
-          console.error("❌ Erro ao buscar agências:", agenciesError);
-          toast({
-            title: "Erro de configuração",
-            description: "Não foi possível carregar suas agências.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // ✅ LINHA 161-169 (Submit.tsx) - ADICIONAR BOTÃO
-        if (!userAgencies || userAgencies.length === 0) {
-          toast({
-            title: "Sem agência vinculada",
-            description: "Você precisa se cadastrar através do link de uma agência.",
-            variant: "destructive",
-            action: (
-              <Button variant="outline" size="sm" onClick={() => navigate("/")}>
-                Voltar para Home
-              </Button>
-            ),
-          });
-          setEvents([]);
-          return;
-        }
-
-        contextAgencyId = userAgencies[0].agency_id;
+      if (agenciesError) {
+        console.error("❌ Erro ao buscar agências:", agenciesError);
+        toast({
+          title: "Erro de configuração",
+          description: "Não foi possível carregar suas agências.",
+          variant: "destructive",
+        });
+        return;
       }
 
+      if (!userAgencies || userAgencies.length === 0) {
+        toast({
+          title: "Sem agência vinculada",
+          description: "Você precisa se cadastrar através do link de uma agência.",
+          variant: "destructive",
+          action: (
+            <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+              Voltar para Home
+            </Button>
+          ),
+        });
+        setEvents([]);
+        return;
+      }
+
+      const contextAgencyId = userAgencies[0].agency_id;
       setAgencyId(contextAgencyId);
 
       console.log("✅ Agência detectada:", {
         agency_id: contextAgencyId,
-        source: urlParams.get("agency") ? "URL query param" : "Última acessada",
         user_id: user.id,
       });
 
@@ -955,8 +946,8 @@ const Submit = () => {
             : "Seu comprovante de venda foi enviado com sucesso e está em análise.",
       });
 
-      // ✅ FASE 3: Preservar contexto de agência ao redirecionar
-      navigate(`/dashboard?agency=${agencyId}`);
+      // 🔧 ITEM 1: Redirecionar para /dashboard sem query params
+      navigate('/dashboard');
 
       setSelectedFile(null);
       setPreviewUrl(null);
