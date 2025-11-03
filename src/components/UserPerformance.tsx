@@ -162,9 +162,12 @@ export const UserPerformance = () => {
   const doc = new jsPDF();
   const eventName = events.find(e => e.id === selectedEventId)?.title || 'Todos';
   
-  // Função para remover acentos
+  // 🔧 CORREÇÃO 4: Função melhorada para remover acentos E emojis
   const removeAccents = (str: string) => {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^\x00-\x7F]/g, ''); // Remove emojis e caracteres especiais
   };
 
   // Título SEM ACENTOS

@@ -150,6 +150,20 @@ const Admin = () => {
     return map;
   }, [events]);
 
+  // 🔧 CORREÇÃO 2: Calcular submissões por evento
+  const submissionsByEvent = useMemo(() => {
+    const counts: Record<string, number> = {};
+    submissions.forEach(sub => {
+      if (sub.post_id) {
+        const post = posts.find(p => p.id === sub.post_id);
+        if (post?.event_id) {
+          counts[post.event_id] = (counts[post.event_id] || 0) + 1;
+        }
+      }
+    });
+    return counts;
+  }, [submissions, posts]);
+
   // Helper para obter título do evento de forma robusta (agora O(1))
   const getEventTitle = (post: any): string => {
     // Método 1: Tentar pelo objeto events
@@ -1247,7 +1261,7 @@ const Admin = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="events" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-9 gap-1 h-auto">
             <TabsTrigger value="events" className="text-xs sm:text-sm py-2">
               Eventos
             </TabsTrigger>
@@ -1265,6 +1279,9 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="audit" className="text-xs sm:text-sm py-2">
               Auditoria
+            </TabsTrigger>
+            <TabsTrigger value="statistics" className="text-xs sm:text-sm py-2">
+              Estatísticas
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2">
               Gerenciamento
@@ -1329,7 +1346,7 @@ const Admin = () => {
                           )}
                           {event.location && <p className="text-sm text-muted-foreground">📍 {event.location}</p>}
                           <p className="text-sm text-muted-foreground mt-1">
-                            📊 Requisitos: {event.required_posts} posts, {event.required_sales} vendas
+                            📊 {submissionsByEvent[event.id] || 0} submissões | Requisitos: {event.required_posts} posts, {event.required_sales} vendas
                           </p>
                           {event.description && <p className="text-muted-foreground mt-2">{event.description}</p>}
                         </div>
@@ -1621,14 +1638,10 @@ const Admin = () => {
                             return;
                           }
 
-                          // 🔧 ITEM 7 CORRIGIDO: Buscar submissions E posts separadamente
-                          // Primeiro buscar as submissões
+                          // 🔧 CORREÇÃO 1: Buscar submissions e profiles separadamente
                           const { data: submissionsData, error: submissionsError } = await sb
                             .from("submissions")
-                            .select(`
-                              *,
-                              profiles(full_name, instagram, email, gender, followers_range)
-                            `)
+                            .select("*")
                             .in("id", submissionIds);
 
                           if (submissionsError) {
@@ -1636,6 +1649,31 @@ const Admin = () => {
                             toast.error("Erro ao buscar submissões");
                             return;
                           }
+
+                          // Buscar perfis dos usuários
+                          const userIds = [...new Set(submissionsData.map(s => s.user_id))];
+                          const { data: profilesData } = await sb
+                            .from("profiles")
+                            .select("id, full_name, instagram, email, gender, followers_range")
+                            .in("id", userIds);
+
+                          // Criar map de profiles
+                          const profilesMap: Record<string, any> = {};
+                          (profilesData || []).forEach(profile => {
+                            profilesMap[profile.id] = profile;
+                          });
+
+                          // Enriquecer submissions com profiles
+                          const enrichedSubmissions = submissionsData.map(sub => ({
+                            ...sub,
+                            profiles: profilesMap[sub.user_id] || {
+                              full_name: 'Usuário Desconhecido',
+                              instagram: null,
+                              email: null,
+                              gender: null,
+                              followers_range: null
+                            }
+                          }));
 
                           // 🔧 ITEM 7: Buscar informações de posts com query robusta
                           let postsMap: Record<string, any> = {};
@@ -1702,8 +1740,8 @@ const Admin = () => {
 
                           console.log("📊 Posts mapeados:", Object.keys(postsMap).length, "de", submissionIds.length);
 
-                          // Preparar dados para exportação
-                          const exportData = (submissionsData || []).map((sub: any) => {
+                          // Preparar dados para exportação usando enrichedSubmissions
+                          const exportData = (enrichedSubmissions || []).map((sub: any) => {
                             // 🔧 Buscar post data com validação extra
                             const eventTitle = postsMap[sub.id]?.event_title || 'Evento não identificado';
                             const postNumber = postsMap[sub.id]?.post_number || 0;
@@ -2196,6 +2234,12 @@ const Admin = () => {
           <TabsContent value="audit" className="space-y-6">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               {currentAgency && <GuestAuditLog agencyId={currentAgency.id} />}
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="statistics" className="space-y-6">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <MemoizedDashboardStats />
             </Suspense>
           </TabsContent>
 

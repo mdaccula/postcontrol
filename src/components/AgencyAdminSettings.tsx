@@ -177,24 +177,24 @@ export const AgencyAdminSettings = () => {
       
       if (uploadError) throw uploadError;
       
-      // Gerar URL assinada
-      const { data: signedData, error: signedError } = await sb.storage
+      // 🔧 CORREÇÃO 5: Usar URL pública permanente (não expira)
+      const { data: publicData } = sb.storage
         .from('screenshots')
-        .createSignedUrl(fileName, 31536000);
+        .getPublicUrl(fileName);
       
-      if (signedError) throw signedError;
+      console.log('✅ Logo URL pública:', publicData.publicUrl);
       
-      // Atualizar agência
+      // Atualizar agência com URL permanente
       const { error: updateError } = await sb
         .from('agencies')
-        .update({ logo_url: signedData.signedUrl })
+        .update({ logo_url: publicData.publicUrl })
         .eq('id', agencyId);
       
       if (updateError) throw updateError;
       
       setUploadProgress(100);
-      setAgencyLogoUrl(signedData.signedUrl);
-      setLogoPreview(signedData.signedUrl);
+      setAgencyLogoUrl(publicData.publicUrl);
+      setLogoPreview(publicData.publicUrl);
       
       toast.success("Logo atualizado com sucesso!");
       setLogoFile(null);

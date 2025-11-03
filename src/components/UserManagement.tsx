@@ -454,7 +454,7 @@ export const UserManagement = () => {
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="all">Todos os eventos</option>
-            <option value="no_event">Sem evento</option>
+            <option value="no_event">🚫 Sem Evento</option>
             {events.map((event: any) => (
               <option key={event.id} value={event.id}>
                 {event.title}

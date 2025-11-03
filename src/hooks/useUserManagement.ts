@@ -99,22 +99,28 @@ export const useUserManagement = () => {
         if (data && data.length > 0) {
           await loadUserEvents(data.map((u) => u.id));
         }
-      } else if (currentAgencyId) {
-        const { data: profilesData, error: profilesError } = await sb
-          .from("profiles")
-          .select("*, gender")
-          .eq("agency_id", currentAgencyId)
-          .order("created_at", { ascending: false });
+    } else if (currentAgencyId) {
+      // 🔧 CORREÇÃO 6: Buscar TODOS os usuários da agência (374), não apenas com submissões (323)
+      console.log("👤 Agency Admin - carregando TODOS os usuários da agência:", currentAgencyId);
+      
+      const { data: profilesData, error: profilesError } = await sb
+        .from("profiles")
+        .select("*, gender")
+        .eq("agency_id", currentAgencyId)
+        .order("created_at", { ascending: false });
 
-        if (profilesError) throw profilesError;
-        setUsers(profilesData || []);
+      if (profilesError) throw profilesError;
+      
+      console.log(`📊 Total de ${profilesData?.length || 0} usuários cadastrados na agência`);
+      setUsers(profilesData || []);
 
-        if (profilesData && profilesData.length > 0) {
-          await loadUserEvents(profilesData.map((u) => u.id));
-        }
-      } else {
-        setUsers([]);
+      if (profilesData && profilesData.length > 0) {
+        // Carregar eventos para TODOS os usuários (incluindo os sem submissões)
+        await loadUserEvents(profilesData.map((u) => u.id));
       }
+    } else {
+      setUsers([]);
+    }
     } catch (error) {
       toast.error("Erro ao carregar usuários", {
         description: "Não foi possível carregar a lista de usuários. Tente novamente.",
