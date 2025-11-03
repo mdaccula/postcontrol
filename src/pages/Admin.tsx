@@ -4,29 +4,67 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Trophy, Plus, Send, Pencil, Check, X, CheckCheck, Trash2, Copy, Columns3, Building2, ArrowLeft, Download } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  Trophy,
+  Plus,
+  Send,
+  Pencil,
+  Check,
+  X,
+  CheckCheck,
+  Trash2,
+  Copy,
+  Columns3,
+  Building2,
+  ArrowLeft,
+  Download,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserRoleQuery } from "@/hooks/useUserRoleQuery";
 import { useNavigate, Link } from "react-router-dom";
 
 // Lazy loading de componentes pesados
-const EventDialog = lazy(() => import("@/components/EventDialog").then(m => ({ default: m.EventDialog })));
-const PostDialog = lazy(() => import("@/components/PostDialog").then(m => ({ default: m.PostDialog })));
-const AddManualSubmissionDialog = lazy(() => import("@/components/AddManualSubmissionDialog").then(m => ({ default: m.AddManualSubmissionDialog })));
-const AgencyAdminSettings = lazy(() => import("@/components/AgencyAdminSettings").then(m => ({ default: m.AgencyAdminSettings })));
-const AdminTutorialGuide = lazy(() => import("@/components/AdminTutorialGuide").then(m => ({ default: m.AdminTutorialGuide })));
-const SubmissionKanban = lazy(() => import("@/components/SubmissionKanban").then(m => ({ default: m.SubmissionKanban })));
-const SubmissionAuditLog = lazy(() => import("@/components/SubmissionAuditLog").then(m => ({ default: m.SubmissionAuditLog })));
-const SubmissionComments = lazy(() => import("@/components/SubmissionComments").then(m => ({ default: m.SubmissionComments })));
-const SubmissionImageDisplay = lazy(() => import("@/components/SubmissionImageDisplay").then(m => ({ default: m.SubmissionImageDisplay })));
-const GuestManager = lazy(() => import("@/components/GuestManager").then(m => ({ default: m.GuestManager })));
-const GuestAuditLog = lazy(() => import("@/components/GuestAuditLog").then(m => ({ default: m.GuestAuditLog })));
+const EventDialog = lazy(() => import("@/components/EventDialog").then((m) => ({ default: m.EventDialog })));
+const PostDialog = lazy(() => import("@/components/PostDialog").then((m) => ({ default: m.PostDialog })));
+const AddManualSubmissionDialog = lazy(() =>
+  import("@/components/AddManualSubmissionDialog").then((m) => ({ default: m.AddManualSubmissionDialog })),
+);
+const AgencyAdminSettings = lazy(() =>
+  import("@/components/AgencyAdminSettings").then((m) => ({ default: m.AgencyAdminSettings })),
+);
+const AdminTutorialGuide = lazy(() =>
+  import("@/components/AdminTutorialGuide").then((m) => ({ default: m.AdminTutorialGuide })),
+);
+const SubmissionKanban = lazy(() =>
+  import("@/components/SubmissionKanban").then((m) => ({ default: m.SubmissionKanban })),
+);
+const SubmissionAuditLog = lazy(() =>
+  import("@/components/SubmissionAuditLog").then((m) => ({ default: m.SubmissionAuditLog })),
+);
+const SubmissionComments = lazy(() =>
+  import("@/components/SubmissionComments").then((m) => ({ default: m.SubmissionComments })),
+);
+const SubmissionImageDisplay = lazy(() =>
+  import("@/components/SubmissionImageDisplay").then((m) => ({ default: m.SubmissionImageDisplay })),
+);
+const GuestManager = lazy(() => import("@/components/GuestManager").then((m) => ({ default: m.GuestManager })));
+const GuestAuditLog = lazy(() => import("@/components/GuestAuditLog").then((m) => ({ default: m.GuestAuditLog })));
 
 // FASE 2: Componentes memoizados para performance
-const MemoizedDashboardStats = lazy(() => import("@/components/memoized/MemoizedDashboardStats").then(m => ({ default: m.MemoizedDashboardStats })));
-const MemoizedUserManagement = lazy(() => import("@/components/memoized/MemoizedUserManagement").then(m => ({ default: m.MemoizedUserManagement })));
-const MemoizedAdminSettings = lazy(() => import("@/components/memoized/MemoizedAdminSettings").then(m => ({ default: m.MemoizedAdminSettings })));
-const MemoizedUserPerformance = lazy(() => import("@/components/memoized/MemoizedUserPerformance").then(m => ({ default: m.MemoizedUserPerformance })));
+const MemoizedDashboardStats = lazy(() =>
+  import("@/components/memoized/MemoizedDashboardStats").then((m) => ({ default: m.MemoizedDashboardStats })),
+);
+const MemoizedUserManagement = lazy(() =>
+  import("@/components/memoized/MemoizedUserManagement").then((m) => ({ default: m.MemoizedUserManagement })),
+);
+const MemoizedAdminSettings = lazy(() =>
+  import("@/components/memoized/MemoizedAdminSettings").then((m) => ({ default: m.MemoizedAdminSettings })),
+);
+const MemoizedUserPerformance = lazy(() =>
+  import("@/components/memoized/MemoizedUserPerformance").then((m) => ({ default: m.MemoizedUserPerformance })),
+);
 
 import { SubmissionZoomDialog } from "@/components/SubmissionZoomDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,8 +74,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 
@@ -92,7 +146,7 @@ const Admin = () => {
   // ✅ FASE 2: Map memoizado para lookups O(1) de eventos
   const eventsById = useMemo(() => {
     const map = new Map();
-    events.forEach(event => map.set(event.id, event));
+    events.forEach((event) => map.set(event.id, event));
     return map;
   }, [events]);
 
@@ -101,14 +155,14 @@ const Admin = () => {
     // Método 1: Tentar pelo objeto events
     if (post.events?.title) return post.events.title;
     if (Array.isArray(post.events) && post.events[0]?.title) return post.events[0].title;
-    
+
     // Método 2: Lookup O(1) usando Map
     if (post.event_id) {
       const foundEvent = eventsById.get(post.event_id);
       if (foundEvent) return foundEvent.title;
     }
-    
-    return 'Evento não encontrado';
+
+    return "Evento não encontrado";
   };
 
   // Debounce para busca
@@ -116,21 +170,21 @@ const Admin = () => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   // ✅ FASE 1: Consolidação de useEffects para evitar múltiplas chamadas
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const agencySlug = urlParams.get('agency');
-    const agencyId = urlParams.get('agencyId');
-    
+    const agencySlug = urlParams.get("agency");
+    const agencyId = urlParams.get("agencyId");
+
     const initializeData = async () => {
       if (!user || (!isAgencyAdmin && !isMasterAdmin)) return;
-      
-      console.log('🚀 [Admin] Inicializando dados...');
-      
+
+      console.log("🚀 [Admin] Inicializando dados...");
+
       // 1. Carregar agência se houver slug/id na URL
       if (agencyId && isMasterAdmin) {
         await loadAgencyById(agencyId);
@@ -139,19 +193,19 @@ const Admin = () => {
       } else {
         await loadCurrentAgency();
       }
-      
+
       // 2. Carregar dados complementares
       loadRejectionTemplates();
       loadUsersCount();
     };
-    
+
     initializeData();
   }, [user, isAgencyAdmin, isMasterAdmin]);
 
   // Recarregar eventos quando currentAgency estiver disponível
   useEffect(() => {
     if (currentAgency) {
-      console.log('✅ [Admin] currentAgency carregado, recarregando eventos...', currentAgency.name);
+      console.log("✅ [Admin] currentAgency carregado, recarregando eventos...", currentAgency.name);
       loadEvents();
       loadUsersCount();
     }
@@ -160,9 +214,9 @@ const Admin = () => {
   // Carregar submissions apenas quando filtro ou agência mudarem
   useEffect(() => {
     if (user && (isAgencyAdmin || isMasterAdmin) && currentAgency) {
-      console.log('🔄 [Admin] Recarregando submissões...', {
+      console.log("🔄 [Admin] Recarregando submissões...", {
         currentAgency: currentAgency.name,
-        submissionEventFilter
+        submissionEventFilter,
       });
       loadSubmissions();
     }
@@ -170,61 +224,60 @@ const Admin = () => {
 
   const loadAgencyById = async (id: string) => {
     const { data } = await sb
-      .from('agencies')
-      .select('id, name, slug, logo_url, subscription_plan')
-      .eq('id', id)
+      .from("agencies")
+      .select("id, name, slug, logo_url, subscription_plan")
+      .eq("id", id)
       .maybeSingle();
-    
+
     if (data) {
       setCurrentAgency(data);
-      console.log('🏢 Master Admin visualizando agência:', data.name);
+      console.log("🏢 Master Admin visualizando agência:", data.name);
     }
   };
-
 
   const loadCurrentAgency = async () => {
     if (!user) return;
 
-    console.log('🔍 [loadCurrentAgency] Iniciando...');
+    console.log("🔍 [loadCurrentAgency] Iniciando...");
 
     // Load user profile
     const { data: profileData, error: profileError } = await sb
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
       .maybeSingle();
-    
+
     if (profileError) {
-      console.error('❌ Erro ao carregar profile:', profileError);
+      console.error("❌ Erro ao carregar profile:", profileError);
       return;
     }
 
-    console.log('✅ Profile carregado:', { 
-      id: profileData?.id, 
+    console.log("✅ Profile carregado:", {
+      id: profileData?.id,
       email: profileData?.email,
-      agency_id: profileData?.agency_id 
+      agency_id: profileData?.agency_id,
     });
-    
+
     setProfile(profileData);
 
     // If master admin and viewing specific agency, use query param
     const urlParams = new URLSearchParams(window.location.search);
-    const agencySlug = urlParams.get('agency');
-    const agencyId = urlParams.get('agencyId');
-    
+    const agencySlug = urlParams.get("agency");
+    const agencyId = urlParams.get("agencyId");
+
     if (agencySlug) {
       const { data, error } = await sb
-        .from('agencies')
-        .select('id, name, slug, logo_url, subscription_plan')
-        .eq('slug', agencySlug)
+        .from("agencies")
+        .select("id, name, slug, logo_url, subscription_plan")
+        .eq("slug", agencySlug)
         .maybeSingle();
-      
+
       if (error) {
-        console.error('❌ Erro ao carregar agência por slug:', error);
+        console.error("❌ Erro ao carregar agência por slug:", error);
         return;
       }
 
-      console.log('🏢 Loaded agency from URL (slug):', data);
+      console.log("🏢 Loaded agency from URL (slug):", data);
       setCurrentAgency(data);
       setAgencySlug(data?.slug || "");
       return;
@@ -232,17 +285,17 @@ const Admin = () => {
 
     if (agencyId && isMasterAdmin) {
       const { data, error } = await sb
-        .from('agencies')
-        .select('id, name, slug, logo_url, subscription_plan')
-        .eq('id', agencyId)
+        .from("agencies")
+        .select("id, name, slug, logo_url, subscription_plan")
+        .eq("id", agencyId)
         .maybeSingle();
-      
+
       if (error) {
-        console.error('❌ Erro ao carregar agência por ID:', error);
+        console.error("❌ Erro ao carregar agência por ID:", error);
         return;
       }
 
-      console.log('🏢 Loaded agency from URL (id):', data);
+      console.log("🏢 Loaded agency from URL (id):", data);
       setCurrentAgency(data);
       setAgencySlug(data?.slug || "");
       return;
@@ -250,46 +303,46 @@ const Admin = () => {
 
     // If agency admin, load their own agency
     if (isAgencyAdmin && !isMasterAdmin && profileData?.agency_id) {
-      console.log('👤 Agency Admin detectado, carregando agência:', profileData.agency_id);
-      
+      console.log("👤 Agency Admin detectado, carregando agência:", profileData.agency_id);
+
       const { data: agencyData, error: agencyError } = await sb
-        .from('agencies')
-        .select('id, name, slug, logo_url, subscription_plan')
-        .eq('id', profileData.agency_id)
+        .from("agencies")
+        .select("id, name, slug, logo_url, subscription_plan")
+        .eq("id", profileData.agency_id)
         .maybeSingle();
-      
+
       if (agencyError) {
-        console.error('❌ Erro ao carregar agência:', agencyError);
-        toast.error('Erro ao carregar dados da agência');
+        console.error("❌ Erro ao carregar agência:", agencyError);
+        toast.error("Erro ao carregar dados da agência");
         return;
       }
 
       if (!agencyData) {
-        console.error('❌ Agência não encontrada para ID:', profileData.agency_id);
-        toast.error('Agência não encontrada');
+        console.error("❌ Agência não encontrada para ID:", profileData.agency_id);
+        toast.error("Agência não encontrada");
         return;
       }
 
-      console.log('✅ Agência carregada:', agencyData);
+      console.log("✅ Agência carregada:", agencyData);
       setCurrentAgency(agencyData);
       setAgencySlug(agencyData?.slug || "");
     } else if (isMasterAdmin && !agencySlug && !agencyId) {
-      console.log('👑 Master Admin sem filtro de agência - visualizando todos os dados');
+      console.log("👑 Master Admin sem filtro de agência - visualizando todos os dados");
     }
   };
 
   const loadAgencyBySlug = async (slug: string) => {
     const { data } = await sb
-      .from('agencies')
-      .select('id, name, slug, logo_url, subscription_plan')
-      .eq('slug', slug)
+      .from("agencies")
+      .select("id, name, slug, logo_url, subscription_plan")
+      .eq("slug", slug)
       .maybeSingle();
-    
+
     setCurrentAgency(data);
   };
 
   const loadRejectionTemplates = async () => {
-    const { data } = await sb.from('rejection_templates').select('*').order('title');
+    const { data } = await sb.from("rejection_templates").select("*").order("title");
     setRejectionTemplatesFromDB(data || []);
   };
 
@@ -299,7 +352,7 @@ const Admin = () => {
     let agencyIdFilter = null;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const queryAgencyId = urlParams.get('agencyId');
+    const queryAgencyId = urlParams.get("agencyId");
 
     if (queryAgencyId && isMasterAdmin) {
       agencyIdFilter = queryAgencyId;
@@ -308,34 +361,28 @@ const Admin = () => {
     } else if (currentAgency) {
       agencyIdFilter = currentAgency.id;
     } else if (isAgencyAdmin) {
-      const { data: profileData } = await sb
-        .from('profiles')
-        .select('agency_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
+      const { data: profileData } = await sb.from("profiles").select("agency_id").eq("id", user.id).maybeSingle();
+
       agencyIdFilter = profileData?.agency_id;
     }
 
-    let countQuery = sb
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-    
+    let countQuery = sb.from("profiles").select("*", { count: "exact", head: true });
+
     if (agencyIdFilter) {
-      countQuery = countQuery.eq('agency_id', agencyIdFilter);
+      countQuery = countQuery.eq("agency_id", agencyIdFilter);
     }
 
     const { count } = await countQuery;
     setUsersCount(count || 0);
   };
 
-const copySlugUrl = () => {
-  const url = `${window.location.origin}/agencia/${agencySlug}`;
-  navigator.clipboard.writeText(url);
-  toast.success("Link copiado!", {
-    description: "URL de cadastro copiada para a área de transferência"
-  });
-};
+  const copySlugUrl = () => {
+    const url = `${window.location.origin}/agencia/${agencySlug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copiado!", {
+      description: "URL de cadastro copiada para a área de transferência",
+    });
+  };
 
   const loadEvents = async () => {
     if (!user) return;
@@ -347,7 +394,7 @@ const copySlugUrl = () => {
 
       // Check if Master Admin is viewing specific agency via agencyId querystring
       const urlParams = new URLSearchParams(window.location.search);
-      const queryAgencyId = urlParams.get('agencyId');
+      const queryAgencyId = urlParams.get("agencyId");
 
       // Determine which agency's data to load
       if (queryAgencyId && isMasterAdmin) {
@@ -358,19 +405,19 @@ const copySlugUrl = () => {
         agencyIdFilter = profile.agency_id;
       } else if (isAgencyAdmin && !profile) {
         const { data: profileData, error: profileError } = await sb
-          .from('profiles')
-          .select('agency_id')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("agency_id")
+          .eq("id", user.id)
           .maybeSingle();
-        
+
         if (profileError) {
-          console.error('Erro ao buscar profile:', profileError);
+          console.error("Erro ao buscar profile:", profileError);
           toast.error("Erro ao carregar dados do usuário");
           return;
         }
 
         agencyIdFilter = profileData?.agency_id;
-        
+
         if (!agencyIdFilter) {
           toast.error("Erro: Usuário não está associado a nenhuma agência.");
           return;
@@ -380,61 +427,61 @@ const copySlugUrl = () => {
       }
 
       // Verify session is active
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
-        toast.error('Sessão expirada. Faça login novamente.');
+        toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
       // Build queries
-      let eventsQuery = supabase.from('events').select('*');
-      let postsQuery = supabase.from('posts').select('*, events(id, title)');
-      
+      let eventsQuery = supabase.from("events").select("*");
+      let postsQuery = supabase.from("posts").select("*, events(id, title)");
+
       if (agencyIdFilter) {
-        eventsQuery = eventsQuery.eq('agency_id', agencyIdFilter);
-        postsQuery = postsQuery.eq('agency_id', agencyIdFilter);
+        eventsQuery = eventsQuery.eq("agency_id", agencyIdFilter);
+        postsQuery = postsQuery.eq("agency_id", agencyIdFilter);
       }
 
       // Execute queries in parallel
-      const [
-        { data: eventsData, error: eventsError },
-        { data: postsData, error: postsError }
-      ] = await Promise.all([
-        eventsQuery.order('created_at', { ascending: false }),
-        postsQuery.order('created_at', { ascending: false })
+      const [{ data: eventsData, error: eventsError }, { data: postsData, error: postsError }] = await Promise.all([
+        eventsQuery.order("created_at", { ascending: false }),
+        postsQuery.order("created_at", { ascending: false }),
       ]);
 
       if (eventsError) {
-        console.error('Erro ao carregar eventos:', eventsError);
+        console.error("Erro ao carregar eventos:", eventsError);
         toast.error(`Erro ao carregar eventos: ${eventsError.message}`);
         return;
       }
 
       if (postsError) {
-        console.error('Erro ao carregar posts:', postsError);
+        console.error("Erro ao carregar posts:", postsError);
         toast.error(`Erro ao carregar posts: ${postsError.message}`);
         return;
       }
 
       // Enrich posts with event data
-      const enrichedPosts = postsData?.map(post => {
-        if (!post.events && post.event_id) {
-          const matchedEvent = eventsData?.find(e => e.id === post.event_id);
-          if (matchedEvent) {
-            return {
-              ...post,
-              events: { id: matchedEvent.id, title: matchedEvent.title }
-            };
+      const enrichedPosts =
+        postsData?.map((post) => {
+          if (!post.events && post.event_id) {
+            const matchedEvent = eventsData?.find((e) => e.id === post.event_id);
+            if (matchedEvent) {
+              return {
+                ...post,
+                events: { id: matchedEvent.id, title: matchedEvent.title },
+              };
+            }
           }
-        }
-        return post;
-      }) || [];
+          return post;
+        }) || [];
 
       setEvents(eventsData || []);
       setPosts(enrichedPosts);
     } catch (error) {
-      console.error('Erro crítico ao carregar eventos:', error);
-      toast.error('Erro ao carregar dados da agência');
+      console.error("Erro crítico ao carregar eventos:", error);
+      toast.error("Erro ao carregar dados da agência");
     } finally {
       setLoadingEvents(false);
     }
@@ -449,7 +496,7 @@ const copySlugUrl = () => {
 
     // Check if Master Admin is viewing specific agency via agencyId querystring
     const urlParams = new URLSearchParams(window.location.search);
-    const queryAgencyId = urlParams.get('agencyId');
+    const queryAgencyId = urlParams.get("agencyId");
 
     // Determine which agency's data to load
     if (queryAgencyId && isMasterAdmin) {
@@ -459,19 +506,13 @@ const copySlugUrl = () => {
     } else if (currentAgency) {
       agencyIdFilter = currentAgency.id;
     } else if (isAgencyAdmin) {
-      const { data: profileData } = await sb
-        .from('profiles')
-        .select('agency_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
+      const { data: profileData } = await sb.from("profiles").select("agency_id").eq("id", user.id).maybeSingle();
+
       agencyIdFilter = profileData?.agency_id;
     }
-    
+
     // Load submissions via posts.agency_id (LEFT JOIN para incluir vendas)
-    let submissionsQuery = sb
-      .from('submissions')
-      .select(`
+    let submissionsQuery = sb.from("submissions").select(`
         *,
         posts(
           post_number, 
@@ -481,35 +522,33 @@ const copySlugUrl = () => {
           events(title, id, event_purpose)
         )
       `);
-    
+
     if (agencyIdFilter) {
-      submissionsQuery = submissionsQuery.eq('agency_id', agencyIdFilter);
+      submissionsQuery = submissionsQuery.eq("agency_id", agencyIdFilter);
     }
-    
+
     // Filtrar por evento específico se não for "all"
     if (submissionEventFilter !== "all") {
-      submissionsQuery = submissionsQuery.eq('posts.event_id', submissionEventFilter);
+      submissionsQuery = submissionsQuery.eq("posts.event_id", submissionEventFilter);
     }
-    
-    const { data: submissionsData } = await submissionsQuery
-      .order('submitted_at', { ascending: false });
+
+    const { data: submissionsData } = await submissionsQuery.order("submitted_at", { ascending: false });
 
     // ✅ FASE 1: Otimização - Buscar perfis e contagens em paralelo
     const userIds = Array.from(new Set((submissionsData || []).map((s: any) => s.user_id)));
-    
+
     const [profilesData, countsData] = await Promise.all([
       // Buscar perfis em lote
       userIds.length > 0
-        ? sb.from('profiles')
-            .select('id, full_name, email, instagram')
-            .in('id', userIds)
+        ? sb.from("profiles").select("id, full_name, email, instagram").in("id", userIds)
         : Promise.resolve({ data: [] }),
-      
+
       // ✅ FASE 1: Query agregada para contagens (evita N+1)
       userIds.length > 0
-        ? sb.from('submissions')
-            .select('user_id')
-            .in('user_id', userIds)
+        ? sb
+            .from("submissions")
+            .select("user_id")
+            .in("user_id", userIds)
             .then(({ data }) => {
               // Agregar contagens no cliente
               const counts: Record<string, number> = {};
@@ -518,13 +557,13 @@ const copySlugUrl = () => {
               });
               return counts;
             })
-        : Promise.resolve({})
+        : Promise.resolve({}),
     ]);
 
     // Indexar perfis por ID
     const profilesById: Record<string, any> = {};
-    (profilesData.data || []).forEach((p: any) => { 
-      profilesById[p.id] = p; 
+    (profilesData.data || []).forEach((p: any) => {
+      profilesById[p.id] = p;
     });
 
     // ✅ FASE 1: NÃO gerar signed URLs aqui - fazer lazy loading depois
@@ -541,37 +580,37 @@ const copySlugUrl = () => {
 
   const handleApproveSubmission = async (submissionId: string) => {
     try {
-      console.log('Aprovando submissão:', submissionId);
+      console.log("Aprovando submissão:", submissionId);
       const { data, error } = await supabase
-        .from('submissions')
+        .from("submissions")
         .update({
-          status: 'approved',
+          status: "approved",
           approved_at: new Date().toISOString(),
-          approved_by: user?.id
+          approved_by: user?.id,
         })
-        .eq('id', submissionId)
+        .eq("id", submissionId)
         .select();
 
-      console.log('Resultado da aprovação:', { data, error });
+      console.log("Resultado da aprovação:", { data, error });
 
       if (error) {
         toast.error("Erro ao aprovar submissão");
-        console.error('Erro detalhado:', error);
+        console.error("Erro detalhado:", error);
       } else {
         toast.success("Submissão aprovada com sucesso");
-        
+
         // Confetti ao aprovar
         confetti({
           particleCount: 100,
           spread: 70,
-          origin: { y: 0.6 }
+          origin: { y: 0.6 },
         });
-        
+
         await loadSubmissions();
       }
     } catch (error) {
       toast.error("Erro ao aprovar submissão");
-      console.error('Exception:', error);
+      console.error("Exception:", error);
     }
   };
 
@@ -583,51 +622,51 @@ const copySlugUrl = () => {
   };
 
   // Linhas 436-481
-const confirmRejection = async () => {
-  if (!selectedSubmissionForRejection) return;
-  
-  setLoadingSubmissions(true);
-  
-  try {
-    const { data, error } = await supabase
-      .from('submissions')
-      .update({
-        status: 'rejected',
-        rejection_reason: rejectionReason || undefined,
-        approved_at: new Date().toISOString(),
-        approved_by: user?.id
-      })
-      .eq('id', selectedSubmissionForRejection)
-      .select();
+  const confirmRejection = async () => {
+    if (!selectedSubmissionForRejection) return;
 
-    if (error) {
+    setLoadingSubmissions(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("submissions")
+        .update({
+          status: "rejected",
+          rejection_reason: rejectionReason || undefined,
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id,
+        })
+        .eq("id", selectedSubmissionForRejection)
+        .select();
+
+      if (error) {
+        toast.error("Erro ao rejeitar submissão");
+        console.error("Erro detalhado:", error);
+        setLoadingSubmissions(false);
+        return;
+      }
+
+      // Recarregar dados antes de fechar
+      await loadSubmissions();
+
+      // Fechar diálogo após sucesso
+      setRejectionDialogOpen(false);
+      setSelectedSubmissionForRejection(null);
+      setRejectionReason("");
+      setRejectionTemplate("");
+
+      toast.success("Submissão rejeitada com sucesso");
+    } catch (error) {
       toast.error("Erro ao rejeitar submissão");
-      console.error('Erro detalhado:', error);
+      console.error("Exception:", error);
+    } finally {
       setLoadingSubmissions(false);
-      return;
     }
-    
-    // Recarregar dados antes de fechar
-    await loadSubmissions();
-    
-    // Fechar diálogo após sucesso
-    setRejectionDialogOpen(false);
-    setSelectedSubmissionForRejection(null);
-    setRejectionReason("");
-    setRejectionTemplate("");
-    
-    toast.success("Submissão rejeitada com sucesso");
-  } catch (error) {
-    toast.error("Erro ao rejeitar submissão");
-    console.error('Exception:', error);
-  } finally {
-    setLoadingSubmissions(false);
-  }
-};
+  };
 
   // Funções de navegação do zoom
   const handleOpenZoom = (submissionId: string) => {
-    const index = getFilteredSubmissions.findIndex(s => s.id === submissionId);
+    const index = getFilteredSubmissions.findIndex((s) => s.id === submissionId);
     if (index !== -1) {
       setZoomSubmissionIndex(index);
       setZoomDialogOpen(true);
@@ -636,13 +675,13 @@ const confirmRejection = async () => {
 
   const handleZoomNext = () => {
     if (zoomSubmissionIndex < getFilteredSubmissions.length - 1) {
-      setZoomSubmissionIndex(prev => prev + 1);
+      setZoomSubmissionIndex((prev) => prev + 1);
     }
   };
 
   const handleZoomPrevious = () => {
     if (zoomSubmissionIndex > 0) {
-      setZoomSubmissionIndex(prev => prev - 1);
+      setZoomSubmissionIndex((prev) => prev - 1);
     }
   };
 
@@ -656,29 +695,31 @@ const confirmRejection = async () => {
 
   const handleStatusChange = async (submissionId: string, newStatus: string) => {
     try {
-      console.log('Alterando status:', submissionId, newStatus);
+      console.log("Alterando status:", submissionId, newStatus);
       const { data, error } = await supabase
-        .from('submissions')
+        .from("submissions")
         .update({
           status: newStatus,
           approved_at: new Date().toISOString(),
-          approved_by: user?.id
+          approved_by: user?.id,
         })
-        .eq('id', submissionId)
+        .eq("id", submissionId)
         .select();
 
-      console.log('Resultado da alteração:', { data, error });
+      console.log("Resultado da alteração:", { data, error });
 
       if (error) {
         toast.error("Erro ao alterar status");
-        console.error('Erro detalhado:', error);
+        console.error("Erro detalhado:", error);
       } else {
-        toast.success(`Status alterado para ${newStatus === 'approved' ? 'aprovado' : newStatus === 'rejected' ? 'rejeitado' : 'pendente'}`);
+        toast.success(
+          `Status alterado para ${newStatus === "approved" ? "aprovado" : newStatus === "rejected" ? "rejeitado" : "pendente"}`,
+        );
         await loadSubmissions();
       }
     } catch (error) {
       toast.error("Erro ao alterar status");
-      console.error('Exception:', error);
+      console.error("Exception:", error);
     }
   };
 
@@ -690,13 +731,13 @@ const confirmRejection = async () => {
     }
 
     const { error } = await sb
-      .from('submissions')
+      .from("submissions")
       .update({
-        status: 'approved',
+        status: "approved",
         approved_at: new Date().toISOString(),
-        approved_by: user?.id
+        approved_by: user?.id,
       })
-      .in('id', ids);
+      .in("id", ids);
 
     if (error) {
       toast.error("Erro ao aprovar submissões em massa");
@@ -796,7 +837,7 @@ const confirmRejection = async () => {
     eventPurposeFilter,
     debouncedSearch,
     dateFilterStart,
-    dateFilterEnd
+    dateFilterEnd,
   ]);
 
   const getPaginatedSubmissions = useMemo(() => {
@@ -814,43 +855,38 @@ const confirmRejection = async () => {
         posts: posts.length,
         submissions: submissions.length,
         users: usersCount,
-        sales: submissions.filter(s => s.submission_type === 'sale' && s.status === 'approved').length
+        sales: submissions.filter((s) => s.submission_type === "sale" && s.status === "approved").length,
       };
     }
-    
+
     const agencyId = currentAgency.id;
     return {
-      events: events.filter(e => e.agency_id === agencyId).length,
-      posts: posts.filter(p => p.agency_id === agencyId).length,
-      submissions: submissions.filter(s => s.agency_id === agencyId).length,
+      events: events.filter((e) => e.agency_id === agencyId).length,
+      posts: posts.filter((p) => p.agency_id === agencyId).length,
+      submissions: submissions.filter((s) => s.agency_id === agencyId).length,
       users: usersCount,
-      sales: submissions.filter(s => 
-        s.agency_id === agencyId && 
-        s.submission_type === 'sale' && 
-        s.status === 'approved'
-      ).length
+      sales: submissions.filter(
+        (s) => s.agency_id === agencyId && s.submission_type === "sale" && s.status === "approved",
+      ).length,
     };
   }, [events, posts, submissions, usersCount, currentAgency]);
 
   // ✅ Item 9: Filtrar eventos por ativo/inativo
   const filteredEvents = useMemo(() => {
     if (eventActiveFilter === "all") return events;
-    if (eventActiveFilter === "active") return events.filter(e => e.is_active === true);
-    return events.filter(e => e.is_active === false);
+    if (eventActiveFilter === "active") return events.filter((e) => e.is_active === true);
+    return events.filter((e) => e.is_active === false);
   }, [events, eventActiveFilter]);
 
   // ✅ Item 10: Filtrar postagens por evento
   const filteredPosts = useMemo(() => {
     if (postEventFilter === "all") return posts;
-    return posts.filter(p => p.event_id === postEventFilter);
+    return posts.filter((p) => p.event_id === postEventFilter);
   }, [posts, postEventFilter]);
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      const { error } = await sb
-        .from('events')
-        .delete()
-        .eq('id', eventId);
+      const { error } = await sb.from("events").delete().eq("id", eventId);
 
       if (error) throw error;
 
@@ -858,7 +894,7 @@ const confirmRejection = async () => {
       await loadEvents();
       setEventToDelete(null);
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error("Error deleting event:", error);
       toast.error("Erro ao excluir evento");
     }
   };
@@ -866,7 +902,7 @@ const confirmRejection = async () => {
   const handleDuplicateEvent = async (event: any) => {
     try {
       const { data: newEvent, error } = await sb
-        .from('events')
+        .from("events")
         .insert({
           title: `${event.title} - Cópia`,
           description: event.description,
@@ -886,10 +922,7 @@ const confirmRejection = async () => {
       if (error) throw error;
 
       // Duplicar requisitos também
-      const { data: requirements } = await sb
-        .from('event_requirements')
-        .select('*')
-        .eq('event_id', event.id);
+      const { data: requirements } = await sb.from("event_requirements").select("*").eq("event_id", event.id);
 
       if (requirements && requirements.length > 0) {
         const newRequirements = requirements.map((req: any) => ({
@@ -900,13 +933,13 @@ const confirmRejection = async () => {
           display_order: req.display_order,
         }));
 
-        await sb.from('event_requirements').insert(newRequirements);
+        await sb.from("event_requirements").insert(newRequirements);
       }
 
       toast.success("Evento duplicado com sucesso! Você pode editá-lo agora.");
       await loadEvents();
     } catch (error) {
-      console.error('Error duplicating event:', error);
+      console.error("Error duplicating event:", error);
       toast.error("Erro ao duplicar evento");
     }
   };
@@ -916,31 +949,26 @@ const confirmRejection = async () => {
 
     try {
       // Deletar todas as submissões associadas primeiro
-      const { error: submissionsError } = await sb
-        .from('submissions')
-        .delete()
-        .eq('post_id', postToDelete.id);
+      const { error: submissionsError } = await sb.from("submissions").delete().eq("post_id", postToDelete.id);
 
       if (submissionsError) throw submissionsError;
 
       // Depois deletar o post
-      const { error: postError } = await sb
-        .from('posts')
-        .delete()
-        .eq('id', postToDelete.id);
+      const { error: postError } = await sb.from("posts").delete().eq("id", postToDelete.id);
 
       if (postError) throw postError;
 
-      const submissionsText = postToDelete.submissionsCount === 1 
-        ? "1 submissão foi deletada" 
-        : `${postToDelete.submissionsCount} submissões foram deletadas`;
-      
-      toast.success(`Postagem deletada com sucesso${postToDelete.submissionsCount > 0 ? `. ${submissionsText}` : ''}`);
+      const submissionsText =
+        postToDelete.submissionsCount === 1
+          ? "1 submissão foi deletada"
+          : `${postToDelete.submissionsCount} submissões foram deletadas`;
+
+      toast.success(`Postagem deletada com sucesso${postToDelete.submissionsCount > 0 ? `. ${submissionsText}` : ""}`);
       await loadEvents();
       await loadSubmissions();
       setPostToDelete(null);
     } catch (error) {
-      console.error('Error deleting post:', error);
+      console.error("Error deleting post:", error);
       toast.error("Erro ao deletar postagem");
     }
   };
@@ -948,13 +976,13 @@ const confirmRejection = async () => {
   const handleDeletePostClick = async (postId: string) => {
     // Verificar quantas submissões estão associadas
     const { data: submissions, count } = await sb
-      .from('submissions')
-      .select('id', { count: 'exact', head: false })
-      .eq('post_id', postId);
+      .from("submissions")
+      .select("id", { count: "exact", head: false })
+      .eq("post_id", postId);
 
-    setPostToDelete({ 
-      id: postId, 
-      submissionsCount: count || 0 
+    setPostToDelete({
+      id: postId,
+      submissionsCount: count || 0,
     });
   };
 
@@ -962,10 +990,7 @@ const confirmRejection = async () => {
     if (!submissionToDelete) return;
 
     try {
-      const { error } = await sb
-        .from('submissions')
-        .delete()
-        .eq('id', submissionToDelete);
+      const { error } = await sb.from("submissions").delete().eq("id", submissionToDelete);
 
       if (error) throw error;
 
@@ -973,14 +998,14 @@ const confirmRejection = async () => {
       await loadSubmissions();
       setSubmissionToDelete(null);
     } catch (error) {
-      console.error('Error deleting submission:', error);
+      console.error("Error deleting submission:", error);
       toast.error("Erro ao deletar submissão");
     }
   };
 
   const getAvailablePostNumbers = () => {
-    const filtered = submissions.filter((s: any) => 
-      submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter
+    const filtered = submissions.filter(
+      (s: any) => submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter,
     );
     const postNumbers = new Set(filtered.map((s: any) => s.posts?.post_number).filter(Boolean));
     return Array.from(postNumbers).sort((a, b) => a - b);
@@ -997,9 +1022,9 @@ const confirmRejection = async () => {
     );
   }
 
-if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
-  return null;
-}
+  if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
@@ -1012,18 +1037,18 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           <div className="flex items-center gap-4">
             {currentAgency?.logo_url ? (
               <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
-                <img 
-                  src={currentAgency.logo_url} 
+                <img
+                  src={currentAgency.logo_url}
                   alt={`Logo ${currentAgency.name}`}
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     const target = e.currentTarget;
-                    target.style.display = 'none';
+                    target.style.display = "none";
                     const parent = target.parentElement;
                     if (parent && currentAgency?.name) {
                       // Use textContent instead of innerHTML to prevent XSS
-                      const fallback = document.createElement('span');
-                      fallback.className = 'text-lg font-bold text-white';
+                      const fallback = document.createElement("span");
+                      fallback.className = "text-lg font-bold text-white";
                       fallback.textContent = currentAgency.name.charAt(0).toUpperCase();
                       parent.appendChild(fallback);
                     }
@@ -1036,9 +1061,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               </div>
             ) : null}
             <div>
-              <h2 className="text-xl font-bold">
-                {profile?.full_name || 'Admin'}
-              </h2>
+              <h2 className="text-xl font-bold">{profile?.full_name || "Admin"}</h2>
               <div className="flex flex-wrap items-center gap-4 text-sm text-white/90">
                 <span>{profile?.email}</span>
                 {currentAgency && (
@@ -1055,7 +1078,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           </div>
           {currentAgency && (
             <Badge variant="secondary" className="text-base px-4 py-2">
-              Plano: {currentAgency.subscription_plan?.toUpperCase() || 'BASIC'}
+              Plano: {currentAgency.subscription_plan?.toUpperCase() || "BASIC"}
             </Badge>
           )}
         </div>
@@ -1068,12 +1091,12 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {currentAgency.logo_url && (
-                  <img 
-                    src={currentAgency.logo_url} 
+                  <img
+                    src={currentAgency.logo_url}
                     alt={`Logo ${currentAgency.name}`}
                     className="h-10 w-10 object-contain rounded-lg bg-card p-1"
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.style.display = "none";
                     }}
                   />
                 )}
@@ -1086,10 +1109,10 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                 </div>
               </div>
               {isMasterAdmin && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
-                    navigate('/master-admin');
+                    navigate("/master-admin");
                     setCurrentAgency(null);
                   }}
                 >
@@ -1123,26 +1146,24 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                 <h1 className="text-xl md:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                   Painel Agência
                 </h1>
-           {agencySlug && (
-  <div className="flex items-center gap-2">
-    <span className="text-xs text-muted-foreground">Link da sua agência:</span>
-    <Badge variant="outline" className="text-sm">
-      <Building2 className="h-3 w-3 mr-1" />
-      {agencySlug}
-    </Badge>
-    <Button 
-      variant="ghost" 
-      size="sm" 
-      onClick={copySlugUrl}
-      className="h-6 w-6 p-0"
-      title="Copiar link de cadastro"
-    >
-      <Copy className="h-3 w-3" />
-    </Button>
-  </div>
-)}
-
-              
+                {agencySlug && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Link da sua agência:</span>
+                    <Badge variant="outline" className="text-sm">
+                      <Building2 className="h-3 w-3 mr-1" />
+                      {agencySlug}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copySlugUrl}
+                      className="h-6 w-6 p-0"
+                      title="Copiar link de cadastro"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -1152,7 +1173,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                   Enviar Postagem
                 </Button>
               </Link>
-              <Button variant="outline" onClick={signOut} className="flex-1 sm:flex-initial">Sair</Button>
+              <Button variant="outline" onClick={signOut} className="flex-1 sm:flex-initial">
+                Sair
+              </Button>
             </div>
           </div>
         </div>
@@ -1216,9 +1239,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vendas Totais</p>
-                <p className="text-2xl font-bold">
-                  {agencyFilteredStats.sales}
-                </p>
+                <p className="text-2xl font-bold">{agencyFilteredStats.sales}</p>
               </div>
             </div>
           </Card>
@@ -1227,14 +1248,30 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
         {/* Main Content */}
         <Tabs defaultValue="events" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1 h-auto">
-            <TabsTrigger value="events" className="text-xs sm:text-sm py-2">Eventos</TabsTrigger>
-            <TabsTrigger value="posts" className="text-xs sm:text-sm py-2">Postagens</TabsTrigger>
-            <TabsTrigger id="submissions-tab" value="submissions" className="text-xs sm:text-sm py-2">Submissões</TabsTrigger>
-            <TabsTrigger id="users-tab" value="users" className="text-xs sm:text-sm py-2">Usuários</TabsTrigger>
-            <TabsTrigger value="guests" className="text-xs sm:text-sm py-2">Convidados</TabsTrigger>
-            <TabsTrigger value="audit" className="text-xs sm:text-sm py-2">Auditoria</TabsTrigger>
-            <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2">Gerenciamento</TabsTrigger>
-            <TabsTrigger id="settings-tab" value="settings" className="text-xs sm:text-sm py-2">Configurações</TabsTrigger>
+            <TabsTrigger value="events" className="text-xs sm:text-sm py-2">
+              Eventos
+            </TabsTrigger>
+            <TabsTrigger value="posts" className="text-xs sm:text-sm py-2">
+              Postagens
+            </TabsTrigger>
+            <TabsTrigger id="submissions-tab" value="submissions" className="text-xs sm:text-sm py-2">
+              Submissões
+            </TabsTrigger>
+            <TabsTrigger id="users-tab" value="users" className="text-xs sm:text-sm py-2">
+              Usuários
+            </TabsTrigger>
+            <TabsTrigger value="guests" className="text-xs sm:text-sm py-2">
+              Convidados
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="text-xs sm:text-sm py-2">
+              Auditoria
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2">
+              Gerenciamento
+            </TabsTrigger>
+            <TabsTrigger id="settings-tab" value="settings" className="text-xs sm:text-sm py-2">
+              Configurações
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="events" className="space-y-6">
@@ -1242,7 +1279,8 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               <div>
                 <h2 className="text-2xl font-bold">Gerenciar Eventos</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {filteredEvents.length} evento{filteredEvents.length !== 1 ? 's' : ''} encontrado{filteredEvents.length !== 1 ? 's' : ''}
+                  {filteredEvents.length} evento{filteredEvents.length !== 1 ? "s" : ""} encontrado
+                  {filteredEvents.length !== 1 ? "s" : ""}
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -1256,10 +1294,14 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                     <SelectItem value="inactive">❌ Apenas Inativos</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button id="create-event-button" className="bg-gradient-primary w-full sm:w-auto" onClick={() => {
-                  setSelectedEvent(null);
-                  setEventDialogOpen(true);
-                }}>
+                <Button
+                  id="create-event-button"
+                  className="bg-gradient-primary w-full sm:w-auto"
+                  onClick={() => {
+                    setSelectedEvent(null);
+                    setEventDialogOpen(true);
+                  }}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Evento
                 </Button>
@@ -1269,7 +1311,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
             <Card className="p-6">
               {filteredEvents.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
-                  {eventActiveFilter === "all" ? "Nenhum evento cadastrado ainda" : "Nenhum evento encontrado com este filtro"}
+                  {eventActiveFilter === "all"
+                    ? "Nenhum evento cadastrado ainda"
+                    : "Nenhum evento encontrado com este filtro"}
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -1280,18 +1324,14 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                           <h3 className="font-bold text-lg">{event.title}</h3>
                           {event.event_date && (
                             <p className="text-sm text-muted-foreground mt-1">
-                              📅 {new Date(event.event_date).toLocaleString('pt-BR')}
+                              📅 {new Date(event.event_date).toLocaleString("pt-BR")}
                             </p>
                           )}
-                          {event.location && (
-                            <p className="text-sm text-muted-foreground">📍 {event.location}</p>
-                          )}
+                          {event.location && <p className="text-sm text-muted-foreground">📍 {event.location}</p>}
                           <p className="text-sm text-muted-foreground mt-1">
                             📊 Requisitos: {event.required_posts} posts, {event.required_sales} vendas
                           </p>
-                          {event.description && (
-                            <p className="text-muted-foreground mt-2">{event.description}</p>
-                          )}
+                          {event.description && <p className="text-muted-foreground mt-2">{event.description}</p>}
                         </div>
                         <div className="flex gap-2 w-full sm:w-auto">
                           <Button
@@ -1349,10 +1389,13 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button className="bg-gradient-primary w-full sm:w-auto" onClick={() => {
-                    setSelectedPost(null);
-                    setPostDialogOpen(true);
-                  }}>
+                  <Button
+                    className="bg-gradient-primary w-full sm:w-auto"
+                    onClick={() => {
+                      setSelectedPost(null);
+                      setPostDialogOpen(true);
+                    }}
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Postagem
                   </Button>
@@ -1363,7 +1406,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
             <Card className="p-6">
               {filteredPosts.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
-                  {postEventFilter === "all" ? "Nenhuma postagem cadastrada ainda" : "Nenhuma postagem para este evento"}
+                  {postEventFilter === "all"
+                    ? "Nenhuma postagem cadastrada ainda"
+                    : "Nenhuma postagem para este evento"}
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -1372,11 +1417,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-bold">Postagem #{post.post_number}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Evento: {getEventTitle(post)}
-                          </p>
+                          <p className="text-sm text-muted-foreground">Evento: {getEventTitle(post)}</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Prazo: {new Date(post.deadline).toLocaleString('pt-BR')}
+                            Prazo: {new Date(post.deadline).toLocaleString("pt-BR")}
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -1413,18 +1456,12 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                 <div>
                   <h2 className="text-2xl font-bold">Submissões de Usuários</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Total: {getFilteredSubmissions.length} submiss{getFilteredSubmissions.length === 1 ? 'ão' : 'ões'}
-                    {submissionEventFilter !== "all" && (
-                      <span className="text-xs ml-1">(filtrado por evento)</span>
-                    )}
+                    Total: {getFilteredSubmissions.length} submiss{getFilteredSubmissions.length === 1 ? "ão" : "ões"}
+                    {submissionEventFilter !== "all" && <span className="text-xs ml-1">(filtrado por evento)</span>}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setKanbanView(!kanbanView)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setKanbanView(!kanbanView)}>
                     <Columns3 className="mr-2 h-4 w-4" />
                     {kanbanView ? "Ver Lista" : "Ver Kanban"}
                   </Button>
@@ -1434,11 +1471,14 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               {/* Filtros sempre visíveis */}
               <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  <Select value={submissionEventFilter} onValueChange={(v) => {
-                    setSubmissionEventFilter(v);
-                    setSubmissionPostFilter("all");
-                    setCurrentPage(1);
-                  }}>
+                  <Select
+                    value={submissionEventFilter}
+                    onValueChange={(v) => {
+                      setSubmissionEventFilter(v);
+                      setSubmissionPostFilter("all");
+                      setCurrentPage(1);
+                    }}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Filtrar por evento" />
                     </SelectTrigger>
@@ -1451,8 +1491,8 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select 
-                    value={submissionPostFilter} 
+                  <Select
+                    value={submissionPostFilter}
                     onValueChange={(v) => {
                       setSubmissionPostFilter(v);
                       setCurrentPage(1);
@@ -1471,8 +1511,8 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select 
-                    value={submissionStatusFilter} 
+                  <Select
+                    value={submissionStatusFilter}
                     onValueChange={(v) => {
                       setSubmissionStatusFilter(v);
                       setCurrentPage(1);
@@ -1490,10 +1530,10 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <Select 
-                    value={submissionTypeFilter} 
+                  <Select
+                    value={submissionTypeFilter}
                     onValueChange={(v) => {
                       setSubmissionTypeFilter(v);
                       setCurrentPage(1);
@@ -1509,9 +1549,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                       <SelectItem value="sale">💰 Vendas</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                  <Select 
-                    value={eventPurposeFilter} 
+
+                  <Select
+                    value={eventPurposeFilter}
                     onValueChange={(v) => {
                       setEventPurposeFilter(v);
                       setCurrentPage(1);
@@ -1528,123 +1568,153 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                  {submissionEventFilter !== "all" && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        onClick={async () => {
-                          try {
-                            const XLSX = await import('xlsx');
-                            
-                            // Aplicar TODOS os filtros ativos
-                            let filteredSubmissions = getFilteredSubmissions;
-                            
-                            if (!filteredSubmissions || filteredSubmissions.length === 0) {
-                              toast.error('Nenhuma submissão encontrada com os filtros aplicados');
-                              return;
-                            }
 
-                            // Buscar dados completos das submissões filtradas
-                            const submissionIds = filteredSubmissions.map(s => s.id);
-                            
-                            if (submissionIds.length === 0) {
-                              toast.error('Nenhuma submissão disponível para exportar');
-                              return;
-                            }
-                            
-                            // 🔧 ITEM 7: Buscar submissions E posts separadamente para evitar erro com vendas
-                            const [submissionsResult, postsResult] = await Promise.all([
-                              // Buscar submissões com profiles
-                              sb.from('submissions')
-                                .select(`
-                                  *,
-                                  profiles(full_name, instagram, email, gender, followers_range)
-                                `)
-                                .in('id', submissionIds),
-                              
-                              // Buscar posts com eventos (apenas para submissões que têm post_id)
-                              sb.from('submissions')
-                                .select('id, post_id, posts!inner(post_number, event_id, events!inner(title))')
-                                .in('id', submissionIds)
-                                .not('post_id', 'is', null)
-                            ]);
+                {submissionEventFilter !== "all" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const XLSX = await import("xlsx");
 
-                            if (submissionsResult.error) {
-                              console.error('Erro ao buscar submissões:', submissionsResult.error);
-                              toast.error('Erro ao buscar submissões');
-                              return;
-                            }
+                          // Aplicar TODOS os filtros ativos
+                          let filteredSubmissions = getFilteredSubmissions;
 
-                            // Criar map de posts para lookup rápido
-                            const postsMap: Record<string, any> = {};
-                            (postsResult.data || []).forEach((item: any) => {
-                              postsMap[item.id] = item.posts;
-                            });
-
-                            // Preparar dados para exportação
-                            const exportData = (submissionsResult.data || []).map((sub: any) => {
-                              const postData = sub.post_id ? postsMap[sub.id] : null;
-                              
-                              return {
-                                'Tipo': sub.submission_type === 'post' ? 'Postagem' : 'Venda',
-                                'Evento': postData?.events?.title || 'N/A',
-                                'Número da Postagem': postData?.post_number || 'N/A',
-                                'Nome': sub.profiles?.full_name || 'N/A',
-                                'Instagram': sub.profiles?.instagram 
-                                  ? `https://instagram.com/${sub.profiles.instagram.replace('@', '')}` 
-                                  : 'N/A',
-                                'Email': sub.profiles?.email || 'N/A',
-                                'Gênero': sub.profiles?.gender || 'N/A',
-                                'Seguidores': sub.profiles?.followers_range || 'N/A',
-                                'Status': sub.status === 'approved' 
-                                  ? 'Aprovado' 
-                                  : sub.status === 'rejected' 
-                                    ? 'Rejeitado' 
-                                    : 'Pendente',
-                                'Data de Envio': new Date(sub.submitted_at).toLocaleString('pt-BR'),
-                                'Motivo Rejeição': sub.rejection_reason || 'N/A'
-                              };
-                            });
-
-                            // Criar worksheet e workbook
-                            const ws = XLSX.utils.json_to_sheet(exportData);
-                            const wb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(wb, ws, 'Submissões');
-
-                            // Download
-                            const eventName = events.find(e => e.id === submissionEventFilter)?.title || 'filtradas';
-                            XLSX.writeFile(wb, `submissoes_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`);
-                            
-                            toast.success(`${exportData.length} submissão(ões) exportada(s) com sucesso!`);
-                          } catch (error) {
-                            console.error('Erro ao exportar:', error);
-                            toast.error('Erro ao exportar submissões');
+                          if (!filteredSubmissions || filteredSubmissions.length === 0) {
+                            toast.error("Nenhuma submissão encontrada com os filtros aplicados");
+                            return;
                           }
-                        }}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Exportar Submissões
-                      </Button>
-                      <Button 
-                        onClick={() => setAddSubmissionDialogOpen(true)}
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Adicionar Submissão Manual
-                      </Button>
-                    </>
-                  )}
-                </div>
+
+                          // Buscar dados completos das submissões filtradas
+                          const submissionIds = filteredSubmissions.map((s) => s.id);
+
+                          if (submissionIds.length === 0) {
+                            toast.error("Nenhuma submissão disponível para exportar");
+                            return;
+                          }
+
+                          // 🔧 ITEM 7 CORRIGIDO: Buscar submissions E posts separadamente
+                          const [submissionsResult, postsResult] = await Promise.all([
+                            sb
+                              .from("submissions")
+                              .select(
+                                `
+      *,
+      profiles(full_name, instagram, email, gender, followers_range)
+    `,
+                              )
+                              .in("id", submissionIds),
+
+                            // 🔧 Buscar posts com LEFT JOIN (não inner) para não falhar
+                            sb
+                              .from("submissions")
+                              .select(
+                                `
+      id,
+      post_id,
+      posts (
+        post_number,
+        event_id,
+        events (
+          title
+        )
+      )
+    `,
+                              )
+                              .in("id", submissionIds),
+                          ]);
+
+                          if (submissionsResult.error) {
+                            console.error("❌ Erro ao buscar submissões:", submissionsResult.error);
+                            toast.error("Erro ao buscar submissões");
+                            return;
+                          }
+
+                          if (postsResult.error) {
+                            console.error("⚠️ Erro ao buscar posts (não crítico):", postsResult.error);
+                            // Continua mesmo se falhar, usa fallback
+                          }
+
+                          // Criar map de posts com validação
+                          const postsMap: Record<string, any> = {};
+                          (postsResult.data || []).forEach((item: any) => {
+                            if (item?.post_id && item?.posts) {
+                              // 🔧 Validar antes de adicionar
+                              postsMap[item.id] = item.posts;
+                            }
+                          });
+
+                          console.log("📊 Posts mapeados:", Object.keys(postsMap).length, "de", submissionIds.length);
+
+                          // Preparar dados para exportação
+                          const exportData = (submissionsResult.data || []).map((sub: any) => {
+                            // 🔧 Buscar post data com validação extra
+                            let postData = null;
+                            let eventTitle = "N/A";
+                            let postNumber = "N/A";
+
+                            if (sub.post_id && postsMap[sub.id]) {
+                              postData = postsMap[sub.id];
+                              eventTitle = postData?.events?.title || "Evento Desconhecido";
+                              postNumber = postData?.post_number?.toString() || "N/A";
+                            }
+
+                            return {
+                              Tipo: sub.submission_type === "post" ? "Postagem" : "Venda",
+                              Evento: eventTitle,
+                              "Número da Postagem": postNumber,
+                              Nome: sub.profiles?.full_name || "N/A",
+                              Instagram: sub.profiles?.instagram
+                                ? `https://instagram.com/${sub.profiles.instagram.replace("@", "")}`
+                                : "N/A",
+                              Email: sub.profiles?.email || "N/A",
+                              Gênero: sub.profiles?.gender || "N/A",
+                              Seguidores: sub.profiles?.followers_range || "N/A",
+                              Status:
+                                sub.status === "approved"
+                                  ? "Aprovado"
+                                  : sub.status === "rejected"
+                                    ? "Rejeitado"
+                                    : "Pendente",
+                              "Data de Envio": new Date(sub.submitted_at).toLocaleString("pt-BR"),
+                              "Motivo Rejeição": sub.rejection_reason || "N/A",
+                            };
+                          });
+
+                          // Criar worksheet e workbook
+                          const ws = XLSX.utils.json_to_sheet(exportData);
+                          const wb = XLSX.utils.book_new();
+                          XLSX.utils.book_append_sheet(wb, ws, "Submissões");
+
+                          // Download
+                          const eventName = events.find((e) => e.id === submissionEventFilter)?.title || "filtradas";
+                          XLSX.writeFile(wb, `submissoes_${eventName}_${new Date().toISOString().split("T")[0]}.xlsx`);
+
+                          toast.success(`${exportData.length} submissão(ões) exportada(s) com sucesso!`);
+                        } catch (error) {
+                          console.error("Erro ao exportar:", error);
+                          toast.error("Erro ao exportar submissões");
+                        }
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar Submissões
+                    </Button>
+                    <Button
+                      onClick={() => setAddSubmissionDialogOpen(true)}
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar Submissão Manual
+                    </Button>
+                  </>
+                )}
+              </div>
 
               {kanbanView ? (
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                  <SubmissionKanban 
-                    submissions={getFilteredSubmissions} 
-                    onUpdate={loadSubmissions}
-                    userId={user?.id}
-                  />
+                  <SubmissionKanban submissions={getFilteredSubmissions} onUpdate={loadSubmissions} userId={user?.id} />
                 </Suspense>
               ) : submissionEventFilter === "all" ? (
                 <Card className="p-12 text-center">
@@ -1662,389 +1732,402 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
               ) : (
                 <>
                   <div className="flex flex-col gap-3">
-                {selectedSubmissions.size > 0 && (
-                  <Button onClick={handleBulkApprove} className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
-                    <CheckCheck className="mr-2 h-4 w-4" />
-                    Aprovar {selectedSubmissions.size}
-                  </Button>
-                )}
-                
-                {/* Busca e paginação */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <Input
-                    placeholder="Buscar por nome, email ou Instagram..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="max-w-sm"
-                  />
-                  <Select value={itemsPerPage.toString()} onValueChange={(v) => {
-                    setItemsPerPage(Number(v));
-                    setCurrentPage(1);
-                  }}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10 por página</SelectItem>
-                      <SelectItem value="30">30 por página</SelectItem>
-                      <SelectItem value="50">50 por página</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {selectedSubmissions.size > 0 && (
+                      <Button onClick={handleBulkApprove} className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
+                        <CheckCheck className="mr-2 h-4 w-4" />
+                        Aprovar {selectedSubmissions.size}
+                      </Button>
+                    )}
 
-                {/* Filtros por data */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="flex-1">
-                    <Label className="text-sm mb-1">Data Inicial</Label>
-                    <Input
-                      type="date"
-                      value={dateFilterStart}
-                      onChange={(e) => {
-                        setDateFilterStart(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-sm mb-1">Data Final</Label>
-                    <Input
-                      type="date"
-                      value={dateFilterEnd}
-                      onChange={(e) => {
-                        setDateFilterEnd(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                    />
-                  </div>
-                  {(dateFilterStart || dateFilterEnd) && (
-                    <div className="flex items-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setDateFilterStart("");
-                          setDateFilterEnd("");
+                    {/* Busca e paginação */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <Input
+                        placeholder="Buscar por nome, email ou Instagram..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="max-w-sm"
+                      />
+                      <Select
+                        value={itemsPerPage.toString()}
+                        onValueChange={(v) => {
+                          setItemsPerPage(Number(v));
                           setCurrentPage(1);
                         }}
                       >
-                        Limpar Datas
-                      </Button>
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10 por página</SelectItem>
+                          <SelectItem value="30">30 por página</SelectItem>
+                          <SelectItem value="50">50 por página</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
-                </div>
-                </div>
-              
-              <Card className="p-6">
-                {getFilteredSubmissions.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
-                    Nenhuma submissão encontrada com os filtros selecionados
-                  </p>
-                ) : (
-                  <>
-                    <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-4 border-b">
-                      <Checkbox
-                        checked={selectedSubmissions.size === getPaginatedSubmissions.length && getPaginatedSubmissions.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        Selecionar todos desta página ({getPaginatedSubmissions.length})
-                      </span>
+
+                    {/* Filtros por data */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1">
+                        <Label className="text-sm mb-1">Data Inicial</Label>
+                        <Input
+                          type="date"
+                          value={dateFilterStart}
+                          onChange={(e) => {
+                            setDateFilterStart(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-sm mb-1">Data Final</Label>
+                        <Input
+                          type="date"
+                          value={dateFilterEnd}
+                          onChange={(e) => {
+                            setDateFilterEnd(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                        />
+                      </div>
+                      {(dateFilterStart || dateFilterEnd) && (
+                        <div className="flex items-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setDateFilterStart("");
+                              setDateFilterEnd("");
+                              setCurrentPage(1);
+                            }}
+                          >
+                            Limpar Datas
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {getPaginatedSubmissions.map((submission: any) => (
-                    <Card key={submission.id} className="p-4 sm:p-6">
-                      <div className="space-y-4">
-                        {/* Layout Mobile e Desktop */}
-                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                          {/* Checkbox de seleção */}
-                          <div className="flex items-start pt-2 order-1 sm:order-1">
+                  </div>
+
+                  <Card className="p-6">
+                    {getFilteredSubmissions.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        Nenhuma submissão encontrada com os filtros selecionados
+                      </p>
+                    ) : (
+                      <>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 pb-4 border-b">
                             <Checkbox
-                              checked={selectedSubmissions.has(submission.id)}
-                              onCheckedChange={() => toggleSubmissionSelection(submission.id)}
+                              checked={
+                                selectedSubmissions.size === getPaginatedSubmissions.length &&
+                                getPaginatedSubmissions.length > 0
+                              }
+                              onCheckedChange={toggleSelectAll}
                             />
+                            <span className="text-sm text-muted-foreground">
+                              Selecionar todos desta página ({getPaginatedSubmissions.length})
+                            </span>
                           </div>
+                          {getPaginatedSubmissions.map((submission: any) => (
+                            <Card key={submission.id} className="p-4 sm:p-6">
+                              <div className="space-y-4">
+                                {/* Layout Mobile e Desktop */}
+                                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                                  {/* Checkbox de seleção */}
+                                  <div className="flex items-start pt-2 order-1 sm:order-1">
+                                    <Checkbox
+                                      checked={selectedSubmissions.has(submission.id)}
+                                      onCheckedChange={() => toggleSubmissionSelection(submission.id)}
+                                    />
+                                  </div>
 
-          {/* Screenshots */}
-          <div className="w-full sm:w-48 flex-shrink-0 order-2 sm:order-2 space-y-2">
-            {/* Screenshot principal (post/venda) */}
-            <div 
-              className="h-64 sm:h-48 cursor-pointer"
-              onClick={() => handleOpenZoom(submission.id)}
-            >
-              <Suspense fallback={<Skeleton className="w-full h-full rounded-lg" />}>
-                <SubmissionImageDisplay
-                  screenshotPath={submission.screenshot_path}
-                  screenshotUrl={submission.screenshot_url}
-                  alt="Screenshot da postagem"
-                  className="w-full h-full object-cover rounded-lg border hover:opacity-80 transition-opacity"
-                />
-              </Suspense>
-            </div>
-
-            {/* 🆕 Screenshot do perfil (se existir) */}
-            {submission.profile_screenshot_path && (
-              <div className="h-40 sm:h-32">
-                <Suspense fallback={<Skeleton className="w-full h-full rounded-lg" />}>
-                  <SubmissionImageDisplay
-                    screenshotPath={submission.profile_screenshot_path}
-                    alt="Screenshot do perfil"
-                    className="w-full h-full object-cover rounded-lg border opacity-80"
-                  />
-                </Suspense>
-                <p className="text-xs text-muted-foreground text-center mt-1">Print do Perfil</p>
-              </div>
-            )}
-
-            {/* 🆕 Faixa de seguidores (se existir) */}
-            {submission.followers_range && (
-              <div className="bg-primary/10 rounded px-2 py-1 text-center">
-                <p className="text-xs font-medium text-primary">
-                  👥 {submission.followers_range}
-                </p>
-              </div>
-            )}
-          </div>
-
-                          {/* Informações do usuário */}
-                          <div className="flex-1 space-y-3 order-3 sm:order-3">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                              <div>
-                                <h3 className="font-bold text-lg">
-                                  {submission.profiles?.full_name || 'Nome não disponível'}
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {submission.profiles?.email || 'Email não disponível'}
-                                </p>
-                                {submission.profiles?.instagram && (
-                                  <p className="text-sm font-medium text-primary mt-1">
-                                    @{submission.profiles.instagram}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="sm:text-right">
-                                <div className="flex flex-col sm:items-end gap-1">
-                                  {submission.submission_type === "sale" ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-500 font-medium">
-                                        💰 Comprovante de Venda
-                                      </span>
+                                  {/* Screenshots */}
+                                  <div className="w-full sm:w-48 flex-shrink-0 order-2 sm:order-2 space-y-2">
+                                    {/* Screenshot principal (post/venda) */}
+                                    <div
+                                      className="h-64 sm:h-48 cursor-pointer"
+                                      onClick={() => handleOpenZoom(submission.id)}
+                                    >
+                                      <Suspense fallback={<Skeleton className="w-full h-full rounded-lg" />}>
+                                        <SubmissionImageDisplay
+                                          screenshotPath={submission.screenshot_path}
+                                          screenshotUrl={submission.screenshot_url}
+                                          alt="Screenshot da postagem"
+                                          className="w-full h-full object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                                        />
+                                      </Suspense>
                                     </div>
-                                  ) : (
-                                    <p className="text-sm font-medium">
-                                      Postagem #{submission.posts?.post_number}
-                                    </p>
-                                  )}
-                                  <p className="text-xs text-muted-foreground">
-                                    {
-                                      // Suporte para events como objeto ou array
-                                      Array.isArray(submission.posts?.events)
-                                        ? submission.posts?.events[0]?.title || 'N/A'
-                                        : submission.posts?.events?.title || 'N/A'
-                                    }
-                                  </p>
-                                </div>
-                                <div className="mt-2">
-                                  {submission.status === 'pending' && (
-                                    <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-500">
-                                      Aguardando
-                                    </span>
-                                  )}
-                                  {submission.status === 'approved' && (
-                                    <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-500">
-                                      Aprovado
-                                    </span>
-                                  )}
-                                  {submission.status === 'rejected' && (
-                                    <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-500">
-                                      Rejeitado
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="border-t pt-3">
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                                <div>
-                                  <p className="text-muted-foreground">Data de Envio:</p>
-                                  <p className="font-medium">
-                                    {new Date(submission.submitted_at).toLocaleString('pt-BR')}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Prazo da Postagem:</p>
-                                  <p className="font-medium">
-                                    {submission.posts?.deadline 
-                                      ? new Date(submission.posts.deadline).toLocaleString('pt-BR')
-                                      : 'N/A'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Total de Postagens:</p>
-                                  <p className="font-medium text-primary">
-                                    {submission.total_submissions} postagem{submission.total_submissions !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
 
-                            <div className="border-t pt-3 flex flex-col sm:flex-row gap-2">
-                              <div className="flex-1">
-                                <label className="text-sm text-muted-foreground mb-1 block">Status da Submissão:</label>
-                                <Select 
-                                  value={submission.status} 
-                                  onValueChange={(newStatus) => handleStatusChange(submission.id, newStatus)}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pending">Aguardando aprovação</SelectItem>
-                                    <SelectItem value="approved">Aprovado</SelectItem>
-                                    <SelectItem value="rejected">Rejeitado</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex items-end">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setAuditLogSubmissionId(submission.id)}
-                                >
-                                  Ver Histórico
-                                </Button>
-                              </div>
-                            </div>
+                                    {/* 🆕 Screenshot do perfil (se existir) */}
+                                    {submission.profile_screenshot_path && (
+                                      <div className="h-40 sm:h-32">
+                                        <Suspense fallback={<Skeleton className="w-full h-full rounded-lg" />}>
+                                          <SubmissionImageDisplay
+                                            screenshotPath={submission.profile_screenshot_path}
+                                            alt="Screenshot do perfil"
+                                            className="w-full h-full object-cover rounded-lg border opacity-80"
+                                          />
+                                        </Suspense>
+                                        <p className="text-xs text-muted-foreground text-center mt-1">
+                                          Print do Perfil
+                                        </p>
+                                      </div>
+                                    )}
 
-                            {submission.status === 'pending' && (
-                              <div className="border-t pt-3 flex flex-col sm:flex-row gap-2">
-                                <Button 
-                                  size="sm" 
-                                  className="bg-green-500 hover:bg-green-600 w-full sm:w-auto"
-                                  onClick={() => handleApproveSubmission(submission.id)}
-                                >
-                                  <Check className="mr-2 h-4 w-4" />
-                                  Aprovar
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => handleRejectSubmission(submission.id)}
-                                >
-                                  <X className="mr-2 h-4 w-4" />
-                                  Rejeitar
-                                </Button>
+                                    {/* 🆕 Faixa de seguidores (se existir) */}
+                                    {submission.followers_range && (
+                                      <div className="bg-primary/10 rounded px-2 py-1 text-center">
+                                        <p className="text-xs font-medium text-primary">
+                                          👥 {submission.followers_range}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Informações do usuário */}
+                                  <div className="flex-1 space-y-3 order-3 sm:order-3">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                      <div>
+                                        <h3 className="font-bold text-lg">
+                                          {submission.profiles?.full_name || "Nome não disponível"}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                          {submission.profiles?.email || "Email não disponível"}
+                                        </p>
+                                        {submission.profiles?.instagram && (
+                                          <p className="text-sm font-medium text-primary mt-1">
+                                            @{submission.profiles.instagram}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="sm:text-right">
+                                        <div className="flex flex-col sm:items-end gap-1">
+                                          {submission.submission_type === "sale" ? (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-500 font-medium">
+                                                💰 Comprovante de Venda
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <p className="text-sm font-medium">
+                                              Postagem #{submission.posts?.post_number}
+                                            </p>
+                                          )}
+                                          <p className="text-xs text-muted-foreground">
+                                            {
+                                              // Suporte para events como objeto ou array
+                                              Array.isArray(submission.posts?.events)
+                                                ? submission.posts?.events[0]?.title || "N/A"
+                                                : submission.posts?.events?.title || "N/A"
+                                            }
+                                          </p>
+                                        </div>
+                                        <div className="mt-2">
+                                          {submission.status === "pending" && (
+                                            <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-500">
+                                              Aguardando
+                                            </span>
+                                          )}
+                                          {submission.status === "approved" && (
+                                            <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-500">
+                                              Aprovado
+                                            </span>
+                                          )}
+                                          {submission.status === "rejected" && (
+                                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-500">
+                                              Rejeitado
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="border-t pt-3">
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                                        <div>
+                                          <p className="text-muted-foreground">Data de Envio:</p>
+                                          <p className="font-medium">
+                                            {new Date(submission.submitted_at).toLocaleString("pt-BR")}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">Prazo da Postagem:</p>
+                                          <p className="font-medium">
+                                            {submission.posts?.deadline
+                                              ? new Date(submission.posts.deadline).toLocaleString("pt-BR")
+                                              : "N/A"}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-muted-foreground">Total de Postagens:</p>
+                                          <p className="font-medium text-primary">
+                                            {submission.total_submissions} postagem
+                                            {submission.total_submissions !== 1 ? "s" : ""}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="border-t pt-3 flex flex-col sm:flex-row gap-2">
+                                      <div className="flex-1">
+                                        <label className="text-sm text-muted-foreground mb-1 block">
+                                          Status da Submissão:
+                                        </label>
+                                        <Select
+                                          value={submission.status}
+                                          onValueChange={(newStatus) => handleStatusChange(submission.id, newStatus)}
+                                        >
+                                          <SelectTrigger className="w-full">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="pending">Aguardando aprovação</SelectItem>
+                                            <SelectItem value="approved">Aprovado</SelectItem>
+                                            <SelectItem value="rejected">Rejeitado</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex items-end">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setAuditLogSubmissionId(submission.id)}
+                                        >
+                                          Ver Histórico
+                                        </Button>
+                                      </div>
+                                    </div>
+
+                                    {submission.status === "pending" && (
+                                      <div className="border-t pt-3 flex flex-col sm:flex-row gap-2">
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-500 hover:bg-green-600 w-full sm:w-auto"
+                                          onClick={() => handleApproveSubmission(submission.id)}
+                                        >
+                                          <Check className="mr-2 h-4 w-4" />
+                                          Aprovar
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          className="w-full sm:w-auto"
+                                          onClick={() => handleRejectSubmission(submission.id)}
+                                        >
+                                          <X className="mr-2 h-4 w-4" />
+                                          Rejeitar
+                                        </Button>
+                                      </div>
+                                    )}
+
+                                    {/* Botão de deletar sempre visível */}
+                                    <div className="border-t pt-3">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
+                                        onClick={() => setSubmissionToDelete(submission.id)}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Deletar Submissão
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Seção de Comentários */}
+                                <div className="border-t pt-4">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedComments);
+                                      if (newExpanded.has(submission.id)) {
+                                        newExpanded.delete(submission.id);
+                                      } else {
+                                        newExpanded.add(submission.id);
+                                      }
+                                      setExpandedComments(newExpanded);
+                                    }}
+                                    className="mb-3"
+                                  >
+                                    {expandedComments.has(submission.id) ? "Ocultar" : "Mostrar"} Comentários
+                                  </Button>
+
+                                  {expandedComments.has(submission.id) && (
+                                    <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                                      <SubmissionComments
+                                        submissionId={submission.id}
+                                        onCommentAdded={loadSubmissions}
+                                      />
+                                    </Suspense>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                            
-                            {/* Botão de deletar sempre visível */}
-                            <div className="border-t pt-3">
+                            </Card>
+                          ))}
+                        </div>
+
+                        {/* Paginação */}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                            <div className="text-sm text-muted-foreground">
+                              Mostrando {(currentPage - 1) * itemsPerPage + 1} a{" "}
+                              {Math.min(currentPage * itemsPerPage, getFilteredSubmissions.length)} de{" "}
+                              {getFilteredSubmissions.length} submissões
+                            </div>
+                            <div className="flex gap-2">
                               <Button
-                                size="sm"
                                 variant="outline"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
-                                onClick={() => setSubmissionToDelete(submission.id)}
+                                size="sm"
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Deletar Submissão
+                                Anterior
+                              </Button>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                  let pageNum;
+                                  if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                  } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                  } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                  } else {
+                                    pageNum = currentPage - 2 + i;
+                                  }
+
+                                  return (
+                                    <Button
+                                      key={pageNum}
+                                      variant={currentPage === pageNum ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => setCurrentPage(pageNum)}
+                                      className="w-10"
+                                    >
+                                      {pageNum}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                              >
+                                Próxima
                               </Button>
                             </div>
                           </div>
-                        </div>
-
-                        {/* Seção de Comentários */}
-                        <div className="border-t pt-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newExpanded = new Set(expandedComments);
-                              if (newExpanded.has(submission.id)) {
-                                newExpanded.delete(submission.id);
-                              } else {
-                                newExpanded.add(submission.id);
-                              }
-                              setExpandedComments(newExpanded);
-                            }}
-                            className="mb-3"
-                          >
-                            {expandedComments.has(submission.id) ? "Ocultar" : "Mostrar"} Comentários
-                          </Button>
-                          
-                          {expandedComments.has(submission.id) && (
-                            <Suspense fallback={<Skeleton className="h-32 w-full" />}>
-                              <SubmissionComments 
-                                submissionId={submission.id}
-                                onCommentAdded={loadSubmissions}
-                              />
-                            </Suspense>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-                
-                {/* Paginação */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                    <div className="text-sm text-muted-foreground">
-                      Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, getFilteredSubmissions.length)} de {getFilteredSubmissions.length} submissões
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        Anterior
-                      </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
-                              className="w-10"
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Próxima
-                      </Button>
-                    </div>
-                    </div>
-                  )}
-                  </>
-                )}
-              </Card>
-              </>
+                        )}
+                      </>
+                    )}
+                  </Card>
+                </>
               )}
             </div>
           </TabsContent>
@@ -2070,8 +2153,12 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           <TabsContent value="dashboard" className="space-y-6">
             <Tabs defaultValue="events-stats" className="space-y-6">
               <TabsList className="grid w-full max-w-md grid-cols-1 sm:grid-cols-2 gap-1 h-auto">
-                <TabsTrigger value="events-stats" className="text-xs sm:text-sm whitespace-normal py-2">Estatísticas por Evento</TabsTrigger>
-                <TabsTrigger value="user-performance" className="text-xs sm:text-sm whitespace-normal py-2">Desempenho por Usuário</TabsTrigger>
+                <TabsTrigger value="events-stats" className="text-xs sm:text-sm whitespace-normal py-2">
+                  Estatísticas por Evento
+                </TabsTrigger>
+                <TabsTrigger value="user-performance" className="text-xs sm:text-sm whitespace-normal py-2">
+                  Desempenho por Usuário
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="events-stats">
@@ -2090,19 +2177,15 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
 
           <TabsContent value="settings" className="space-y-6">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              {isMasterAdmin ? (
-                <MemoizedAdminSettings isMasterAdmin={true} />
-              ) : (
-                <AgencyAdminSettings />
-              )}
+              {isMasterAdmin ? <MemoizedAdminSettings isMasterAdmin={true} /> : <AgencyAdminSettings />}
             </Suspense>
           </TabsContent>
         </Tabs>
       </div>
 
       <Suspense fallback={null}>
-        <EventDialog 
-          open={eventDialogOpen} 
+        <EventDialog
+          open={eventDialogOpen}
           onOpenChange={(open) => {
             setEventDialogOpen(open);
             if (!open) setSelectedEvent(null);
@@ -2114,10 +2197,10 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           event={selectedEvent}
         />
       </Suspense>
-      
+
       <Suspense fallback={null}>
-        <PostDialog 
-          open={postDialogOpen} 
+        <PostDialog
+          open={postDialogOpen}
           onOpenChange={(open) => {
             setPostDialogOpen(open);
             if (!open) setSelectedPost(null);
@@ -2135,22 +2218,20 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rejeitar Submissão</DialogTitle>
-            <DialogDescription>
-              Informe o motivo da rejeição para que o usuário possa corrigir
-            </DialogDescription>
+            <DialogDescription>Informe o motivo da rejeição para que o usuário possa corrigir</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="template">Template de Resposta</Label>
-              <Select 
-                value={rejectionTemplate} 
+              <Select
+                value={rejectionTemplate}
                 onValueChange={(value) => {
                   setRejectionTemplate(value);
                   if (value === "custom") {
                     setRejectionReason("");
                   } else {
-                    const template = rejectionTemplatesFromDB.find(t => t.id === value);
+                    const template = rejectionTemplatesFromDB.find((t) => t.id === value);
                     if (template) {
                       setRejectionReason(template.message);
                     }
@@ -2200,11 +2281,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Histórico de Alterações</DialogTitle>
-            <DialogDescription>
-              Visualize todas as mudanças de status desta submissão
-            </DialogDescription>
+            <DialogDescription>Visualize todas as mudanças de status desta submissão</DialogDescription>
           </DialogHeader>
-          
+
           {auditLogSubmissionId && (
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <SubmissionAuditLog submissionId={auditLogSubmissionId} />
@@ -2212,9 +2291,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           )}
 
           <DialogFooter>
-            <Button onClick={() => setAuditLogSubmissionId(null)}>
-              Fechar
-            </Button>
+            <Button onClick={() => setAuditLogSubmissionId(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2224,12 +2301,13 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O evento e todos os seus dados relacionados serão permanentemente excluídos.
+              Esta ação não pode ser desfeita. O evento e todos os seus dados relacionados serão permanentemente
+              excluídos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => eventToDelete && handleDeleteEvent(eventToDelete)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
@@ -2254,11 +2332,14 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeletePost}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir {postToDelete && postToDelete.submissionsCount > 0 ? `tudo (${postToDelete.submissionsCount} submissão${postToDelete.submissionsCount > 1 ? 'ões' : ''})` : ''}
+              Excluir{" "}
+              {postToDelete && postToDelete.submissionsCount > 0
+                ? `tudo (${postToDelete.submissionsCount} submissão${postToDelete.submissionsCount > 1 ? "ões" : ""})`
+                : ""}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2274,7 +2355,7 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteSubmission}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
@@ -2292,9 +2373,9 @@ if (!user || (!isAgencyAdmin && !isMasterAdmin)) {
           </DialogHeader>
           <div className="flex items-center justify-center w-full h-full">
             {selectedImageForZoom && (
-              <img 
-                src={selectedImageForZoom} 
-                alt="Screenshot ampliado" 
+              <img
+                src={selectedImageForZoom}
+                alt="Screenshot ampliado"
                 className="max-w-full max-h-[85vh] object-contain rounded"
               />
             )}
