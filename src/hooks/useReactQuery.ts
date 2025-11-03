@@ -136,7 +136,13 @@ export const useUserAgencies = (userId?: string) => {
         .order('last_accessed_at', { ascending: false });
       
       if (error) throw error;
-      return data?.map((ua: any) => ua.agencies).filter(Boolean) || [];
+      // 🔧 CRÍTICO: Sempre mapear agency_id, mesmo se agencies vier null (RLS issue)
+      return (data || []).map((ua: any) => ({
+        id: ua.agency_id, // ✅ Sempre presente
+        name: ua.agencies?.name || null,
+        subscription_plan: ua.agencies?.subscription_plan || null,
+        logo_url: ua.agencies?.logo_url || null,
+      }));
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
     gcTime: 30 * 60 * 1000,

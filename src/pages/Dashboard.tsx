@@ -92,23 +92,8 @@ const Dashboard = () => {
     "whatsapp_number",
   ]);
 
-  // 🔧 ITEM 1: Remover query params, usar apenas primeira agência do usuário
-  const currentAgencyId = useMemo(() => {
-    // ⚠️ NÃO retornar null enquanto está loading
-    if (isLoadingAgencies) return undefined; // 🔧 MUDANÇA: undefined em vez de null
-
-    if (!userAgenciesData || userAgenciesData.length === 0) {
-      console.log("⚠️ [Dashboard] Nenhuma agência encontrada");
-      return null;
-    }
-
-    const agencyId = userAgenciesData[0]?.id || null;
-    console.log("📍 [Dashboard] Usando agência:", agencyId);
-    return agencyId;
-  }, [userAgenciesData, isLoadingAgencies]);
-
-  // ✅ Hook unificado para todos os dados do dashboard (agora recebe valor síncrono)
-  const { data: dashboardData, isLoading: isLoadingDashboard, refetch } = useDashboard(currentAgencyId);
+  // ✅ Hook unificado para todos os dados do dashboard (sem agencyId)
+  const { data: dashboardData, isLoading: isLoadingDashboard, refetch } = useDashboard();
 
   // ✅ Derivar dados do hook unificado
   const profile = dashboardData?.profile;
@@ -118,20 +103,20 @@ const Dashboard = () => {
   const isMasterAdmin = dashboardData?.isMasterAdmin || false;
   const isAgencyAdmin = dashboardData?.isAgencyAdmin || false;
 
-  // Loading consolidado
-  const loading = isLoadingAgencies || isLoadingSettings || isLoadingDashboard;
+  // Loading consolidado (sem isLoadingAgencies)
+  const loading = isLoadingSettings || isLoadingDashboard;
 
-  // ✅ FASE 5: Logs de debug do estado do Dashboard
+  // ✅ Logs de debug do estado do Dashboard
   useEffect(() => {
     console.log("📊 [Dashboard] Estado atual:", {
       user: user?.id,
-      currentAgencyId,
-      userAgencies: userAgenciesData?.length,
       loading,
       hasData: !!dashboardData,
+      hasAgencies: dashboardData?.hasAgencies,
       profile: dashboardData?.profile?.full_name || "(sem perfil)",
+      agencies: dashboardData?.userAgencyIds?.length || 0,
     });
-  }, [user, currentAgencyId, userAgenciesData, loading, dashboardData]);
+  }, [user, loading, dashboardData]);
 
   // ✅ Setup inicial
   useEffect(() => {
@@ -141,11 +126,11 @@ const Dashboard = () => {
     }
 
     // Atualizar nome e plano da agência quando mudar
-    if (userAgenciesData && currentAgencyId) {
-      const currentAgency = userAgenciesData.find((a: any) => a.id === currentAgencyId);
-      if (currentAgency) {
-        setAgencyName(currentAgency.name);
-        setAgencyPlan(currentAgency.subscription_plan);
+    if (userAgenciesData && userAgenciesData.length > 0) {
+      const firstAgency = userAgenciesData[0];
+      if (firstAgency) {
+        setAgencyName(firstAgency.name || "");
+        setAgencyPlan(firstAgency.subscription_plan || "");
       }
     }
 
@@ -155,7 +140,7 @@ const Dashboard = () => {
       setBadgesEnabled(adminSettingsData.badges_enabled === "true");
       setWhatsappNumber(adminSettingsData.whatsapp_number || "");
     }
-  }, [user, navigate, userAgenciesData, currentAgencyId, adminSettingsData, isLoadingSettings]);
+  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingSettings]);
 
   // ✅ Atualizar estados locais quando perfil carrega
   useEffect(() => {
@@ -167,14 +152,15 @@ const Dashboard = () => {
 
   // ✅ Background: Atualizar last_accessed_at (não bloqueia carregamento)
   useEffect(() => {
-    if (user && currentAgencyId) {
+    if (user && dashboardData?.userAgencyIds && dashboardData.userAgencyIds.length > 0) {
+      const firstAgencyId = dashboardData.userAgencyIds[0];
       sb.from("user_agencies")
         .update({ last_accessed_at: new Date().toISOString() })
         .eq("user_id", user.id)
-        .eq("agency_id", currentAgencyId)
+        .eq("agency_id", firstAgencyId)
         .then(() => console.log("✅ last_accessed_at atualizado em background"));
     }
-  }, [user, currentAgencyId]);
+  }, [user, dashboardData?.userAgencyIds]);
 
   // ✅ Mutação otimista para salvar perfil
   const updateProfileMutation = useMutation({
@@ -186,7 +172,7 @@ const Dashboard = () => {
     },
     onMutate: async (newData) => {
       // Atualizar cache local imediatamente
-      queryClient.setQueryData(["dashboard", user?.id, currentAgencyId], (old: any) => {
+      queryClient.setQueryData(["dashboard", user?.id], (old: any) => {
         if (!old) return old;
         return {
           ...old,
@@ -396,8 +382,8 @@ const Dashboard = () => {
     );
   }
 
-  // Fallback UI para usuários sem agência
-  if (!currentAgencyId || !profile) {
+  // Fallback UI para usuários sem agência (só exibir se confirmado pelo hook)
+  if (dashboardData && dashboardData.hasAgencies === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background p-8">
         <Card className="max-w-7xl mx-auto p-12 text-center">
@@ -410,6 +396,11 @@ const Dashboard = () => {
         </Card>
       </div>
     );
+  }
+
+  // Se ainda não carregou dados, não renderizar (aguardar loading)
+  if (!dashboardData || !profile) {
+    return null;
   }
 
   // Cálculos de estatísticas

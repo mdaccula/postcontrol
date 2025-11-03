@@ -63,22 +63,8 @@ const Home = () => {
                   <Button 
                     size="sm" 
                     className="bg-gradient-primary" 
-                    onClick={async () => {
-                      const { data: userAgency } = await sb
-                        .from('user_agencies')
-                        .select(`
-                          agency_id,
-                          agencies!inner (
-                            slug
-                          )
-                        `)
-                        .eq('user_id', user.id)
-                        .order('last_accessed_at', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
-                      
-                      const slug = userAgency?.agencies?.slug;
-                      window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
+                    onClick={() => {
+                      window.location.href = '/dashboard';
                     }}
                   >
                     Dashboard
@@ -145,22 +131,8 @@ const Home = () => {
                   <Button 
                     size="lg" 
                     className="bg-gradient-primary w-full" 
-                    onClick={async () => {
-                      const { data: userAgency } = await sb
-                        .from('user_agencies')
-                        .select(`
-                          agency_id,
-                          agencies!inner (
-                            slug
-                          )
-                        `)
-                        .eq('user_id', user.id)
-                        .order('last_accessed_at', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
-                      
-                      const slug = userAgency?.agencies?.slug;
-                      window.location.href = slug ? `/dashboard?agency=${slug}` : '/dashboard';
+                    onClick={() => {
+                      window.location.href = '/dashboard';
                       setMobileMenuOpen(false);
                     }}
                   >

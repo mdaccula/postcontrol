@@ -11,41 +11,67 @@ interface EventStats {
   isApproximate: boolean;
 }
 
-export const useDashboard = (agencyId: string | null | undefined) => {
-  // 🔧 Aceitar undefined
+export const useDashboard = () => {
   const { user } = useAuthStore();
 
   return useQuery({
-    queryKey: ["dashboard", user?.id, agencyId],
+    queryKey: ["dashboard", user?.id],
     queryFn: async () => {
       if (!user) {
         console.log("❌ useDashboard: Sem user");
         return null;
       }
 
-      if (!agencyId) {
-        console.log("⚠️ useDashboard: Aguardando agencyId...");
-        return null; // Não é erro, apenas aguardando
-      }
-
-      console.log("🔄 [useDashboard] Iniciando query:", {
-        userId: user.id,
-        agencyId,
-        enabled: !!user && !!agencyId,
-      });
-
-      console.log("🔄 [useDashboard] Carregando dados em paralelo...");
+      console.log("🔄 [useDashboard] Iniciando query para user:", user.id);
       const startTime = performance.now();
 
-      // ✅ 1 ÚNICA QUERY com Promise.all - Carregamento paralelo
-      const [profileRes, rolesRes, submissionsRes, eventsRes] = await Promise.all([
-        // Query 1: Perfil completo
+      // ✅ PASSO 1: Buscar perfil, roles e user_agencies em paralelo
+      const [profileRes, rolesRes, userAgenciesRes] = await Promise.all([
         sb.from("profiles").select("*").eq("id", user.id).single(),
-
-        // Query 2: Roles (1 vez só)
         sb.from("user_roles").select("role").eq("user_id", user.id),
+        sb.from("user_agencies").select("agency_id").eq("user_id", user.id),
+      ]);
 
-        // Query 3: Submissions
+      const profile = profileRes.data;
+      const roles = rolesRes.data?.map((r) => r.role) || [];
+      const userAgencyIds = (userAgenciesRes.data || []).map((ua: any) => ua.agency_id);
+
+      console.log("📊 [useDashboard] Dados básicos:", {
+        profile: profile?.full_name || "(sem nome)",
+        roles: roles.join(", ") || "(sem role)",
+        userAgencies: userAgencyIds.length,
+        profileAgencyId: profile?.agency_id || null,
+      });
+
+      // ✅ PASSO 2: Determinar agências efetivas
+      let effectiveAgencyIds: string[] = [];
+
+      if (userAgencyIds.length > 0) {
+        effectiveAgencyIds = userAgencyIds;
+      } else if (profile?.agency_id) {
+        effectiveAgencyIds = [profile.agency_id];
+      }
+
+      console.log("🎯 [useDashboard] Agências do usuário:", effectiveAgencyIds);
+
+      // Se não tem nenhuma agência, retornar indicador
+      if (effectiveAgencyIds.length === 0) {
+        console.log("⚠️ [useDashboard] Usuário sem agências vinculadas");
+        return {
+          profile,
+          roles,
+          submissions: [],
+          events: [],
+          eventStats: [],
+          isMasterAdmin: roles.includes("master_admin"),
+          isAgencyAdmin: roles.includes("agency_admin"),
+          hasAgencies: false, // 🆕 Flag indicando ausência de agências
+          userAgencyIds: [],
+        };
+      }
+
+      // ✅ PASSO 3: Buscar submissions e eventos das agências do usuário
+      const [submissionsRes, eventsRes] = await Promise.all([
         sb
           .from("submissions")
           .select(
@@ -74,35 +100,28 @@ export const useDashboard = (agencyId: string | null | undefined) => {
           )
           .eq("user_id", user.id)
           .eq("posts.events.is_active", true)
-          .eq("posts.events.agency_id", agencyId)
+          .in("posts.events.agency_id", effectiveAgencyIds)
           .order("submitted_at", { ascending: false }),
 
-        // Query 4: Eventos ativos
         sb
           .from("events")
           .select("id, title, total_required_posts, is_approximate_total")
           .eq("is_active", true)
-          .eq("agency_id", agencyId)
+          .in("agency_id", effectiveAgencyIds)
           .order("event_date", { ascending: false }),
       ]);
 
       const endTime = performance.now();
       console.log(`✅ [useDashboard] Dados carregados em ${(endTime - startTime).toFixed(0)}ms`);
 
-      // Processar dados
-      const profile = profileRes.data;
-      const roles = rolesRes.data?.map((r) => r.role) || [];
       const submissions = submissionsRes.data || [];
       const events = eventsRes.data || [];
 
-      console.log("📊 Dados carregados:", {
-        profile: profile?.full_name || "(vazio)",
-        roles: roles.join(", ") || "(nenhuma)",
+      console.log("📊 [useDashboard] Resultado final:", {
         submissions: submissions.length,
         events: events.length,
       });
 
-      // Calcular estatísticas sem query adicional
       const eventStats = calculateEventStats(submissions);
 
       return {
@@ -113,13 +132,15 @@ export const useDashboard = (agencyId: string | null | undefined) => {
         eventStats,
         isMasterAdmin: roles.includes("master_admin"),
         isAgencyAdmin: roles.includes("agency_admin"),
+        hasAgencies: true,
+        userAgencyIds: effectiveAgencyIds,
       };
     },
-    enabled: !!user && agencyId !== undefined, // 🔧 Permitir null, bloquear apenas undefined
-    staleTime: 5 * 60 * 1000, // Cache 5 min
-    gcTime: 10 * 60 * 1000, // Mantém em memória 10 min
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // ✅ CRÍTICO: Não refetch se já tem cache
+    refetchOnMount: false,
   });
 };
 
