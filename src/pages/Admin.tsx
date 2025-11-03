@@ -1594,70 +1594,91 @@ const Admin = () => {
                           }
 
                           // 🔧 ITEM 7 CORRIGIDO: Buscar submissions E posts separadamente
-                          const [submissionsResult, postsResult] = await Promise.all([
-                            sb
-                              .from("submissions")
-                              .select(
-                                `
-      *,
-      profiles(full_name, instagram, email, gender, followers_range)
-    `,
-                              )
-                              .in("id", submissionIds),
+                          // Primeiro buscar as submissões
+                          const { data: submissionsData, error: submissionsError } = await sb
+                            .from("submissions")
+                            .select(`
+                              *,
+                              profiles(full_name, instagram, email, gender, followers_range)
+                            `)
+                            .in("id", submissionIds);
 
-                            // 🔧 Buscar posts com LEFT JOIN (não inner) para não falhar
-                            sb
-                              .from("submissions")
-                              .select(
-                                `
-      id,
-      post_id,
-      posts (
-        post_number,
-        event_id,
-        events (
-          title
-        )
-      )
-    `,
-                              )
-                              .in("id", submissionIds),
-                          ]);
-
-                          if (submissionsResult.error) {
-                            console.error("❌ Erro ao buscar submissões:", submissionsResult.error);
+                          if (submissionsError) {
+                            console.error("❌ Erro ao buscar submissões:", submissionsError);
                             toast.error("Erro ao buscar submissões");
                             return;
                           }
 
-                          if (postsResult.error) {
-                            console.error("⚠️ Erro ao buscar posts (não crítico):", postsResult.error);
-                            // Continua mesmo se falhar, usa fallback
-                          }
+                          // 🔧 ITEM 7: Buscar informações de posts com query robusta
+                          let postsMap: Record<string, any> = {};
+                          
+                          if (submissionIds.length > 0) {
+                            console.log('🔍 Buscando posts para', submissionIds.length, 'submissões');
+                            
+                            // Passo 1: Buscar post_ids das submissões
+                            const { data: submissionsWithPosts, error: postsIdsError } = await sb
+                              .from("submissions")
+                              .select("id, post_id")
+                              .in("id", submissionIds)
+                              .not('post_id', 'is', null);
 
-                          // Criar map de posts com validação
-                          const postsMap: Record<string, any> = {};
-                          (postsResult.data || []).forEach((item: any) => {
-                            if (item?.post_id && item?.posts) {
-                              // 🔧 Validar antes de adicionar
-                              postsMap[item.id] = item.posts;
+                            if (postsIdsError) {
+                              console.error('Erro ao buscar post_ids:', postsIdsError);
+                            } else {
+                              const postIds = (submissionsWithPosts || []).map((s: any) => s.post_id).filter(Boolean);
+                              
+                              if (postIds.length > 0) {
+                                // Passo 2: Buscar dados dos posts
+                                const { data: postsData, error: postsError } = await sb
+                                  .from("posts")
+                                  .select(`
+                                    id,
+                                    post_number,
+                                    event_id,
+                                    events (
+                                      title
+                                    )
+                                  `)
+                                  .in("id", postIds);
+
+                                if (postsError) {
+                                  console.error('Erro ao buscar posts:', postsError);
+                                } else {
+                                  // Criar map de post_id → post_data
+                                  const postsDataMap: Record<string, any> = {};
+                                  (postsData || []).forEach((post: any) => {
+                                    if (post?.id) {
+                                      postsDataMap[post.id] = {
+                                        post_number: post.post_number || 0,
+                                        event_title: post.events?.title || 'Evento Desconhecido'
+                                      };
+                                    }
+                                  });
+
+                                  // Criar map de submission_id → post_data
+                                  (submissionsWithPosts || []).forEach((item: any) => {
+                                    if (item?.id && item?.post_id && postsDataMap[item.post_id]) {
+                                      postsMap[item.id] = postsDataMap[item.post_id];
+                                    }
+                                  });
+
+                                  console.log('✅ Posts carregados:', {
+                                    submissionsTotal: submissionIds.length,
+                                    postsEncontrados: Object.keys(postsDataMap).length,
+                                    submissoesComPosts: Object.keys(postsMap).length
+                                  });
+                                }
+                              }
                             }
-                          });
+                          }
 
                           console.log("📊 Posts mapeados:", Object.keys(postsMap).length, "de", submissionIds.length);
 
                           // Preparar dados para exportação
-                          const exportData = (submissionsResult.data || []).map((sub: any) => {
+                          const exportData = (submissionsData || []).map((sub: any) => {
                             // 🔧 Buscar post data com validação extra
-                            let postData = null;
-                            let eventTitle = "N/A";
-                            let postNumber = "N/A";
-
-                            if (sub.post_id && postsMap[sub.id]) {
-                              postData = postsMap[sub.id];
-                              eventTitle = postData?.events?.title || "Evento Desconhecido";
-                              postNumber = postData?.post_number?.toString() || "N/A";
-                            }
+                            const eventTitle = postsMap[sub.id]?.event_title || 'Evento não identificado';
+                            const postNumber = postsMap[sub.id]?.post_number || 0;
 
                             return {
                               Tipo: sub.submission_type === "post" ? "Postagem" : "Venda",

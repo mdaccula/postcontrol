@@ -65,12 +65,32 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setTitle(event.title || "");
         setDescription(event.description || "");
         // ✅ ITEM 8: Forçar horário fixo sem conversão de timezone
-        if (event.event_date) {
-          const dateStr = new Date(event.event_date).toISOString();
-          setEventDate(dateStr.slice(0, 16));
-        } else {
-          setEventDate("");
-        }
+      if (event.event_date) {
+        // 🔧 ITEM 8: Converter de UTC para horário de São Paulo
+        const utcDate = new Date(event.event_date);
+        
+        // Obter offset de São Paulo (-03:00)
+        const saoPauloOffset = -3 * 60; // -180 minutos
+        const localDate = new Date(utcDate.getTime() + saoPauloOffset * 60 * 1000);
+        
+        // Formatar para datetime-local (YYYY-MM-DDTHH:mm)
+        const year = localDate.getUTCFullYear();
+        const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(localDate.getUTCDate()).padStart(2, '0');
+        const hours = String(localDate.getUTCHours()).padStart(2, '0');
+        const minutes = String(localDate.getUTCMinutes()).padStart(2, '0');
+        
+        const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+        setEventDate(formattedDate);
+        
+        console.log('📅 Carregando data do evento:', {
+          utc: utcDate.toISOString(),
+          saoPaulo: formattedDate,
+          original: event.event_date
+        });
+      } else {
+        setEventDate("");
+      }
         setLocation(event.location || "");
         setSetor(event.setor || "");
         setNumeroDeVagas(event.numero_de_vagas ? String(event.numero_de_vagas) : "");
@@ -286,7 +306,22 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
           .update({
             title,
             description,
-            event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
+        event_date: eventDate ? (() => {
+          // 🔧 ITEM 8: Converter de São Paulo para UTC corretamente
+          // eventDate está em formato "YYYY-MM-DDTHH:mm" (hora local de SP)
+          
+          // Adicionar segundos e offset de São Paulo
+          const dateWithOffset = `${eventDate}:00-03:00`;
+          const utcDate = new Date(dateWithOffset);
+          
+          console.log('💾 Salvando data do evento:', {
+            input: eventDate,
+            withOffset: dateWithOffset,
+            utc: utcDate.toISOString()
+          });
+          
+          return utcDate.toISOString();
+        })() : null,
             location,
             setor: setor || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,

@@ -34,6 +34,8 @@ import { useUserAgencies, useAdminSettings } from "@/hooks/useReactQuery";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import imageCompression from "browser-image-compression";
 import { useDashboard } from "@/hooks/useDashboard";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide").then((m) => ({ default: m.TutorialGuide })));
@@ -83,6 +85,7 @@ const Dashboard = () => {
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const [badgesEnabled, setBadgesEnabled] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
+  const [submissionToDelete, setSubmissionToDelete] = useState<{ id: string; status: string } | null>(null);
 
   // React Query hooks
   const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgencies(user?.id);
@@ -356,11 +359,48 @@ const Dashboard = () => {
 
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error) {
-      console.error("Erro ao mudar senha:", error);
+    } catch (error: any) {
       toast({
         title: "Erro ao alterar senha",
+        description: error.message || "Tente novamente mais tarde.",
         variant: "destructive",
+      });
+    }
+  };
+
+  // 🆕 ITEM NOVO: Função para excluir submissão pendente
+  const handleDeleteSubmission = async (submissionId: string, status: string) => {
+    if (status !== 'pending') {
+      toast({
+        title: "Não permitido",
+        description: "Apenas submissões pendentes podem ser excluídas",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .delete()
+        .eq('id', submissionId)
+        .eq('user_id', user?.id) // Segurança: só pode deletar próprias submissões
+        .eq('status', 'pending'); // Segurança: só pode deletar pendentes
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Submissão excluída!",
+        description: "A postagem pendente foi removida do histórico."
+      });
+      
+      refetch(); // Recarregar dashboard
+    } catch (error: any) {
+      console.error('Erro ao excluir submissão:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive"
       });
     }
   };
@@ -657,61 +697,17 @@ const Dashboard = () => {
                           </Suspense>
                         )}
                       </div>
-                      {/* ✅ Item 5: Botão para deletar submissão pendente */}
+                      {/* ✅ ITEM NOVO: Botão excluir com AlertDialog */}
                       {submission.status === "pending" && (
                         <div className="mt-3 pt-3 border-t">
                           <Button
                             size="sm"
                             variant="outline"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
-                            onClick={async () => {
-                              if (
-                                confirm(
-                                  "Tem certeza que deseja deletar esta submissão? Esta ação não pode ser desfeita.",
-                                )
-                              ) {
-                                try {
-                                  const { error } = await sb
-                                    .from("submissions")
-                                    .delete()
-                                    .eq("id", submission.id)
-                                    .eq("user_id", user!.id);
-
-                                  if (error) throw error;
-
-                                  toast({
-                                    title: "Submissão deletada",
-                                    description: "A submissão foi removida com sucesso.",
-                                  });
-
-                                  refetch();
-                                } catch (error: any) {
-                                  toast({
-                                    title: "Erro ao deletar",
-                                    description: error.message || "Tente novamente mais tarde.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }
-                            }}
+                            onClick={() => setSubmissionToDelete({ id: submission.id, status: submission.status })}
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="mr-2"
-                            >
-                              <path d="M3 6h18"></path>
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                            </svg>
-                            Deletar Submissão
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir Submissão
                           </Button>
                         </div>
                       )}
@@ -900,6 +896,32 @@ const Dashboard = () => {
         <Suspense fallback={null}>
           <TutorialGuide />
         </Suspense>
+
+        {/* 🆕 AlertDialog de Confirmação para Exclusão */}
+        <AlertDialog open={!!submissionToDelete} onOpenChange={(open) => !open && setSubmissionToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir esta submissão pendente? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (submissionToDelete) {
+                    handleDeleteSubmission(submissionToDelete.id, submissionToDelete.status);
+                    setSubmissionToDelete(null);
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
