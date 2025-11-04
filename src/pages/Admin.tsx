@@ -1344,7 +1344,7 @@ const Admin = () => {
                 <Calendar className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Eventos Ativos</p>
+                <p className="text-sm text-muted-foreground">Eventos Totais</p>
                 <p className="text-2xl font-bold">{agencyFilteredStats.events}</p>
               </div>
             </div>
