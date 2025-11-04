@@ -98,7 +98,8 @@ export const AllUsersManagement = () => {
 
   const users = usersData?.users || [];
   const totalCount = usersData?.totalCount || 0;
-  const totalPages = Math.ceil(totalCount / 20);
+  // ✅ ITEM 4: Ajustar paginação para considerar filtros de role
+  const totalPages = Math.ceil(totalCount / 20) || 1;
 
   const handleEditUser = (user: UserProfile) => {
     setSelectedUser(user);
