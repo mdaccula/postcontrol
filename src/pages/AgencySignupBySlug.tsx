@@ -1,11 +1,15 @@
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabaseSafe";
+import { useAuthStore } from "@/stores/authStore";
 import AgencySignup from "./AgencySignup";
 
 export default function AgencySignupBySlug() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(null);
+  const [agencyId, setAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyLogo, setAgencyLogo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -13,6 +17,42 @@ export default function AgencySignupBySlug() {
   useEffect(() => {
     loadTokenBySlug();
   }, [slug]);
+
+  // ✅ B1: Se usuário já está logado, associar à agência e redirecionar
+  useEffect(() => {
+    const associateAndRedirect = async () => {
+      if (user && agencyId && !loading) {
+        console.log("🔗 Usuário logado detectado, associando à agência:", {
+          user_id: user.id,
+          agency_id: agencyId,
+          agency_name: agencyName,
+        });
+
+        // Associar usuário à agência
+        const { error: agencyLinkError } = await sb.from("user_agencies").upsert(
+          {
+            user_id: user.id,
+            agency_id: agencyId,
+            last_accessed_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,agency_id",
+          },
+        );
+
+        if (agencyLinkError) {
+          console.error("❌ Erro ao vincular agência:", agencyLinkError);
+        } else {
+          console.log("✅ Agência vinculada! Redirecionando para /submit");
+        }
+
+        // Redirecionar para submit
+        navigate('/submit', { replace: true });
+      }
+    };
+
+    associateAndRedirect();
+  }, [user, agencyId, loading, navigate, agencyName]);
 
   const loadTokenBySlug = async () => {
     if (!slug) {
@@ -31,6 +71,7 @@ export default function AgencySignupBySlug() {
     if (data && data.length > 0) {
       const agency = data[0];
       setToken(agency.signup_token);
+      setAgencyId(agency.id);
       setAgencyName(agency.name || "");
       setAgencyLogo(agency.logo_url);
     }
@@ -48,6 +89,19 @@ export default function AgencySignupBySlug() {
 
   if (!token) {
     return <Navigate to="/404" replace />;
+  }
+
+  // Se usuário está logado, o useEffect acima vai redirecionar
+  // Mas enquanto isso, mostrar loading
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted to-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Associando você à {agencyName}...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

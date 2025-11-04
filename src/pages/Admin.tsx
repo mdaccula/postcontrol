@@ -301,7 +301,7 @@ const Admin = () => {
   const loadAgencyById = async (id: string) => {
     const { data } = await sb
       .from("agencies")
-      .select("id, name, slug, logo_url, subscription_plan")
+      .select("id, name, slug, logo_url, subscription_plan, subscription_status, trial_start_date, trial_end_date")
       .eq("id", id)
       .maybeSingle();
 
@@ -344,7 +344,7 @@ const Admin = () => {
     if (agencySlug) {
       const { data, error } = await sb
         .from("agencies")
-        .select("id, name, slug, logo_url, subscription_plan")
+        .select("id, name, slug, logo_url, subscription_plan, subscription_status, trial_start_date, trial_end_date")
         .eq("slug", agencySlug)
         .maybeSingle();
 
@@ -362,7 +362,7 @@ const Admin = () => {
     if (agencyId && isMasterAdmin) {
       const { data, error } = await sb
         .from("agencies")
-        .select("id, name, slug, logo_url, subscription_plan")
+        .select("id, name, slug, logo_url, subscription_plan, subscription_status, trial_start_date, trial_end_date")
         .eq("id", agencyId)
         .maybeSingle();
 
@@ -383,7 +383,7 @@ const Admin = () => {
 
       const { data: agencyData, error: agencyError } = await sb
         .from("agencies")
-        .select("id, name, slug, logo_url, subscription_plan")
+        .select("id, name, slug, logo_url, subscription_plan, subscription_status, trial_start_date, trial_end_date")
         .eq("id", profileData.agency_id)
         .maybeSingle();
 
@@ -410,7 +410,7 @@ const Admin = () => {
   const loadAgencyBySlug = async (slug: string) => {
     const { data } = await sb
       .from("agencies")
-      .select("id, name, slug, logo_url, subscription_plan")
+      .select("id, name, slug, logo_url, subscription_plan, subscription_status, trial_start_date, trial_end_date")
       .eq("slug", slug)
       .maybeSingle();
 
@@ -1138,9 +1138,32 @@ const Admin = () => {
             </div>
           </div>
           {currentAgency && (
-            <Badge variant="secondary" className="text-base px-4 py-2">
-              Plano: {currentAgency.subscription_plan?.toUpperCase() || "BASIC"}
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="text-base px-4 py-2">
+                Plano: {currentAgency.subscription_plan?.toUpperCase() || "BASIC"}
+              </Badge>
+              <Button
+                onClick={async () => {
+                  try {
+                    const { data, error } = await sb.functions.invoke('create-checkout-session', {
+                      body: { planKey: 'basic' }
+                    });
+                    if (error) throw error;
+                    if (data?.url) {
+                      window.open(data.url, '_blank');
+                    }
+                  } catch (error) {
+                    console.error('Erro ao abrir checkout:', error);
+                    toast.error('Erro ao abrir página de assinatura');
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="font-semibold"
+              >
+                {trialInfo?.inTrial ? "Assinar Agora" : "Gerenciar Assinatura"}
+              </Button>
+            </div>
           )}
         </div>
       </div>

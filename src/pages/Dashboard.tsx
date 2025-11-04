@@ -87,6 +87,8 @@ const Dashboard = () => {
   const [badgesEnabled, setBadgesEnabled] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
   const [submissionToDelete, setSubmissionToDelete] = useState<{ id: string; status: string } | null>(null);
+  // ✅ B2: Estado para agência selecionada
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
 
   // React Query hooks
   const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgencies(user?.id);
@@ -153,6 +155,25 @@ const Dashboard = () => {
       setAvatarPreview(profile.avatar_url || null);
     }
   }, [profile]);
+
+  // ✅ B2: Inicializar agência selecionada (primeira agência ou do localStorage)
+  useEffect(() => {
+    if (userAgenciesData && userAgenciesData.length > 0) {
+      const savedAgencyId = localStorage.getItem('preferred_agency');
+      const validSavedAgency = savedAgencyId && userAgenciesData.some(a => a.id === savedAgencyId);
+      
+      setSelectedAgencyId(
+        validSavedAgency ? savedAgencyId : userAgenciesData[0].id
+      );
+    }
+  }, [userAgenciesData]);
+
+  // ✅ B2: Salvar preferência no localStorage
+  useEffect(() => {
+    if (selectedAgencyId) {
+      localStorage.setItem('preferred_agency', selectedAgencyId);
+    }
+  }, [selectedAgencyId]);
 
   // ✅ Background: Atualizar last_accessed_at (não bloqueia carregamento)
   useEffect(() => {
@@ -474,11 +495,35 @@ const Dashboard = () => {
   const activeEventsCount = eventStats.length; // ✅ Item 3: Mostrar apenas eventos com submissão
   const lastSubmission = submissions[0];
 
+  // ✅ B2: Filtrar submissões e eventos por agência selecionada
+  const filteredSubmissions = useMemo(() => {
+    if (!selectedAgencyId) return submissions;
+    return submissions.filter((s) => {
+      const eventAgencyId = s.posts?.events && typeof s.posts.events === 'object' 
+        ? (s.posts.events as any).agency_id 
+        : null;
+      return eventAgencyId === selectedAgencyId;
+    });
+  }, [submissions, selectedAgencyId]);
+
+  const filteredEvents = useMemo(() => {
+    if (!selectedAgencyId) return events;
+    return events.filter((e) => e.agency_id === selectedAgencyId);
+  }, [events, selectedAgencyId]);
+
+  const filteredEventStats = useMemo(() => {
+    if (!selectedAgencyId) return eventStats;
+    return eventStats.filter((stat) => {
+      const event = events.find(e => e.id === stat.eventId);
+      return event?.agency_id === selectedAgencyId;
+    });
+  }, [eventStats, events, selectedAgencyId]);
+
   // Filtrar submissões por evento (inline, sem useMemo para evitar problemas com early returns)
-  const filteredSubmissions =
+  const filteredSubmissionsByEvent =
     selectedHistoryEvent === "all"
-      ? submissions
-      : submissions.filter((s) => s.posts?.event_id === selectedHistoryEvent);
+      ? filteredSubmissions
+      : filteredSubmissions.filter((s) => s.posts?.event_id === selectedHistoryEvent);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
@@ -494,29 +539,47 @@ const Dashboard = () => {
                     <AvatarFallback className="text-2xl font-bold bg-primary/10">
                       {profile.full_name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-2 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
-                        Olá, {profile.full_name || "Usuário"}!
-                      </h1>
-                      {isMasterAdmin && (
-                        <Badge variant="default" className="bg-purple-500">
-                          Master Admin
-                        </Badge>
-                      )}
-                      {isAgencyAdmin && !isMasterAdmin && (
-                        <Badge variant="default" className="bg-blue-500">
-                          Agency Admin
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground text-sm sm:text-base break-all">{profile.email}</p>
-                    {profile.instagram && (
-                      <p className="text-xs sm:text-sm text-muted-foreground">📱 @{profile.instagram}</p>
-                    )}
-                  </div>
-                </div>
+                   </Avatar>
+                   <div className="space-y-2 min-w-0 flex-1">
+                     <div className="flex items-center gap-2 flex-wrap">
+                       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
+                         Olá, {profile.full_name || "Usuário"}!
+                       </h1>
+                       {isMasterAdmin && (
+                         <Badge variant="default" className="bg-purple-500">
+                           Master Admin
+                         </Badge>
+                       )}
+                       {isAgencyAdmin && !isMasterAdmin && (
+                         <Badge variant="default" className="bg-blue-500">
+                           Agency Admin
+                         </Badge>
+                       )}
+                     </div>
+                     <p className="text-muted-foreground text-sm sm:text-base break-all">{profile.email}</p>
+                     {profile.instagram && (
+                       <p className="text-xs sm:text-sm text-muted-foreground">📱 @{profile.instagram}</p>
+                     )}
+                     {/* ✅ B2: Seletor de Agência (apenas se tiver mais de uma) */}
+                     {userAgenciesData && userAgenciesData.length > 1 && (
+                       <Select value={selectedAgencyId} onValueChange={setSelectedAgencyId}>
+                         <SelectTrigger className="w-full sm:w-[280px] bg-background/50">
+                           <div className="flex items-center gap-2">
+                             <Building2 className="h-4 w-4" />
+                             <SelectValue placeholder="Selecione a agência" />
+                           </div>
+                         </SelectTrigger>
+                         <SelectContent>
+                           {userAgenciesData.map((agency: any) => (
+                             <SelectItem key={agency.id} value={agency.id}>
+                               {agency.name}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     )}
+                   </div>
+                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                   <ThemeToggle />
@@ -565,11 +628,11 @@ const Dashboard = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Postagens Aprovadas</p>
-                  <h3 className="text-3xl font-bold mt-2">{approvedSubmissionsCount}</h3>
-                </div>
+               <div className="flex items-center justify-between">
+                 <div>
+                   <p className="text-sm text-muted-foreground">Postagens Aprovadas</p>
+                   <h3 className="text-3xl font-bold mt-2">{filteredSubmissions.filter(s => s.status === "approved").length}</h3>
+                 </div>
                 <div className="p-4 bg-green-500/10 rounded-full">
                   <TrendingUp className="h-8 w-8 text-green-500" />
                 </div>
@@ -583,11 +646,11 @@ const Dashboard = () => {
             transition={{ duration: 0.5, delay: 0.15 }}
           >
             <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Submissões</p>
-                  <h3 className="text-3xl font-bold mt-2">{submissions.length}</h3>
-                </div>
+               <div className="flex items-center justify-between">
+                 <div>
+                   <p className="text-sm text-muted-foreground">Total de Submissões</p>
+                   <h3 className="text-3xl font-bold mt-2">{filteredSubmissions.length}</h3>
+                 </div>
                 <div className="p-4 bg-orange-500/10 rounded-full">
                   <Send className="h-8 w-8 text-orange-500" />
                 </div>
@@ -601,11 +664,11 @@ const Dashboard = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Eventos Ativos</p>
-                  <h3 className="text-3xl font-bold mt-2">{activeEventsCount}</h3>
-                </div>
+               <div className="flex items-center justify-between">
+                 <div>
+                   <p className="text-sm text-muted-foreground">Eventos Ativos</p>
+                   <h3 className="text-3xl font-bold mt-2">{filteredEventStats.length}</h3>
+                 </div>
                 <div className="p-4 bg-blue-500/10 rounded-full">
                   <Calendar className="h-8 w-8 text-blue-500" />
                 </div>
@@ -653,8 +716,8 @@ const Dashboard = () => {
             <Card className="p-6">
               <h2 className="text-2xl font-bold mb-6">Progresso dos Eventos</h2>
               <div className="space-y-6">
-                {eventStats.length > 0 ? (
-                  eventStats.map((stat) => (
+                {filteredEventStats.length > 0 ? (
+                  filteredEventStats.map((stat) => (
                     <div key={stat.eventId} className="space-y-3 p-4 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
@@ -674,6 +737,9 @@ const Dashboard = () => {
                 ) : (
                   <p className="text-center text-muted-foreground py-8">Nenhum evento ativo no momento</p>
                 )}
+                {filteredEventStats.length === 0 && eventStats.length > 0 && (
+                  <p className="text-center text-muted-foreground py-4 text-sm">Sem eventos nesta agência</p>
+                )}
               </div>
             </Card>
           </TabsContent>
@@ -689,7 +755,7 @@ const Dashboard = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os eventos</SelectItem>
-                    {events.map((event: any) => (
+                    {filteredEvents.map((event: any) => (
                       <SelectItem key={event.id} value={event.id}>
                         {event.title}
                       </SelectItem>
@@ -699,8 +765,8 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-4">
-                {filteredSubmissions.length > 0 ? (
-                  filteredSubmissions.map((submission) => (
+                {filteredSubmissionsByEvent.length > 0 ? (
+                  filteredSubmissionsByEvent.map((submission) => (
                     <Card key={submission.id} className="p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">
