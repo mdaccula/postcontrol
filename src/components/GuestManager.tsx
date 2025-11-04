@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Mail, Calendar, Shield, MoreVertical, Trash2 } from 'lucide-react';
+import { UserPlus, Mail, Calendar, Shield, MoreVertical, Trash2, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import { useGuestInvites } from '@/hooks/useGuestInvites';
 import { GuestInviteDialog } from './GuestInviteDialog';
 import { GuestPermissionEditor } from './GuestPermissionEditor';
@@ -157,6 +158,16 @@ export const GuestManager = ({ agencyId }: GuestManagerProps) => {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleEditPermissions(guest)}>
                       Editar Permissões
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        const inviteUrl = `${window.location.origin}/accept-invite?token=${guest.invite_token}`;
+                        navigator.clipboard.writeText(inviteUrl);
+                        toast.success('Link de convite copiado!');
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar Link de Convite
                     </DropdownMenuItem>
                     {guest.status === 'pending' && (
                       <DropdownMenuItem onClick={() => resendInvite(guest.id)}>
