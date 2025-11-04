@@ -1348,6 +1348,7 @@ export type Database = {
         Args: { p_admin_email: string; p_agency_id: string }
         Returns: undefined
       }
+      user_can_view_agency: { Args: { _agency_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "user" | "agency_admin" | "master_admin"
