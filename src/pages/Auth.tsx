@@ -41,8 +41,9 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // ✅ FASE 5: NÃO redirecionar se está resetando senha
     // ✅ FASE 3: Verificar contexto de evento e redirecionar apropriadamente
-    if (user && !authLoading) {
+    if (user && !authLoading && !isResettingPassword) {
       const eventContextStr = localStorage.getItem('event_context');
       
       if (eventContextStr) {
@@ -83,7 +84,7 @@ const Auth = () => {
         navigate('/dashboard');
       }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, isResettingPassword, navigate]);
 
   // ✅ ITEM 5: Função de recuperação de senha
   const handlePasswordRecovery = async (e: FormEvent) => {

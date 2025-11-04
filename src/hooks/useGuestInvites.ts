@@ -66,9 +66,25 @@ export const useGuestInvites = (agencyId?: string) => {
 
       return guestData;
     },
-    onSuccess: () => {
+    onSuccess: async (guestData) => {
       queryClient.invalidateQueries({ queryKey: ['guestInvites', agencyId] });
       toast.success('Convite criado com sucesso!');
+      
+      // FASE 3: Enviar email de convite via edge function
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-guest-invite', {
+          body: { guestId: guestData.id }
+        });
+        
+        if (emailError) {
+          console.error('Erro ao enviar email de convite:', emailError);
+          toast.warning('Convite criado, mas o email não foi enviado');
+        } else {
+          console.log('Email de convite enviado com sucesso para:', guestData.guest_email);
+        }
+      } catch (err) {
+        console.error('Erro ao invocar edge function send-guest-invite:', err);
+      }
     },
     onError: (error: any) => {
       console.error('Error creating invite:', error);
