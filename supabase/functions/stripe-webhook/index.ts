@@ -53,11 +53,14 @@ serve(async (req) => {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log("✅ [STRIPE-WEBHOOK] Checkout completado:", session.id);
 
-        const agencyId = session.metadata?.agency_id;
+        let agencyId = session.metadata?.agency_id;
         const planKey = session.metadata?.plan_key;
+        const userId = session.metadata?.user_id;
+        const userEmail = session.metadata?.user_email;
+        const userName = session.metadata?.user_name;
 
-        if (!agencyId || !planKey) {
-          console.error("❌ [STRIPE-WEBHOOK] Metadata ausente:", { agencyId, planKey });
+        if (!planKey || !userId) {
+          console.error("❌ [STRIPE-WEBHOOK] Metadata essencial ausente:", { planKey, userId });
           break;
         }
 
@@ -73,16 +76,84 @@ serve(async (req) => {
           break;
         }
 
+        // Create agency if it doesn't exist
+        if (!agencyId) {
+          console.log("🏗️ [STRIPE-WEBHOOK] Criando nova agência para:", userEmail);
+          
+          // Generate agency slug from email
+          const agencySlug = userEmail?.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-') || 
+                            `agency-${Date.now()}`;
+          
+          const { data: newAgency, error: agencyError } = await supabaseClient
+            .from('agencies')
+            .insert({
+              name: userName || userEmail?.split('@')[0] || 'New Agency',
+              slug: agencySlug,
+              owner_id: userId,
+              subscription_status: 'active',
+              subscription_plan: planKey,
+              max_influencers: plan.max_influencers,
+              max_events: plan.max_events,
+              admin_email: userEmail,
+            })
+            .select()
+            .single();
+
+          if (agencyError || !newAgency) {
+            console.error("❌ [STRIPE-WEBHOOK] Erro ao criar agência:", agencyError);
+            break;
+          }
+
+          agencyId = newAgency.id;
+          console.log("✨ [STRIPE-WEBHOOK] Agência criada:", agencyId);
+
+          // Update user profile with agency_id
+          const { error: profileError } = await supabaseClient
+            .from('profiles')
+            .update({ agency_id: agencyId })
+            .eq('id', userId);
+
+          if (profileError) {
+            console.error("❌ [STRIPE-WEBHOOK] Erro ao atualizar profile:", profileError);
+          }
+
+          // Add user to agency
+          const { error: userAgencyError } = await supabaseClient
+            .from('user_agencies')
+            .insert({
+              user_id: userId,
+              agency_id: agencyId,
+            });
+
+          if (userAgencyError) {
+            console.error("❌ [STRIPE-WEBHOOK] Erro ao vincular usuário à agência:", userAgencyError);
+          }
+
+          // Set user as agency admin
+          const { error: roleError } = await supabaseClient
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              role: 'agency_admin',
+            });
+
+          if (roleError) {
+            console.error("❌ [STRIPE-WEBHOOK] Erro ao atribuir role de admin:", roleError);
+          }
+        }
+
         // Get subscription details from Stripe
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
-        // Update agency
+        // Update agency with subscription details
         const { error: updateError } = await supabaseClient
           .from('agencies')
           .update({
             subscription_status: 'active',
             subscription_plan: planKey,
             plan_expiry_date: new Date(subscription.current_period_end * 1000).toISOString(),
+            max_influencers: plan.max_influencers,
+            max_events: plan.max_events,
           })
           .eq('id', agencyId);
 

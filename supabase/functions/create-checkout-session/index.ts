@@ -58,17 +58,15 @@ serve(async (req) => {
     }
     console.log("💳 [CREATE-CHECKOUT] Plano encontrado:", plan.plan_name, "Price ID:", plan.stripe_price_id);
 
-    // Get user's agency
+    // Get user's agency (optional - will be created after payment if doesn't exist)
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, full_name')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.agency_id) {
-      throw new Error("User doesn't have an agency");
-    }
-    console.log("🏢 [CREATE-CHECKOUT] Agency ID:", profile.agency_id);
+    const agencyId = profile?.agency_id || null;
+    console.log("🏢 [CREATE-CHECKOUT] Agency ID:", agencyId || "Will be created after payment");
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -83,12 +81,18 @@ serve(async (req) => {
       customerId = customers.data[0].id;
       console.log("✅ [CREATE-CHECKOUT] Cliente Stripe existente:", customerId);
     } else {
+      const customerMetadata: Record<string, string> = {
+        supabase_user_id: user.id,
+      };
+      
+      if (agencyId) {
+        customerMetadata.agency_id = agencyId;
+      }
+
       const newCustomer = await stripe.customers.create({
         email: user.email,
-        metadata: {
-          supabase_user_id: user.id,
-          agency_id: profile.agency_id,
-        },
+        name: profile?.full_name || user.email.split('@')[0],
+        metadata: customerMetadata,
       });
       customerId = newCustomer.id;
       console.log("✨ [CREATE-CHECKOUT] Novo cliente Stripe criado:", customerId);
@@ -96,6 +100,18 @@ serve(async (req) => {
 
     // Create checkout session
     const origin = req.headers.get("origin") || "http://localhost:3000";
+    
+    const sessionMetadata: Record<string, string> = {
+      plan_key: planKey,
+      user_id: user.id,
+      user_email: user.email,
+      user_name: profile?.full_name || user.email.split('@')[0],
+    };
+    
+    if (agencyId) {
+      sessionMetadata.agency_id = agencyId;
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -107,11 +123,7 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/?payment=success`,
       cancel_url: `${origin}/?payment=canceled`,
-      metadata: {
-        agency_id: profile.agency_id,
-        plan_key: planKey,
-        user_id: user.id,
-      },
+      metadata: sessionMetadata,
     });
 
     console.log("🎉 [CREATE-CHECKOUT] Sessão criada com sucesso:", session.id);
