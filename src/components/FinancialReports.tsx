@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { sb } from "@/lib/supabaseSafe";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, DollarSign, Building2, Users, Calendar } from "lucide-react";
+import { useFinancialReports } from "@/hooks/useFinancialReports";
 
 interface FinancialStats {
   totalMonthlyRevenue: number;
@@ -20,103 +19,19 @@ interface RevenueByPlan {
 }
 
 export const FinancialReports = () => {
-  const [stats, setStats] = useState<FinancialStats>({
+  // ✅ ITEM 6: Migração para React Query
+  const { data, isLoading, error } = useFinancialReports();
+
+  const stats = data?.stats || {
     totalMonthlyRevenue: 0,
     totalAnnualRevenue: 0,
     activeAgencies: 0,
     trialAgencies: 0,
     suspendedAgencies: 0,
     conversionRate: 0,
-  });
-  const [revenueByPlan, setRevenueByPlan] = useState<RevenueByPlan[]>([]);
-
-  useEffect(() => {
-    loadFinancialData();
-  }, []);
-
-  const loadFinancialData = async () => {
-    console.log('💰 [FinancialReports] Iniciando carregamento...');
-    
-    // Buscar todas as agências
-    const { data: agenciesData, error: agenciesError } = await sb
-      .from('agencies')
-      .select('*');
-
-    console.log('📊 [FinancialReports] Agências carregadas:', agenciesData?.length, 'Erro:', agenciesError);
-
-    // Buscar todos os planos
-    const { data: plansData, error: plansError } = await sb
-      .from('subscription_plans')
-      .select('*');
-
-    console.log('📋 [FinancialReports] Planos carregados:', plansData?.length, 'Erro:', plansError);
-
-    if (!agenciesData || !plansData) {
-      console.error('❌ [FinancialReports] Dados não carregados - agenciesData:', !!agenciesData, 'plansData:', !!plansData);
-      return;
-    }
-
-    // ✅ ITEM 3: Mapear agências com seus planos COM LOGS DETALHADOS
-    const agencies = agenciesData.map(agency => {
-      const plan = plansData.find(p => p.plan_key === agency.subscription_plan);
-      console.log(`📦 [FinancialReports] Agência: ${agency.name} | Plan Key: ${agency.subscription_plan} | Encontrado: ${!!plan} | Preço: ${plan?.monthly_price || 0}`);
-      return {
-        ...agency,
-        subscription_plans: plan
-      };
-    });
-
-    // Calcular estatísticas
-    const active = agencies.filter(a => a.subscription_status === 'active');
-    const trial = agencies.filter(a => a.subscription_status === 'trial');
-    const suspended = agencies.filter(a => a.subscription_status === 'suspended');
-
-    console.log('📈 [FinancialReports] Status:', { 
-      total: agencies.length, 
-      active: active.length, 
-      trial: trial.length, 
-      suspended: suspended.length 
-    });
-
-    const monthlyRevenue = active.reduce((sum, a) => {
-      const price = a.subscription_plans?.monthly_price || 0;
-      console.log(`💵 [FinancialReports] ${a.name}: R$ ${price}`);
-      return sum + price;
-    }, 0);
-
-    console.log('💰 [FinancialReports] Receita mensal total: R$', monthlyRevenue);
-
-    const conversion = trial.length > 0 ? (active.length / (active.length + trial.length)) * 100 : 0;
-
-    setStats({
-      totalMonthlyRevenue: monthlyRevenue,
-      totalAnnualRevenue: monthlyRevenue * 12,
-      activeAgencies: active.length,
-      trialAgencies: trial.length,
-      suspendedAgencies: suspended.length,
-      conversionRate: conversion,
-    });
-
-    // Receita por plano
-    const planRevenue: { [key: string]: { revenue: number; count: number } } = {};
-    active.forEach(agency => {
-      const planName = agency.subscription_plans?.plan_name || 'Desconhecido';
-      const price = agency.subscription_plans?.monthly_price || 0;
-      if (!planRevenue[planName]) {
-        planRevenue[planName] = { revenue: 0, count: 0 };
-      }
-      planRevenue[planName].revenue += price;
-      planRevenue[planName].count += 1;
-    });
-
-    const revenueData = Object.entries(planRevenue).map(([plan_name, data]) => ({
-      plan_name,
-      revenue: data.revenue,
-      count: data.count,
-    }));
-
-    setRevenueByPlan(revenueData);
   };
+
+  const revenueByPlan = data?.revenueByPlan || [];
 
   const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
 
@@ -125,6 +40,30 @@ export const FinancialReports = () => {
     { name: 'Trial', value: stats.trialAgencies },
     { name: 'Suspensas', value: stats.suspendedAgencies },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-6 animate-pulse">
+              <div className="h-20 bg-muted rounded"></div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6">
+          <p className="text-destructive">Erro ao carregar relatórios financeiros. Tente novamente.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

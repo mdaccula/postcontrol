@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,8 @@ import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { usePagination } from "@/hooks/usePagination";
+import { useAllUsers, useAgencies } from "@/hooks/useAllUsers";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface UserProfile {
   id: string;
@@ -55,9 +57,10 @@ interface Agency {
 
 export const AllUsersManagement = () => {
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [genderOptions, setGenderOptions] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  
+  // ✅ ITEM 6 & 7: Migração para React Query + Paginação Backend
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [agencyFilter, setAgencyFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -72,70 +75,30 @@ export const AllUsersManagement = () => {
     agency_id: "",
     gender: "",
   });
-  const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // ✅ Opções de gênero fixas
+  const genderOptions = ['Masculino', 'Feminino', 'LGBTQ+', 'Agência'];
 
-  const loadData = async () => {
-    console.log("🔄 Carregando usuários...");
+  // ✅ ITEM 6: React Query para carregar usuários com paginação backend
+  const { 
+    data: usersData, 
+    isLoading: isLoadingUsers,
+    refetch: refetchUsers 
+  } = useAllUsers({
+    page: currentPage,
+    pageSize: 20,
+    searchTerm,
+    roleFilter,
+    agencyFilter,
+    genderFilter
+  });
 
-    // Load users first
-    const { data: usersData, error: usersError } = await sb
-      .from("profiles")
-      .select("*, gender")
-      .order("created_at", { ascending: false });
+  // ✅ ITEM 6: React Query para carregar agências
+  const { data: agencies = [] } = useAgencies();
 
-    console.log("📊 Usuários carregados:", usersData?.length, "Error:", usersError);
-
-    if (usersData) {
-      // Load roles separately for each user
-      const usersWithRoles = await Promise.all(
-        usersData.map(async (user: any) => {
-          const { data: rolesData } = await sb
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id);
-
-          return {
-            ...user,
-            roles: rolesData?.map((ur: any) => ur.role) || [],
-          };
-        })
-      );
-
-      console.log("✅ Usuários com roles:", usersWithRoles.length);
-      setUsers(usersWithRoles);
-
-      // Load submission counts for each user
-      const counts: Record<string, number> = {};
-      await Promise.all(
-        usersWithRoles.map(async (user) => {
-          const { count } = await sb
-            .from("submissions")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id);
-          counts[user.id] = count || 0;
-        })
-      );
-      setSubmissionCounts(counts);
-    }
-
-    // Load agencies
-    const { data: agenciesData } = await sb
-      .from("agencies")
-      .select("id, name, slug")
-      .order("name", { ascending: true });
-
-    if (agenciesData) {
-      setAgencies(agenciesData);
-    }
-
-    // ✅ Definir opções de gênero fixas conforme regra de negócio
-    const allowedGenders = ['Masculino', 'Feminino', 'LGBTQ+', 'Agência'];
-    setGenderOptions(allowedGenders);
-  };
+  const users = usersData?.users || [];
+  const totalCount = usersData?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / 20);
 
   const handleEditUser = (user: UserProfile) => {
     setSelectedUser(user);
@@ -189,7 +152,8 @@ export const AllUsersManagement = () => {
       });
 
       setEditDialogOpen(false);
-      await loadData();
+      await refetchUsers();
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error: any) {
       console.error('❌ [Master] Exception:', error);
       toast({
@@ -219,7 +183,8 @@ export const AllUsersManagement = () => {
         description: "O usuário e todas as suas submissões foram removidos.",
       });
 
-      await loadData();
+      await refetchUsers();
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
@@ -251,7 +216,7 @@ export const AllUsersManagement = () => {
 
   const handleExportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredUsers.map(user => {
+      users.map(user => {
         // Limpar Instagram username (remover @ se existir)
         const cleanInstagram = user.instagram 
           ? user.instagram.replace('@', '').trim()
@@ -267,7 +232,7 @@ export const AllUsersManagement = () => {
           "Faixa de Seguidores": user.followers_range || "",
           Nível: getUserRole(user.roles),
           Agência: getAgencyName(user.agency_id),
-          "Total Posts": submissionCounts[user.id] || 0,
+          "Total Posts": user.submission_count || 0,
         };
       })
     );
@@ -276,43 +241,16 @@ export const AllUsersManagement = () => {
     XLSX.writeFile(workbook, `usuarios_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast({
       title: "Exportação concluída",
-      description: `${filteredUsers.length} usuários exportados com sucesso.`,
+      description: `${users.length} usuários exportados com sucesso.`,
     });
   };
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = searchTerm
-      ? user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.instagram?.toLowerCase().includes(searchTerm.toLowerCase())
-      : true;
-
-    const matchesAgency =
-      agencyFilter === "all" || user.agency_id === agencyFilter;
-
-    const matchesRole =
-      roleFilter === "all" ||
-      (roleFilter === "master_admin" && user.roles?.includes("master_admin")) ||
-      (roleFilter === "agency_admin" && user.roles?.includes("agency_admin")) ||
-      (roleFilter === "user" && (!user.roles || user.roles.length === 0));
-
-    const matchesGender =
-      genderFilter === "all" || user.gender === genderFilter;
-
-    return matchesSearch && matchesAgency && matchesRole && matchesGender;
-  });
-
-  // Paginação
-  const {
-    currentPage,
-    totalPages,
-    paginatedItems: paginatedUsers,
-    goToPage,
-    nextPage,
-    previousPage,
-    hasNextPage,
-    hasPreviousPage
-  } = usePagination({ items: filteredUsers, itemsPerPage: 20 });
+  // ✅ Handlers de paginação
+  const goToPage = (page: number) => setCurrentPage(page);
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const previousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  const hasNextPage = currentPage < totalPages;
+  const hasPreviousPage = currentPage > 1;
 
   return (
     <div className="space-y-6">
@@ -327,14 +265,14 @@ export const AllUsersManagement = () => {
           <Button
             variant="outline"
             onClick={handleExportToExcel}
-            disabled={filteredUsers.length === 0}
+            disabled={isLoadingUsers || users.length === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             Exportar XLSX
           </Button>
           <Badge variant="outline" className="text-lg px-4 py-2">
             <Users className="w-4 h-4 mr-2" />
-            {filteredUsers.length} usuários {totalPages > 1 && `(página ${currentPage} de ${totalPages})`}
+            {totalCount} usuários {totalPages > 1 && `(página ${currentPage} de ${totalPages})`}
           </Badge>
         </div>
       </div>
@@ -401,7 +339,12 @@ export const AllUsersManagement = () => {
 
       {/* Users Table */}
       <Card className="p-4 md:p-6">
-        {filteredUsers.length === 0 ? (
+        {isLoadingUsers ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando usuários...</p>
+          </div>
+        ) : users.length === 0 ? (
           <div className="text-center py-8">
             <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">
@@ -447,7 +390,7 @@ export const AllUsersManagement = () => {
                 </TableHeader>
 
                 <TableBody>
-                  {paginatedUsers.map((user) => (
+                  {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium max-w-0">
                         <div className="truncate" title={user.full_name || "—"}>
@@ -497,7 +440,7 @@ export const AllUsersManagement = () => {
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="secondary" className="text-xs">
-                          {submissionCounts[user.id] || 0}
+                          {user.submission_count || 0}
                         </Badge>
                       </TableCell>
                       <TableCell>
