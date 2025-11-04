@@ -112,6 +112,41 @@ const Dashboard = () => {
   // Loading consolidado (sem isLoadingAgencies)
   const loading = isLoadingSettings || isLoadingDashboard;
 
+  // ✅ B2: Filtrar dados por agência selecionada (ANTES de early returns)
+  const filteredSubmissions = useMemo(() => {
+    if (!selectedAgencyId || !submissions) return submissions;
+    return submissions.filter((s) => {
+      const eventAgencyId = s.posts?.events && typeof s.posts.events === 'object' 
+        ? (s.posts.events as any).agency_id 
+        : null;
+      return eventAgencyId === selectedAgencyId;
+    });
+  }, [submissions, selectedAgencyId]);
+
+  const filteredEvents = useMemo(() => {
+    if (!selectedAgencyId || !events) return events;
+    return events.filter((e) => e.agency_id === selectedAgencyId);
+  }, [events, selectedAgencyId]);
+
+  const filteredEventStats = useMemo(() => {
+    if (!selectedAgencyId || !eventStats || !events) return eventStats;
+    return eventStats.filter((stat) => {
+      const event = events.find(e => e.id === stat.eventId);
+      return event?.agency_id === selectedAgencyId;
+    });
+  }, [eventStats, events, selectedAgencyId]);
+
+  // Filtrar submissões por evento (usar filteredSubmissions)
+  const filteredSubmissionsByEvent = useMemo(() => {
+    if (!filteredSubmissions) return [];
+    return selectedHistoryEvent === "all"
+      ? filteredSubmissions
+      : filteredSubmissions.filter((s) => s.posts?.event_id === selectedHistoryEvent);
+  }, [filteredSubmissions, selectedHistoryEvent]);
+
+  // Variável para última submissão
+  const lastSubmission = filteredSubmissions && filteredSubmissions.length > 0 ? filteredSubmissions[0] : null;
+
   // ✅ Logs de debug do estado do Dashboard
   useEffect(() => {
     console.log("📊 [Dashboard] Estado atual:", {
@@ -489,41 +524,6 @@ const Dashboard = () => {
   if (!dashboardData || !profile) {
     return null;
   }
-
-  // Cálculos de estatísticas
-  const approvedSubmissionsCount = submissions.filter((s) => s.status === "approved").length;
-  const activeEventsCount = eventStats.length; // ✅ Item 3: Mostrar apenas eventos com submissão
-  const lastSubmission = submissions[0];
-
-  // ✅ B2: Filtrar submissões e eventos por agência selecionada
-  const filteredSubmissions = useMemo(() => {
-    if (!selectedAgencyId) return submissions;
-    return submissions.filter((s) => {
-      const eventAgencyId = s.posts?.events && typeof s.posts.events === 'object' 
-        ? (s.posts.events as any).agency_id 
-        : null;
-      return eventAgencyId === selectedAgencyId;
-    });
-  }, [submissions, selectedAgencyId]);
-
-  const filteredEvents = useMemo(() => {
-    if (!selectedAgencyId) return events;
-    return events.filter((e) => e.agency_id === selectedAgencyId);
-  }, [events, selectedAgencyId]);
-
-  const filteredEventStats = useMemo(() => {
-    if (!selectedAgencyId) return eventStats;
-    return eventStats.filter((stat) => {
-      const event = events.find(e => e.id === stat.eventId);
-      return event?.agency_id === selectedAgencyId;
-    });
-  }, [eventStats, events, selectedAgencyId]);
-
-  // Filtrar submissões por evento (inline, sem useMemo para evitar problemas com early returns)
-  const filteredSubmissionsByEvent =
-    selectedHistoryEvent === "all"
-      ? filteredSubmissions
-      : filteredSubmissions.filter((s) => s.posts?.event_id === selectedHistoryEvent);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
