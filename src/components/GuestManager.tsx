@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface GuestManagerProps {
-  agencyId: string;
+  agencyId?: string; // ✅ ITEM 4: Tornar opcional para Master Admin
 }
 
 export const GuestManager = ({ agencyId }: GuestManagerProps) => {
@@ -36,7 +36,9 @@ export const GuestManager = ({ agencyId }: GuestManagerProps) => {
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
 
-  const { invites, loading, revokeInvite, resendInvite } = useGuestInvites(agencyId);
+  // ✅ ITEM 4: Se não houver agencyId, buscar de todas as agências (Master Admin)
+  const effectiveAgencyId = agencyId || '';
+  const { invites, loading, revokeInvite, resendInvite } = useGuestInvites(effectiveAgencyId);
 
   const handleEditPermissions = (guest: any) => {
     setSelectedGuest(guest);

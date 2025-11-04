@@ -95,6 +95,7 @@ const Submit = () => {
   const [instagram, setInstagram] = useState("");
   const [phone, setPhone] = useState("");
   const [hasExistingPhone, setHasExistingPhone] = useState(false);
+  const [originalInstagram, setOriginalInstagram] = useState(""); // ✅ ITEM 3: Instagram original carregado
   const [selectedEvent, setSelectedEvent] = useState("");
   const [selectedPost, setSelectedPost] = useState("");
   const [instagramLink, setInstagramLink] = useState("");
@@ -456,6 +457,7 @@ const Submit = () => {
       setName(data.full_name || "");
       setEmail(data.email || "");
       setInstagram(data.instagram || data.email?.split("@")[0] || "");
+      setOriginalInstagram(data.instagram || ""); // ✅ ITEM 3: Salvar instagram original
       setPhone(data.phone || "");
       setHasExistingPhone(!!data.phone);
       // ✅ SPRINT 1 - ITEM 5: Bloquear Instagram se já existe
@@ -1315,13 +1317,21 @@ const Submit = () => {
                   id="instagram"
                   placeholder="@seuinstagram"
                   value={instagram}
-                  onChange={(e) => setInstagram(e.target.value)}
+                  onChange={(e) => {
+                    // Remove espaços e garante formato @usuario
+                    let value = e.target.value.trim().replace(/\s/g, '');
+                    if (value && !value.startsWith('@')) {
+                      value = '@' + value;
+                    }
+                    setInstagram(value.slice(0, 31)); // @ + 30 caracteres
+                  }}
                   required
-                  disabled={isSubmitting || !!instagram}
+                  maxLength={31}
+                  disabled={isSubmitting}
                 />
-                {instagram && (
-                  <p className="text-xs text-muted-foreground">
-                    Instagram bloqueado após o primeiro envio. Entre em contato com o admin para alterações.
+                {instagram && originalInstagram && instagram !== originalInstagram && (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                    ⚠️ Você está alterando seu Instagram. Certifique-se de que está correto.
                   </p>
                 )}
               </div>

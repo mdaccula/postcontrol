@@ -1,15 +1,14 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 import { z } from "zod";
 
 // Validation schemas
@@ -24,13 +23,18 @@ const signupSchema = loginSchema.extend({
 });
 
 const Auth = () => {
+  const [searchParams] = useSearchParams();
+  const isResettingPassword = searchParams.get('reset') === 'true';
+  
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [gender, setGender] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false); // ✅ ITEM 5: Estado de recuperação
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.loading);
   const { toast } = useToast();
@@ -114,6 +118,58 @@ const Auth = () => {
           description: "Verifique sua caixa de entrada para redefinir sua senha.",
         });
         setIsRecoveringPassword(false);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ ITEM 5: Função para definir nova senha
+  const handlePasswordReset = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validação
+      if (newPassword.length < 6) {
+        toast({
+          title: "Senha muito curta",
+          description: "A senha deve ter no mínimo 6 caracteres",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        toast({
+          title: "Senhas não coincidem",
+          description: "As senhas digitadas não são iguais",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao redefinir senha",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Senha redefinida!",
+          description: "Sua senha foi alterada com sucesso. Faça login com a nova senha.",
+        });
+        
+        // Fazer logout e redirecionar para login
+        await supabase.auth.signOut();
+        navigate('/auth', { replace: true });
       }
     } finally {
       setLoading(false);
@@ -239,21 +295,74 @@ const Auth = () => {
 
         <Card className="p-8">
           <div className="mb-8 text-center">
-            {/* ✅ ITEM 5: UI de Recuperação de Senha */}
             <h1 className="text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
-              {isRecoveringPassword ? "Recuperar Senha" : isLogin ? "Login" : "Criar Conta"}
+              {isResettingPassword 
+                ? "Definir Nova Senha" 
+                : isRecoveringPassword 
+                  ? "Recuperar Senha" 
+                  : isLogin 
+                    ? "Login" 
+                    : "Criar Conta"}
             </h1>
             <p className="text-muted-foreground">
-              {isRecoveringPassword 
-                ? "Enviaremos um link para redefinir sua senha"
-                : isLogin 
-                  ? "Acesse seu painel" 
-                  : "Registre-se para continuar"}
+              {isResettingPassword
+                ? "Digite sua nova senha abaixo"
+                : isRecoveringPassword 
+                  ? "Enviaremos um link para redefinir sua senha"
+                  : isLogin 
+                    ? "Acesse seu painel" 
+                    : "Registre-se para continuar"}
             </p>
           </div>
 
-          {/* ✅ ITEM 5: Formulário de Recuperação de Senha */}
-          {isRecoveringPassword ? (
+          {/* ✅ ITEM 5: Formulário de Redefinição de Senha */}
+          {isResettingPassword ? (
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha *</Label>
+                <Input 
+                  id="newPassword" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha *</Label>
+                <Input 
+                  id="confirmPassword" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-primary hover:opacity-90" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Definir Nova Senha"
+                )}
+              </Button>
+            </form>
+          ) : isRecoveringPassword ? (
             <form onSubmit={handlePasswordRecovery} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>

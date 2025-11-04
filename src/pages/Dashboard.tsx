@@ -89,6 +89,8 @@ const Dashboard = () => {
   const [submissionToDelete, setSubmissionToDelete] = useState<{ id: string; status: string } | null>(null);
   // ✅ B2: Estado para agência selecionada
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
+  // ✅ ITEM 3: Estado para Instagram editável
+  const [instagram, setInstagram] = useState<string>("");
 
   // React Query hooks
   const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgencies(user?.id);
@@ -188,6 +190,7 @@ const Dashboard = () => {
     if (profile) {
       setSelectedGender(profile.gender || "");
       setAvatarPreview(profile.avatar_url || null);
+      setInstagram(profile.instagram || "");
     }
   }, [profile]);
 
@@ -889,7 +892,55 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <Label>Instagram</Label>
-                      <Input value={profile.instagram || ""} disabled />
+                      <div className="flex gap-2">
+                        <Input
+                          value={instagram}
+                          onChange={(e) => {
+                            // Remove espaços e garante formato @usuario
+                            let value = e.target.value.trim().replace(/\s/g, '');
+                            if (value && !value.startsWith('@')) {
+                              value = '@' + value;
+                            }
+                            setInstagram(value.slice(0, 31)); // @ + 30 caracteres
+                          }}
+                          placeholder="@seu_usuario"
+                          maxLength={31}
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!user) return;
+                            try {
+                              const { error } = await sb
+                                .from("profiles")
+                                .update({ instagram })
+                                .eq("id", user.id);
+                              
+                              if (error) throw error;
+                              
+                              toast({
+                                title: "Instagram atualizado!",
+                                description: "Seu Instagram foi salvo com sucesso.",
+                              });
+                              
+                              // Refetch profile
+                              refetch();
+                            } catch (error: any) {
+                              toast({
+                                title: "Erro ao salvar",
+                                description: error.message,
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          disabled={instagram === profile.instagram || !instagram}
+                          size="sm"
+                        >
+                          Salvar
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Use o formato: @seuusuario (sem espaços)
+                      </p>
                     </div>
                     {profile.phone && (
                       <div>

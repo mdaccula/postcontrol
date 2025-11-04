@@ -25,6 +25,7 @@ const AgencyAdminCard = lazy(() => import("@/components/AgencyAdminCard").then(m
 const AllUsersManagement = lazy(() => import("@/components/AllUsersManagement").then(m => ({ default: m.AllUsersManagement })));
 const AdminSettings = lazy(() => import("@/components/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const ChangelogManager = lazy(() => import("@/components/ChangelogManager").then(m => ({ default: m.ChangelogManager })));
+const GuestManager = lazy(() => import("@/components/GuestManager").then(m => ({ default: m.GuestManager })));
 import { AgencyRequestsManager } from "@/components/AgencyRequestsManager";
 import { ConversionDashboard } from "@/components/ConversionDashboard";
 
@@ -397,17 +398,22 @@ const MasterAdmin = () => {
 
         {/* Tabs com diferentes áreas */}
         <Tabs defaultValue="agencies" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-10">
-            <TabsTrigger value="conversion">Conversão</TabsTrigger>
-            <TabsTrigger value="agencies">Agências</TabsTrigger>
-            <TabsTrigger value="requests">Solicitações</TabsTrigger>
-            <TabsTrigger value="events">Eventos</TabsTrigger>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-            <TabsTrigger value="plans">Planos</TabsTrigger>
-            <TabsTrigger value="reports">Relatórios</TabsTrigger>
-            <TabsTrigger value="settings">Configurações</TabsTrigger>
-            <TabsTrigger value="changelog">Changelog</TabsTrigger>
-          </TabsList>
+          <div className="space-y-2">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="conversion">Conversão</TabsTrigger>
+              <TabsTrigger value="agencies">Agências</TabsTrigger>
+              <TabsTrigger value="requests">Solicitações</TabsTrigger>
+              <TabsTrigger value="events">Eventos</TabsTrigger>
+              <TabsTrigger value="users">Usuários</TabsTrigger>
+            </TabsList>
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="guests">Convidados</TabsTrigger>
+              <TabsTrigger value="plans">Planos</TabsTrigger>
+              <TabsTrigger value="reports">Relatórios</TabsTrigger>
+              <TabsTrigger value="settings">Configurações</TabsTrigger>
+              <TabsTrigger value="changelog">Changelog</TabsTrigger>
+            </TabsList>
+          </div>
 
 
           <TabsContent value="conversion" className="space-y-6">
@@ -611,6 +617,12 @@ const MasterAdmin = () => {
           <TabsContent value="settings">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               <AdminSettings isMasterAdmin={true} />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="guests">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <GuestManager />
             </Suspense>
           </TabsContent>
 
