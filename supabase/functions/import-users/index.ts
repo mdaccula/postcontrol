@@ -94,12 +94,23 @@ serve(async (req) => {
 
     const { users } = await req.json();
     
+    // ✅ ITEM 1: Validar gêneros antes de processar
+    const VALID_GENDERS = ['Masculino', 'Feminino', 'LGBTQ+', 'Agência'];
+    
     const results = {
       success: [] as string[],
       errors: [] as { email: string; error: string }[]
     };
 
     for (const importUser of users) {
+      // Validar gênero se fornecido
+      if (importUser.gender && !VALID_GENDERS.includes(importUser.gender)) {
+        results.errors.push({ 
+          email: importUser.email, 
+          error: `Gênero inválido: "${importUser.gender}". Valores permitidos: ${VALID_GENDERS.join(', ')}` 
+        });
+        continue;
+      }
       try {
         // Criar usuário com senha padrão
         const { data, error } = await supabase.auth.admin.createUser({
@@ -115,12 +126,24 @@ serve(async (req) => {
 
         if (error) throw error;
 
-        // 4. Atualizar profile com agency_id (se agency_admin)
-        if (userAgencyId && data.user) {
-          await supabase
-            .from('profiles')
-            .update({ agency_id: userAgencyId })
-            .eq('id', data.user.id);
+        // 4. Atualizar profile com agency_id e gender (se fornecidos)
+        if (data.user) {
+          const profileUpdate: any = {};
+          
+          if (userAgencyId) {
+            profileUpdate.agency_id = userAgencyId;
+          }
+          
+          if (importUser.gender) {
+            profileUpdate.gender = importUser.gender;
+          }
+          
+          if (Object.keys(profileUpdate).length > 0) {
+            await supabase
+              .from('profiles')
+              .update(profileUpdate)
+              .eq('id', data.user.id);
+          }
         }
         
         results.success.push(importUser.email);

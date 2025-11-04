@@ -35,32 +35,56 @@ export const FinancialReports = () => {
   }, []);
 
   const loadFinancialData = async () => {
+    console.log('💰 [FinancialReports] Iniciando carregamento...');
+    
     // Buscar todas as agências
-    const { data: agenciesData } = await sb
+    const { data: agenciesData, error: agenciesError } = await sb
       .from('agencies')
       .select('*');
 
+    console.log('📊 [FinancialReports] Agências carregadas:', agenciesData?.length, 'Erro:', agenciesError);
+
     // Buscar todos os planos
-    const { data: plansData } = await sb
+    const { data: plansData, error: plansError } = await sb
       .from('subscription_plans')
       .select('*');
 
-    if (!agenciesData || !plansData) return;
+    console.log('📋 [FinancialReports] Planos carregados:', plansData?.length, 'Erro:', plansError);
 
-    // Mapear agências com seus planos
-    const agencies = agenciesData.map(agency => ({
-      ...agency,
-      subscription_plans: plansData.find(p => p.plan_key === agency.subscription_plan)
-    }));
+    if (!agenciesData || !plansData) {
+      console.error('❌ [FinancialReports] Dados não carregados - agenciesData:', !!agenciesData, 'plansData:', !!plansData);
+      return;
+    }
+
+    // ✅ ITEM 3: Mapear agências com seus planos COM LOGS DETALHADOS
+    const agencies = agenciesData.map(agency => {
+      const plan = plansData.find(p => p.plan_key === agency.subscription_plan);
+      console.log(`📦 [FinancialReports] Agência: ${agency.name} | Plan Key: ${agency.subscription_plan} | Encontrado: ${!!plan} | Preço: ${plan?.monthly_price || 0}`);
+      return {
+        ...agency,
+        subscription_plans: plan
+      };
+    });
 
     // Calcular estatísticas
     const active = agencies.filter(a => a.subscription_status === 'active');
     const trial = agencies.filter(a => a.subscription_status === 'trial');
     const suspended = agencies.filter(a => a.subscription_status === 'suspended');
 
+    console.log('📈 [FinancialReports] Status:', { 
+      total: agencies.length, 
+      active: active.length, 
+      trial: trial.length, 
+      suspended: suspended.length 
+    });
+
     const monthlyRevenue = active.reduce((sum, a) => {
-      return sum + (a.subscription_plans?.monthly_price || 0);
+      const price = a.subscription_plans?.monthly_price || 0;
+      console.log(`💵 [FinancialReports] ${a.name}: R$ ${price}`);
+      return sum + price;
     }, 0);
+
+    console.log('💰 [FinancialReports] Receita mensal total: R$', monthlyRevenue);
 
     const conversion = trial.length > 0 ? (active.length / (active.length + trial.length)) * 100 : 0;
 

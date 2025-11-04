@@ -190,16 +190,29 @@ const Dashboard = () => {
         description: "Suas informações foram salvas com sucesso.",
       });
       
-      // ✅ ITEM 3: Se atualizou avatar_url, sincronizar com logo da agência
-      if (newData.avatar_url && profile?.agency_id) {
-        const { error: agencyError } = await sb
-          .from('agencies')
-          .update({ logo_url: newData.avatar_url })
-          .eq('id', profile.agency_id);
+      // ✅ ITEM 4: Invalidar cache de avatares para forçar recarga
+      if (newData.avatar_url) {
+        console.log('🔄 [Dashboard] Invalidando cache de avatar...');
         
-        if (!agencyError) {
-          console.log('✅ Logo da agência sincronizado automaticamente com avatar');
+        // Invalidar query do dashboard para recarregar avatar
+        await queryClient.invalidateQueries({ queryKey: ['dashboard', user?.id] });
+        
+        // Sincronizar com logo da agência se aplicável
+        if (profile?.agency_id) {
+          const { error: agencyError } = await sb
+            .from('agencies')
+            .update({ logo_url: newData.avatar_url })
+            .eq('id', profile.agency_id);
+          
+          if (!agencyError) {
+            console.log('✅ Logo da agência sincronizado automaticamente com avatar');
+            // Invalidar cache de agências também
+            await queryClient.invalidateQueries({ queryKey: ['userAgencies', user?.id] });
+          }
         }
+        
+        // Forçar recarga do preview do avatar
+        setAvatarPreview(newData.avatar_url);
       }
     },
     onError: (error) => {
