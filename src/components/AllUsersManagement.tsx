@@ -132,21 +132,9 @@ export const AllUsersManagement = () => {
       setAgencies(agenciesData);
     }
 
-    // ✅ Load gender options dynamically (corrigido para TypeScript)
-    const { data: genderData, error: genderError } = await sb
-      .from("profiles")
-      .select("gender", { distinct: true });
-
-    if (!genderError && genderData) {
-      const uniqueGenders: string[] = Array.from(
-        new Set(
-          (genderData as { gender: string | null }[])
-            .map((item) => item.gender)
-            .filter((g): g is string => Boolean(g))
-        )
-      );
-      setGenderOptions(uniqueGenders);
-    }
+    // ✅ Definir opções de gênero fixas conforme regra de negócio
+    const allowedGenders = ['Masculino', 'Feminino', 'LGBTQ+', 'Agência'];
+    setGenderOptions(allowedGenders);
   };
 
   const handleEditUser = (user: UserProfile) => {
@@ -263,17 +251,25 @@ export const AllUsersManagement = () => {
 
   const handleExportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredUsers.map(user => ({
-        Nome: user.full_name || "",
-        Email: user.email || "",
-        Instagram: user.instagram || "",
-        Telefone: user.phone || "",
-        Gênero: user.gender || "",
-        "Faixa de Seguidores": user.followers_range || "",
-        Nível: getUserRole(user.roles),
-        Agência: getAgencyName(user.agency_id),
-        "Total Posts": submissionCounts[user.id] || 0,
-      }))
+      filteredUsers.map(user => {
+        // Limpar Instagram username (remover @ se existir)
+        const cleanInstagram = user.instagram 
+          ? user.instagram.replace('@', '').trim()
+          : "";
+        
+        return {
+          Nome: user.full_name || "",
+          Email: user.email || "",
+          Instagram: cleanInstagram ? `@${cleanInstagram}` : "",
+          "Link Instagram": cleanInstagram ? `https://instagram.com/${cleanInstagram}` : "",
+          Telefone: user.phone || "",
+          Gênero: user.gender || "",
+          "Faixa de Seguidores": user.followers_range || "",
+          Nível: getUserRole(user.roles),
+          Agência: getAgencyName(user.agency_id),
+          "Total Posts": submissionCounts[user.id] || 0,
+        };
+      })
     );
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Usuários");
@@ -416,72 +412,96 @@ export const AllUsersManagement = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto -mx-4 md:mx-0">
-            <div className="inline-block min-w-full align-middle">
-              <Table>
+          <div className="w-full overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table className="w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="max-w-[180px]">Nome</TableHead>
-                    <TableHead className="max-w-[200px]">Email</TableHead>
-                    <TableHead className="max-w-[130px]">Instagram</TableHead>
-                    <TableHead className="max-w-[120px] hidden lg:table-cell">Telefone</TableHead>
-                    <TableHead className="max-w-[130px] hidden lg:table-cell">Faixa Seguidores</TableHead>
-                    <TableHead className="max-w-[100px] hidden xl:table-cell">Sexo</TableHead>
-                    <TableHead className="max-w-[140px]">Acesso</TableHead>
-                    <TableHead className="max-w-[150px] hidden lg:table-cell">Agência</TableHead>
-                    <TableHead className="max-w-[90px] text-center">Posts</TableHead>
-                    <TableHead className="w-[120px] sticky right-0 bg-card">Ações</TableHead>
+                    <TableHead className="w-[15%] min-w-[140px]">
+                      <div className="truncate">Nome</div>
+                    </TableHead>
+                    <TableHead className="w-[18%] min-w-[160px]">
+                      <div className="truncate">Email</div>
+                    </TableHead>
+                    <TableHead className="w-[10%] min-w-[100px]">
+                      <div className="truncate">Instagram</div>
+                    </TableHead>
+                    <TableHead className="w-[10%] min-w-[100px] hidden lg:table-cell">
+                      <div className="truncate">Telefone</div>
+                    </TableHead>
+                    <TableHead className="w-[12%] min-w-[110px] hidden lg:table-cell">
+                      <div className="truncate">Faixa Seguidores</div>
+                    </TableHead>
+                    <TableHead className="w-[8%] min-w-[80px] hidden xl:table-cell">
+                      <div className="truncate">Sexo</div>
+                    </TableHead>
+                    <TableHead className="w-[10%] min-w-[100px]">
+                      <div className="truncate">Acesso</div>
+                    </TableHead>
+                    <TableHead className="w-[12%] min-w-[110px] hidden lg:table-cell">
+                      <div className="truncate">Agência</div>
+                    </TableHead>
+                    <TableHead className="w-[6%] min-w-[60px] text-center">Posts</TableHead>
+                    <TableHead className="w-[10%] min-w-[100px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
 
                 <TableBody>
                   {paginatedUsers.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium max-w-[180px]">
+                      <TableCell className="font-medium max-w-0">
                         <div className="truncate" title={user.full_name || "—"}>
                           {user.full_name || "—"}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div className="truncate" title={user.email || "—"}>
+                      <TableCell className="max-w-0">
+                        <div className="truncate text-xs" title={user.email || "—"}>
                           {user.email || "—"}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[130px]">
-                        <div className="truncate">
+                      <TableCell className="max-w-0">
+                        <div className="truncate text-xs">
                           {user.instagram 
                             ? (user.instagram.startsWith('@') ? user.instagram : `@${user.instagram}`)
                             : "—"}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[120px] hidden lg:table-cell">{user.phone || "—"}</TableCell>
-                      <TableCell className="max-w-[130px] hidden lg:table-cell">
-                        <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                          {user.followers_range || "Não informado"}
-                        </Badge>
+                      <TableCell className="max-w-0 hidden lg:table-cell">
+                        <div className="truncate text-xs">{user.phone || "—"}</div>
                       </TableCell>
-                      <TableCell className="max-w-[100px] hidden xl:table-cell">
-                        <Badge variant="outline" className="text-xs whitespace-nowrap">
-                          {user.gender || "—"}
-                        </Badge>
+                      <TableCell className="max-w-0 hidden lg:table-cell">
+                        <div className="truncate">
+                          <Badge variant="secondary" className="text-xs max-w-full truncate">
+                            {user.followers_range || "Não informado"}
+                          </Badge>
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-[140px]">
-                        <Badge variant={getRoleBadgeVariant(user.roles)} className="text-xs whitespace-nowrap">
-                          {getUserRole(user.roles)}
-                        </Badge>
+                      <TableCell className="max-w-0 hidden xl:table-cell">
+                        <div className="truncate">
+                          <Badge variant="outline" className="text-xs max-w-full truncate">
+                            {user.gender || "—"}
+                          </Badge>
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-[150px] hidden lg:table-cell">
-                        <div className="truncate" title={getAgencyName(user.agency_id)}>
+                      <TableCell className="max-w-0">
+                        <div className="truncate">
+                          <Badge variant={getRoleBadgeVariant(user.roles)} className="text-xs max-w-full truncate">
+                            {getUserRole(user.roles)}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-0 hidden lg:table-cell">
+                        <div className="truncate text-xs" title={getAgencyName(user.agency_id)}>
                           {getAgencyName(user.agency_id)}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[90px] text-center">
+                      <TableCell className="text-center">
                         <Badge variant="secondary" className="text-xs">
                           {submissionCounts[user.id] || 0}
                         </Badge>
                       </TableCell>
-                       <TableCell className="w-[120px] min-w-[120px] sticky right-0 bg-card shadow-[-4px_0_8px_rgba(0,0,0,0.05)]">
-                        <div className="flex gap-1 justify-end">
+                      <TableCell>
+                        <div className="flex gap-1 justify-end flex-nowrap">
                           <Button
                             variant="outline"
                             size="sm"

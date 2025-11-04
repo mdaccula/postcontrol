@@ -356,8 +356,7 @@ const setCachedStats = (key: string, data: any) => {
   const GENDER_MAP: Record<string, string> = {
     'Masculino': 'Masculino',
     'Feminino': 'Feminino',
-    'Outro': 'Outro',
-    'LGBTQ+': 'Outro',
+    'LGBTQ+': 'LGBTQ+',
     'Agência': 'Agência',
     'Não informado': 'Não informado'
   };
@@ -750,7 +749,7 @@ const setCachedStats = (key: string, data: any) => {
           
           if (p.gender && p.gender.trim()) {
             // Tentar mapear usando GENDER_MAP primeiro
-            displayGender = GENDER_MAP[p.gender] || 'Outro';
+            displayGender = GENDER_MAP[p.gender] || 'LGBTQ+';
           }
           
           eventSpecificGenderData.set(displayGender, (eventSpecificGenderData.get(displayGender) || 0) + 1);
