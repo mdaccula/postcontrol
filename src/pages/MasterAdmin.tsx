@@ -507,7 +507,74 @@ const MasterAdmin = () => {
             </Suspense>
           </TabsContent>
 
-          <TabsContent value="plans">
+          <TabsContent value="plans" className="space-y-6">
+            {/* Stripe Integration Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Integração Stripe
+                </CardTitle>
+                <CardDescription>
+                  Sincronize seus planos com a Stripe para habilitar pagamentos automáticos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={async () => {
+                    try {
+                      toast({
+                        title: "Sincronizando...",
+                        description: "Criando produtos e preços na Stripe",
+                      });
+
+                      const { data, error } = await sb.functions.invoke('create-stripe-products');
+                      
+                      if (error) {
+                        throw error;
+                      }
+
+                      console.log('✅ Resultado da sincronização:', data);
+
+                      const results = data?.results || [];
+                      const successCount = results.filter((r: any) => r.success).length;
+                      const totalCount = results.length;
+
+                      if (successCount === totalCount) {
+                        toast({
+                          title: "Sincronização Completa!",
+                          description: `${successCount} planos sincronizados com sucesso na Stripe`,
+                        });
+                      } else {
+                        toast({
+                          title: "Sincronização Parcial",
+                          description: `${successCount} de ${totalCount} planos sincronizados. Verifique o console para detalhes.`,
+                          variant: "destructive",
+                        });
+                      }
+
+                      // Reload plans to show updated Stripe IDs
+                      loadPlans();
+                    } catch (error) {
+                      console.error('❌ Erro ao sincronizar:', error);
+                      toast({
+                        title: "Erro na Sincronização",
+                        description: error instanceof Error ? error.message : "Erro desconhecido",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="bg-gradient-primary"
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Sincronizar Planos com Stripe
+                </Button>
+                <p className="text-sm text-muted-foreground mt-4">
+                  Este botão criará produtos e preços na Stripe para todos os planos que ainda não possuem IDs Stripe.
+                </p>
+              </CardContent>
+            </Card>
+
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               <PlanManager />
             </Suspense>
