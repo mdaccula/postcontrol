@@ -564,7 +564,6 @@ const Dashboard = () => {
                      {userAgenciesData && userAgenciesData.length > 1 && (
                         <Select value={selectedAgencyId} onValueChange={setSelectedAgencyId}>
                           <SelectTrigger className="w-full sm:w-[280px] bg-background/50">
-                            <Building2 className="h-4 w-4 mr-2" />
                             <SelectValue placeholder="Selecione a agência" />
                           </SelectTrigger>
                          <SelectContent>
