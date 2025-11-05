@@ -31,45 +31,45 @@ export const AcceptInvite = () => {
   const loadInvite = async () => {
     try {
       // Query 1: Buscar convite e agência
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('agency_guests')
-        .select(`
-          *,
-          agencies(name, logo_url)
-        `)
-        .eq('invite_token', token)
-        .single();
+   const { data: inviteData, error: inviteError } = await supabase
+  .from('agency_guests')
+  .select(`
+    *,
+    agencies(name, logo_url)
+  `)
+  .eq('invite_token', token)
+  .maybeSingle();
 
-      if (inviteError) throw inviteError;
+// 🛡️ 1. Primeiro: trate erro real da query (ex: sintaxe, permissões)
+if (inviteError) {
+  throw inviteError;
+}
 
-      if (!inviteData) {
-        setError('Convite não encontrado');
-        return;
-      }
+// ❗ 2. Depois: verifique se não encontrou resultado
+if (!inviteData) {
+  setError('Convite não encontrado ou já foi utilizado/expirado');
+  return;
+}
 
-      if (inviteData.status === 'accepted') {
-        setError('Este convite já foi aceito');
-        return;
-      }
+// 🚫 3. Agora validamos o status do convite:
+const invalidStatuses = {
+  accepted: 'Este convite já foi aceito',
+  expired: 'Este convite expirou',
+  revoked: 'Este convite foi revogado',
+};
 
-      if (inviteData.status === 'expired') {
-        setError('Este convite expirou');
-        return;
-      }
+if (invalidStatuses[inviteData.status]) {
+  setError(invalidStatuses[inviteData.status]);
+  return;
+}
 
-      if (inviteData.status === 'revoked') {
-        setError('Este convite foi revogado');
-        return;
-      }
-
-      // Verificar se ainda está dentro do período de validade
-      const now = new Date();
-      const endDate = new Date(inviteData.access_end_date);
-
-      if (now > endDate) {
-        setError('Este convite expirou');
-        return;
-      }
+// 📅 4. Verifique validade de data
+const now = new Date();
+const endDate = new Date(inviteData.access_end_date);
+if (now > endDate) {
+  setError('Este convite expirou');
+  return;
+}
 
       // Query 2: Buscar permissões com eventos
       const { data: permissions, error: permError } = await supabase
