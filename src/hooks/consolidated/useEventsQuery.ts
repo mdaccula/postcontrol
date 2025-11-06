@@ -43,12 +43,17 @@ export const useEventsQuery = ({
       
       if (error) throw error;
 
-      // Se includePosts = true, buscar posts em paralelo
-      if (includePosts && events) {
-        const { data: posts } = await getEventPosts(agencyId);
+      // Se includePosts = true, buscar posts para cada evento
+      if (includePosts && events && events.length > 0) {
+        // Buscar posts de cada evento em paralelo
+        const postsPromises = events.map(event => getEventPosts(event.id));
+        const postsResults = await Promise.all(postsPromises);
+        
+        // Consolidar todos os posts
+        const allPosts = postsResults.flatMap(result => result.data || []);
         
         // Enriquecer posts com dados do evento
-        const enrichedPosts = (posts || []).map(post => {
+        const enrichedPosts = allPosts.map(post => {
           const matchedEvent = events.find(e => e.id === post.event_id);
           return {
             ...post,
