@@ -6,6 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+// ✅ Sprint 2B: Importar hooks consolidados
+import {
+  useEventsQuery,
+  useSubmissionsQuery,
+  useUpdateSubmissionStatusMutation,
+  useDeleteEventMutation,
+  useDeleteSubmissionMutation,
+} from "@/hooks/consolidated";
 import {
   Calendar,
   Users,
@@ -110,9 +119,6 @@ const Admin = () => {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedPost, setSelectedPost] = useState<any>(null);
-  const [events, setEvents] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [submissions, setSubmissions] = useState<any[]>([]);
   const [submissionEventFilter, setSubmissionEventFilter] = useState<string>("all");
   const [submissionPostFilter, setSubmissionPostFilter] = useState<string>("all");
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>("all");
@@ -139,12 +145,36 @@ const Admin = () => {
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [selectedImageForZoom, setSelectedImageForZoom] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
-  const [loadingEvents, setLoadingEvents] = useState(false);
   const [usersCount, setUsersCount] = useState(0);
   const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
   const [zoomSubmissionIndex, setZoomSubmissionIndex] = useState(0);
   const [eventActiveFilter, setEventActiveFilter] = useState<string>("all");
+  
+  // ✅ Sprint 2B: Usar hooks consolidados ao invés de states locais + chamadas diretas
+  const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents } = useEventsQuery({
+    agencyId: currentAgency?.id,
+    includePosts: true,
+    enabled: !!user && (isAgencyAdmin || isMasterAdmin)
+  });
+  
+  const { data: submissionsData, isLoading: submissionsLoading, refetch: refetchSubmissions } = useSubmissionsQuery({
+    agencyId: currentAgency?.id,
+    eventId: submissionEventFilter !== "all" ? submissionEventFilter : undefined,
+    enrichProfiles: true,
+    enabled: !!user && (isAgencyAdmin || isMasterAdmin) && !!currentAgency
+  });
+  
+  // ✅ Sprint 2B: Usar mutations consolidadas
+  const updateStatusMutation = useUpdateSubmissionStatusMutation();
+  const deleteEventMutation = useDeleteEventMutation();
+  const deleteSubmissionMutation = useDeleteSubmissionMutation();
+  
+  // Extrair eventos e posts dos dados do hook
+  const events = eventsData?.events || [];
+  const posts = eventsData?.posts || [];
+  const submissions = submissionsData?.data || [];
+  const loadingEvents = eventsLoading;
+  const loadingSubmissions = submissionsLoading;
   
   // Trial state management
   const [trialInfo, setTrialInfo] = useState<{
@@ -233,7 +263,7 @@ const Admin = () => {
   useEffect(() => {
     if (currentAgency) {
       console.log("✅ [Admin] currentAgency carregado, recarregando eventos...", currentAgency.name);
-      loadEvents();
+      refetchEvents();
       loadUsersCount();
       
       // Check trial status
@@ -292,7 +322,7 @@ const Admin = () => {
         currentAgency: currentAgency.name,
         submissionEventFilter,
       });
-      loadSubmissions();
+      refetchSubmissions();
     }
   }, [submissionEventFilter, currentAgency?.id]);
 
@@ -467,232 +497,24 @@ const Admin = () => {
     });
   }, []);
 
-  const loadEvents = async () => {
-    if (!user) return;
-
-    setLoadingEvents(true);
-
-    try {
-      let agencyIdFilter = null;
-
-      // Check if Master Admin is viewing specific agency via agencyId querystring
-      const urlParams = new URLSearchParams(window.location.search);
-      const queryAgencyId = urlParams.get("agencyId");
-
-      // Determine which agency's data to load
-      if (queryAgencyId && isMasterAdmin) {
-        agencyIdFilter = queryAgencyId;
-      } else if (currentAgency?.id) {
-        agencyIdFilter = currentAgency.id;
-      } else if (isAgencyAdmin && profile?.agency_id) {
-        agencyIdFilter = profile.agency_id;
-      } else if (isAgencyAdmin && !profile) {
-        const { data: profileData, error: profileError } = await sb
-          .from("profiles")
-          .select("agency_id")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Erro ao buscar profile:", profileError);
-          toast.error("Erro ao carregar dados do usuário");
-          return;
-        }
-
-        agencyIdFilter = profileData?.agency_id;
-
-        if (!agencyIdFilter) {
-          toast.error("Erro: Usuário não está associado a nenhuma agência.");
-          return;
-        }
-      } else if (isMasterAdmin) {
-        agencyIdFilter = null;
-      }
-
-      // Verify session is active
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Sessão expirada. Faça login novamente.");
-        return;
-      }
-
-      // Build queries
-      let eventsQuery = supabase.from("events").select("*");
-      let postsQuery = supabase.from("posts").select("*, events(id, title)");
-
-      if (agencyIdFilter) {
-        eventsQuery = eventsQuery.eq("agency_id", agencyIdFilter);
-        postsQuery = postsQuery.eq("agency_id", agencyIdFilter);
-      }
-
-      // Execute queries in parallel
-      const [{ data: eventsData, error: eventsError }, { data: postsData, error: postsError }] = await Promise.all([
-        eventsQuery.order("created_at", { ascending: false }),
-        postsQuery.order("created_at", { ascending: false }),
-      ]);
-
-      if (eventsError) {
-        console.error("Erro ao carregar eventos:", eventsError);
-        toast.error(`Erro ao carregar eventos: ${eventsError.message}`);
-        return;
-      }
-
-      if (postsError) {
-        console.error("Erro ao carregar posts:", postsError);
-        toast.error(`Erro ao carregar posts: ${postsError.message}`);
-        return;
-      }
-
-      // Enrich posts with event data
-      const enrichedPosts =
-        postsData?.map((post) => {
-          if (!post.events && post.event_id) {
-            const matchedEvent = eventsData?.find((e) => e.id === post.event_id);
-            if (matchedEvent) {
-              return {
-                ...post,
-                events: { id: matchedEvent.id, title: matchedEvent.title },
-              };
-            }
-          }
-          return post;
-        }) || [];
-
-      setEvents(eventsData || []);
-      setPosts(enrichedPosts);
-    } catch (error) {
-      console.error("Erro crítico ao carregar eventos:", error);
-      toast.error("Erro ao carregar dados da agência");
-    } finally {
-      setLoadingEvents(false);
-    }
-  };
-
-  const loadSubmissions = async () => {
-    if (!user) return;
-
-    setLoadingSubmissions(true);
-
-    let agencyIdFilter = null;
-
-    // Check if Master Admin is viewing specific agency via agencyId querystring
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryAgencyId = urlParams.get("agencyId");
-
-    // Determine which agency's data to load
-    if (queryAgencyId && isMasterAdmin) {
-      agencyIdFilter = queryAgencyId;
-    } else if (isMasterAdmin && !currentAgency) {
-      agencyIdFilter = null;
-    } else if (currentAgency) {
-      agencyIdFilter = currentAgency.id;
-    } else if (isAgencyAdmin) {
-      const { data: profileData } = await sb.from("profiles").select("agency_id").eq("id", user.id).maybeSingle();
-
-      agencyIdFilter = profileData?.agency_id;
-    }
-
-    // Load submissions via posts.agency_id (LEFT JOIN para incluir vendas)
-    let submissionsQuery = sb.from("submissions").select(`
-        *,
-        posts(
-          post_number, 
-          deadline, 
-          event_id, 
-          agency_id, 
-          events(title, id, event_purpose)
-        )
-      `);
-
-    if (agencyIdFilter) {
-      submissionsQuery = submissionsQuery.eq("agency_id", agencyIdFilter);
-    }
-
-    // Filtrar por evento específico se não for "all"
-    if (submissionEventFilter !== "all") {
-      submissionsQuery = submissionsQuery.eq("posts.event_id", submissionEventFilter);
-    }
-
-    const { data: submissionsData } = await submissionsQuery.order("submitted_at", { ascending: false });
-
-    // ✅ FASE 1: Otimização - Buscar perfis e contagens em paralelo
-    const userIds = Array.from(new Set((submissionsData || []).map((s: any) => s.user_id)));
-
-    const [profilesData, countsData] = await Promise.all([
-      // Buscar perfis em lote
-      userIds.length > 0
-        ? sb.from("profiles").select("id, full_name, email, instagram").in("id", userIds)
-        : Promise.resolve({ data: [] }),
-
-      // ✅ FASE 1: Query agregada para contagens (evita N+1)
-      userIds.length > 0
-        ? sb
-            .from("submissions")
-            .select("user_id")
-            .in("user_id", userIds)
-            .then(({ data }) => {
-              // Agregar contagens no cliente
-              const counts: Record<string, number> = {};
-              (data || []).forEach((s: any) => {
-                counts[s.user_id] = (counts[s.user_id] || 0) + 1;
-              });
-              return counts;
-            })
-        : Promise.resolve({}),
-    ]);
-
-    // Indexar perfis por ID
-    const profilesById: Record<string, any> = {};
-    (profilesData.data || []).forEach((p: any) => {
-      profilesById[p.id] = p;
-    });
-
-    // ✅ FASE 1: NÃO gerar signed URLs aqui - fazer lazy loading depois
-    const enrichedSubmissions = (submissionsData || []).map((s: any) => ({
-      ...s,
-      profiles: profilesById[s.user_id] || null,
-      total_submissions: countsData[s.user_id] || 0,
-    }));
-
-    setSubmissions(enrichedSubmissions);
-    setSelectedSubmissions(new Set());
-    setLoadingSubmissions(false);
-  };
-
+  // ✅ Sprint 2B: Substituir handleApproveSubmission para usar mutation consolidada
   const handleApproveSubmission = async (submissionId: string) => {
     try {
-      console.log("Aprovando submissão:", submissionId);
-      const { data, error } = await supabase
-        .from("submissions")
-        .update({
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id,
-        })
-        .eq("id", submissionId)
-        .select();
+      await updateStatusMutation.mutateAsync({
+        submissionId,
+        status: 'approved',
+        userId: user?.id || ''
+      });
 
-      console.log("Resultado da aprovação:", { data, error });
+      // Confetti ao aprovar
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
 
-      if (error) {
-        toast.error("Erro ao aprovar submissão");
-        console.error("Erro detalhado:", error);
-      } else {
-        toast.success("Submissão aprovada com sucesso");
-
-        // Confetti ao aprovar
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-
-        await loadSubmissions();
-      }
+      refetchSubmissions();
     } catch (error) {
-      toast.error("Erro ao aprovar submissão");
       console.error("Exception:", error);
     }
   };
@@ -705,45 +527,28 @@ const Admin = () => {
   };
 
   // Linhas 436-481
+  // ✅ Sprint 2B: Refatorar confirmRejection para usar mutation
   const confirmRejection = async () => {
     if (!selectedSubmissionForRejection) return;
 
-    setLoadingSubmissions(true);
-
     try {
-      const { data, error } = await supabase
-        .from("submissions")
-        .update({
-          status: "rejected",
-          rejection_reason: rejectionReason || undefined,
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id,
-        })
-        .eq("id", selectedSubmissionForRejection)
-        .select();
-
-      if (error) {
-        toast.error("Erro ao rejeitar submissão");
-        console.error("Erro detalhado:", error);
-        setLoadingSubmissions(false);
-        return;
-      }
+      await updateStatusMutation.mutateAsync({
+        submissionId: selectedSubmissionForRejection,
+        status: 'rejected',
+        userId: user?.id || '',
+        rejectionReason: rejectionReason || undefined
+      });
 
       // Recarregar dados antes de fechar
-      await loadSubmissions();
+      refetchSubmissions();
 
       // Fechar diálogo após sucesso
       setRejectionDialogOpen(false);
       setSelectedSubmissionForRejection(null);
       setRejectionReason("");
       setRejectionTemplate("");
-
-      toast.success("Submissão rejeitada com sucesso");
     } catch (error) {
-      toast.error("Erro ao rejeitar submissão");
       console.error("Exception:", error);
-    } finally {
-      setLoadingSubmissions(false);
     }
   };
 
@@ -778,30 +583,14 @@ const Admin = () => {
 
   const handleStatusChange = async (submissionId: string, newStatus: string) => {
     try {
-      console.log("Alterando status:", submissionId, newStatus);
-      const { data, error } = await supabase
-        .from("submissions")
-        .update({
-          status: newStatus,
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id,
-        })
-        .eq("id", submissionId)
-        .select();
-
-      console.log("Resultado da alteração:", { data, error });
-
-      if (error) {
-        toast.error("Erro ao alterar status");
-        console.error("Erro detalhado:", error);
-      } else {
-        toast.success(
-          `Status alterado para ${newStatus === "approved" ? "aprovado" : newStatus === "rejected" ? "rejeitado" : "pendente"}`,
-        );
-        await loadSubmissions();
-      }
+      await updateStatusMutation.mutateAsync({
+        submissionId,
+        status: newStatus as 'approved' | 'rejected' | 'pending',
+        userId: user?.id || ''
+      });
+      
+      refetchSubmissions();
     } catch (error) {
-      toast.error("Erro ao alterar status");
       console.error("Exception:", error);
     }
   };
@@ -813,21 +602,20 @@ const Admin = () => {
       return;
     }
 
-    const { error } = await sb
-      .from("submissions")
-      .update({
-        status: "approved",
-        approved_at: new Date().toISOString(),
-        approved_by: user?.id,
-      })
-      .in("id", ids);
-
-    if (error) {
-      toast.error("Erro ao aprovar submissões em massa");
-      console.error(error);
-    } else {
+    try {
+      // Aprovar todas em paralelo usando a mutation
+      await Promise.all(
+        ids.map(id => updateStatusMutation.mutateAsync({
+          submissionId: id,
+          status: 'approved',
+          userId: user?.id || ''
+        }))
+      );
+      
       toast.success(`${ids.length} submissões aprovadas com sucesso`);
-      await loadSubmissions();
+      refetchSubmissions();
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -966,16 +754,11 @@ const Admin = () => {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      const { error } = await sb.from("events").delete().eq("id", eventId);
-
-      if (error) throw error;
-
-      toast.success("Evento excluído com sucesso");
-      await loadEvents();
+      await deleteEventMutation.mutateAsync(eventId);
+      refetchEvents();
       setEventToDelete(null);
     } catch (error) {
       console.error("Error deleting event:", error);
-      toast.error("Erro ao excluir evento");
     }
   };
 
@@ -1017,7 +800,7 @@ const Admin = () => {
       }
 
       toast.success("Evento duplicado com sucesso! Você pode editá-lo agora.");
-      await loadEvents();
+      refetchEvents();
     } catch (error) {
       console.error("Error duplicating event:", error);
       toast.error("Erro ao duplicar evento");
@@ -1044,8 +827,8 @@ const Admin = () => {
           : `${postToDelete.submissionsCount} submissões foram deletadas`;
 
       toast.success(`Postagem deletada com sucesso${postToDelete.submissionsCount > 0 ? `. ${submissionsText}` : ""}`);
-      await loadEvents();
-      await loadSubmissions();
+      refetchEvents();
+      refetchSubmissions();
       setPostToDelete(null);
     } catch (error) {
       console.error("Error deleting post:", error);
@@ -1070,16 +853,11 @@ const Admin = () => {
     if (!submissionToDelete) return;
 
     try {
-      const { error } = await sb.from("submissions").delete().eq("id", submissionToDelete);
-
-      if (error) throw error;
-
-      toast.success("Submissão deletada com sucesso");
-      await loadSubmissions();
+      await deleteSubmissionMutation.mutateAsync(submissionToDelete);
+      refetchSubmissions();
       setSubmissionToDelete(null);
     } catch (error) {
       console.error("Error deleting submission:", error);
-      toast.error("Erro ao deletar submissão");
     }
   };
 
@@ -1719,10 +1497,10 @@ const Admin = () => {
                       {getAvailablePostNumbers().map((num) => {
                         // Buscar post_type das submissions filtradas
                         const submission = submissions.find(
-                          s => s.posts?.post_number === num &&
-                          (submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter)
+                          s => (s.posts as any)?.post_number === num &&
+                          (submissionEventFilter === "all" || (s.posts as any)?.events?.id === submissionEventFilter)
                         );
-                        const postType = submission?.posts?.post_type || null;
+                        const postType = (submission?.posts as any)?.post_type || null;
                         return (
                           <SelectItem key={num} value={num.toString()}>
                             {formatPostName(postType, num)}
@@ -1959,7 +1737,7 @@ const Admin = () => {
 
               {kanbanView ? (
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                  <SubmissionKanban submissions={getFilteredSubmissions} onUpdate={loadSubmissions} userId={user?.id} />
+                  <SubmissionKanban submissions={getFilteredSubmissions as any} onUpdate={refetchSubmissions} userId={user?.id} />
                 </Suspense>
               ) : submissionEventFilter === "all" ? (
                 <Card className="p-12 text-center">
@@ -2312,7 +2090,7 @@ const Admin = () => {
                                     <Suspense fallback={<Skeleton className="h-32 w-full" />}>
                                       <SubmissionComments
                                         submissionId={submission.id}
-                                        onCommentAdded={loadSubmissions}
+                                        onCommentAdded={refetchSubmissions}
                                       />
                                     </Suspense>
                                   )}
@@ -2443,8 +2221,8 @@ const Admin = () => {
             if (!open) setSelectedEvent(null);
           }}
           onEventCreated={() => {
-            loadEvents();
-            if (submissionEventFilter !== "all") loadSubmissions();
+            refetchEvents();
+            if (submissionEventFilter !== "all") refetchSubmissions();
           }}
           event={selectedEvent}
         />
@@ -2458,8 +2236,8 @@ const Admin = () => {
             if (!open) setSelectedPost(null);
           }}
           onPostCreated={() => {
-            loadEvents();
-            if (submissionEventFilter !== "all") loadSubmissions();
+            refetchEvents();
+            if (submissionEventFilter !== "all") refetchSubmissions();
           }}
           post={selectedPost}
         />
@@ -2641,7 +2419,7 @@ const Admin = () => {
           open={addSubmissionDialogOpen}
           onOpenChange={setAddSubmissionDialogOpen}
           onSuccess={() => {
-            loadSubmissions();
+            refetchSubmissions();
             toast.success("Submissão adicionada com sucesso!");
           }}
           selectedEventId={submissionEventFilter !== "all" ? submissionEventFilter : undefined}
@@ -2653,7 +2431,7 @@ const Admin = () => {
         <SubmissionZoomDialog
           open={zoomDialogOpen}
           onOpenChange={setZoomDialogOpen}
-          submission={getFilteredSubmissions[zoomSubmissionIndex]}
+          submission={getFilteredSubmissions[zoomSubmissionIndex] as any}
           onApprove={handleApproveSubmission}
           onReject={handleRejectSubmission}
           onNext={handleZoomNext}
