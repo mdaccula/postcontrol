@@ -2,6 +2,12 @@ import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
+// ✅ Sprint 3B: Importar componentes refatorados
+import { DashboardStats } from "./Dashboard/DashboardStats";
+import { DashboardSubmissionHistory } from "./Dashboard/DashboardSubmissionHistory";
+import { DashboardProfile } from "./Dashboard/DashboardProfile";
+import { useDashboardFilters } from "./Dashboard/useDashboardFilters";
 import {
   ArrowLeft,
   TrendingUp,
@@ -80,7 +86,6 @@ const Dashboard = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedGender, setSelectedGender] = useState<string>("");
-  const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string>("all");
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyPlan, setAgencyPlan] = useState<string>("");
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
@@ -91,6 +96,12 @@ const Dashboard = () => {
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
   // ✅ ITEM 3: Estado para Instagram editável
   const [instagram, setInstagram] = useState<string>("");
+
+  // ✅ Sprint 3B: Hook consolidado para filtros
+  const {
+    filters: { selectedHistoryEvent },
+    setSelectedHistoryEvent,
+  } = useDashboardFilters();
 
   // React Query hooks
   const { data: userAgenciesData, isLoading: isLoadingAgencies } = useUserAgenciesQuery(user?.id);
@@ -620,82 +631,14 @@ const Dashboard = () => {
           </Suspense>
         )}
 
-        {/* Stats Cards - ✅ ITEM 4: Adicionado card de Total de Submissões */}
-        <div className="grid md:grid-cols-4 gap-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-               <div className="flex items-center justify-between">
-                 <div>
-                   <p className="text-sm text-muted-foreground">Postagens Aprovadas</p>
-                   <h3 className="text-3xl font-bold mt-2">{filteredSubmissions.filter(s => s.status === "approved").length}</h3>
-                 </div>
-                <div className="p-4 bg-green-500/10 rounded-full">
-                  <TrendingUp className="h-8 w-8 text-green-500" />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-          >
-            <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-               <div className="flex items-center justify-between">
-                 <div>
-                   <p className="text-sm text-muted-foreground">Total de Submissões</p>
-                   <h3 className="text-3xl font-bold mt-2">{filteredSubmissions.length}</h3>
-                 </div>
-                <div className="p-4 bg-orange-500/10 rounded-full">
-                  <Send className="h-8 w-8 text-orange-500" />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-               <div className="flex items-center justify-between">
-                 <div>
-                   <p className="text-sm text-muted-foreground">Eventos Ativos</p>
-                   <h3 className="text-3xl font-bold mt-2">{filteredEventStats.length}</h3>
-                 </div>
-                <div className="p-4 bg-blue-500/10 rounded-full">
-                  <Calendar className="h-8 w-8 text-blue-500" />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Card className="p-6 hover:shadow-lg transition-all duration-300 border-primary/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Última Submissão</p>
-                  <h3 className="text-lg font-bold mt-2">
-                    {lastSubmission ? new Date(lastSubmission.submitted_at).toLocaleDateString("pt-BR") : "Nenhuma"}
-                  </h3>
-                </div>
-                <div className="p-4 bg-purple-500/10 rounded-full">
-                  <Award className="h-8 w-8 text-purple-500" />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
+        {/* Stats Cards e Event Progress */}
+        <DashboardStats
+          approvedCount={filteredSubmissions.filter(s => s.status === 'approved').length}
+          totalSubmissions={filteredSubmissions.length}
+          activeEventsCount={filteredEventStats.length}
+          lastSubmissionDate={lastSubmission?.submitted_at || null}
+          eventStats={filteredEventStats}
+        />
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="statistics" className="space-y-6">
@@ -746,290 +689,69 @@ const Dashboard = () => {
 
           {/* History Tab */}
           <TabsContent value="history" className="space-y-6">
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Histórico de Submissões</h2>
-                <Select value={selectedHistoryEvent} onValueChange={setSelectedHistoryEvent}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Filtrar por evento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os eventos</SelectItem>
-                    {filteredEvents.map((event: any) => (
-                      <SelectItem key={event.id} value={event.id}>
-                        {event.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4">
-                {filteredSubmissionsByEvent.length > 0 ? (
-                  filteredSubmissionsByEvent.map((submission) => (
-                    <Card key={submission.id} className="p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-3">
-                            <Badge
-                              variant={
-                                submission.status === "approved"
-                                  ? "default"
-                                  : submission.status === "rejected"
-                                    ? "destructive"
-                                    : "secondary"
-                              }
-                            >
-                              {submission.status === "approved"
-                                ? "Aprovado"
-                                : submission.status === "rejected"
-                                  ? "Rejeitado"
-                                  : "Pendente"}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(submission.submitted_at).toLocaleString("pt-BR")}
-                            </span>
-                          </div>
-                          <p className="font-medium">
-                            {submission.posts?.events?.title} - Post #{submission.posts?.post_number}
-                          </p>
-                          {submission.rejection_reason && (
-                            <p className="text-sm text-destructive">Motivo: {submission.rejection_reason}</p>
-                          )}
-                        </div>
-                        {submission.screenshot_url && (
-                          <Suspense fallback={<Skeleton className="h-20 w-20" />}>
-                            <SubmissionImageDisplay
-                              screenshotPath={submission.screenshot_path}
-                              screenshotUrl={submission.screenshot_url}
-                              className="h-20 w-20 object-cover rounded"
-                            />
-                          </Suspense>
-                        )}
-                      </div>
-                      {/* ✅ ITEM NOVO: Botão excluir com AlertDialog */}
-                      {submission.status === "pending" && (
-                        <div className="mt-3 pt-3 border-t">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
-                            onClick={() => setSubmissionToDelete({ id: submission.id, status: submission.status })}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir Submissão
-                          </Button>
-                        </div>
-                      )}
-                    </Card>
-                  ))
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">Nenhuma submissão encontrada</p>
-                )}
-              </div>
-            </Card>
+            <DashboardSubmissionHistory
+              submissions={filteredSubmissionsByEvent}
+              events={filteredEvents}
+              selectedEvent={selectedHistoryEvent}
+              onEventChange={setSelectedHistoryEvent}
+              onDeleteSubmission={setSubmissionToDelete}
+              SubmissionImageDisplay={SubmissionImageDisplay}
+            />
           </TabsContent>
 
           {/* Profile Tab */}
           <TabsContent value="cadastro" className="space-y-6">
-            <Card className="p-6">
-              <Tabs defaultValue="info">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="info">Informações</TabsTrigger>
-                  <TabsTrigger value="senha">Alterar Senha</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="info" className="space-y-6 mt-6">
-                  {/* Avatar Section */}
-                  <div className="flex flex-col items-center gap-4 pb-6 border-b">
-                    <Avatar className="h-32 w-32 ring-4 ring-primary/20">
-                      <AvatarImage src={avatarPreview || undefined} />
-                      <AvatarFallback className="text-3xl">{profile.full_name?.charAt(0) || "U"}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex gap-2">
-                      <Label htmlFor="avatar-upload" className="cursor-pointer">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-                          <Camera className="h-4 w-4" />
-                          <span>Alterar Foto</span>
-                        </div>
-                        <Input
-                          id="avatar-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarChange}
-                          className="hidden"
-                        />
-                      </Label>
-                      {avatarFile && (
-                        <Button onClick={saveAvatar} disabled={uploading}>
-                          {uploading ? `${uploadProgress}%` : "Salvar Foto"}
-                        </Button>
-                      )}
-                    </div>
-                    {uploading && <Progress value={uploadProgress} className="w-full max-w-xs" />}
-                  </div>
-
-                  {/* Profile Info */}
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Nome Completo</Label>
-                      <Input
-                        defaultValue={profile.full_name || ""}
-                        onBlur={async (e) => {
-                          // Salvar ao perder foco
-                          const newName = e.target.value.trim();
-                          if (newName && newName !== profile.full_name) {
-                            await updateProfileMutation.mutateAsync({ full_name: newName });
-                          }
-                        }}
-                        placeholder="Digite seu nome completo"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Email</Label>
-                      <Input value={profile.email || ""} disabled />
-                    </div>
-                    <div>
-                      <Label>Instagram</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={instagram}
-                          onChange={(e) => {
-                            // Remove espaços e garante formato @usuario
-                            let value = e.target.value.trim().replace(/\s/g, '');
-                            if (value && !value.startsWith('@')) {
-                              value = '@' + value;
-                            }
-                            setInstagram(value.slice(0, 31)); // @ + 30 caracteres
-                          }}
-                          placeholder="@seu_usuario"
-                          maxLength={31}
-                        />
-                        <Button
-                          onClick={async () => {
-                            if (!user) return;
-                            try {
-                              const { error } = await sb
-                                .from("profiles")
-                                .update({ instagram })
-                                .eq("id", user.id);
-                              
-                              if (error) throw error;
-                              
-                              toast({
-                                title: "Instagram atualizado!",
-                                description: "Seu Instagram foi salvo com sucesso.",
-                              });
-                              
-                              // Refetch profile
-                              refetch();
-                            } catch (error: any) {
-                              toast({
-                                title: "Erro ao salvar",
-                                description: error.message,
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          disabled={instagram === profile.instagram || !instagram}
-                          size="sm"
-                        >
-                          Salvar
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Use o formato: @seuusuario (sem espaços)
-                      </p>
-                    </div>
-                    {profile.phone && (
-                      <div>
-                        <Label>Telefone</Label>
-                        <Input value={profile.phone} disabled />
-                      </div>
-                    )}
-                    <div>
-                      <Label>Gênero</Label>
-                      <Select value={selectedGender} onValueChange={setSelectedGender} disabled={isAgencyAdmin}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione seu gênero" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isAgencyAdmin ? (
-                            <SelectItem value="Agência">Agência</SelectItem>
-                          ) : (
-                            <>
-                              <SelectItem value="Masculino">Masculino</SelectItem>
-                              <SelectItem value="Feminino">Feminino</SelectItem>
-                              <SelectItem value="LGBTQ+">LGBTQ+</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {isAgencyAdmin && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Administradores de agência têm gênero fixo como "Agência"
-                        </p>
-                      )}
-                      {selectedGender !== (profile.gender || "") && (
-                        <Button onClick={saveGender} className="mt-2" size="sm">
-                          Salvar Gênero
-                        </Button>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Faixa de Seguidores</Label>
-                      <Select
-                        value={profile.followers_range || ""}
-                        onValueChange={async (value) => {
-                          await updateProfileMutation.mutateAsync({ followers_range: value });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a faixa" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0-5k">0 - 5k</SelectItem>
-                          <SelectItem value="5k-10k">5k - 10k</SelectItem>
-                          <SelectItem value="10k-50k">10k - 50k</SelectItem>
-                          <SelectItem value="50k-100k">50k - 100k</SelectItem>
-                          <SelectItem value="100k+">100k+</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="senha" className="space-y-6 mt-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="new-password">Nova Senha</Label>
-                      <Input
-                        id="new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Mínimo 6 caracteres"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="confirm-password">Confirmar Senha</Label>
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Digite a senha novamente"
-                      />
-                    </div>
-                    <Button onClick={changePassword} disabled={!newPassword || !confirmPassword} className="w-full">
-                      <Lock className="mr-2 h-4 w-4" />
-                      Alterar Senha
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </Card>
+            <DashboardProfile
+              profile={profile}
+              avatarPreview={avatarPreview}
+              avatarFile={avatarFile}
+              uploading={uploading}
+              uploadProgress={uploadProgress}
+              instagram={instagram}
+              selectedGender={selectedGender}
+              newPassword={newPassword}
+              confirmPassword={confirmPassword}
+              isAgencyAdmin={isAgencyAdmin}
+              user={user}
+              onAvatarChange={handleAvatarChange}
+              onSaveAvatar={saveAvatar}
+              onInstagramChange={setInstagram}
+              onSaveInstagram={async () => {
+                if (!user) return;
+                try {
+                  const { error } = await sb
+                    .from('profiles')
+                    .update({ instagram })
+                    .eq('id', user.id);
+                  
+                  if (error) throw error;
+                  
+                  toast({
+                    title: 'Instagram atualizado!',
+                    description: 'Seu Instagram foi salvo com sucesso.',
+                  });
+                  
+                  refetch();
+                } catch (error: any) {
+                  toast({
+                    title: 'Erro ao salvar',
+                    description: error.message,
+                    variant: 'destructive',
+                  });
+                }
+              }}
+              onGenderChange={setSelectedGender}
+              onSaveGender={saveGender}
+              onNewPasswordChange={setNewPassword}
+              onConfirmPasswordChange={setConfirmPassword}
+              onChangePassword={changePassword}
+              onFollowersRangeChange={async (value) => {
+                await updateProfileMutation.mutateAsync({ followers_range: value });
+              }}
+              onFullNameChange={async (newName) => {
+                await updateProfileMutation.mutateAsync({ full_name: newName });
+              }}
+            />
           </TabsContent>
         </Tabs>
 
