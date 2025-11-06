@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
+// ✅ Sprint 3A: Importar componentes refatorados
+import { AdminFilters, AdminSubmissionList, AdminEventList, useAdminFilters } from "./Admin/";
+
 // ✅ Sprint 2B: Importar hooks consolidados
 import {
   useEventsQuery,
@@ -119,12 +122,7 @@ const Admin = () => {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedPost, setSelectedPost] = useState<any>(null);
-  const [submissionEventFilter, setSubmissionEventFilter] = useState<string>("all");
-  const [submissionPostFilter, setSubmissionPostFilter] = useState<string>("all");
-  const [submissionStatusFilter, setSubmissionStatusFilter] = useState<string>("all");
-  const [postTypeFilter, setPostTypeFilter] = useState<string>("all"); // ✅ Filtro único unificado
   const [addSubmissionDialogOpen, setAddSubmissionDialogOpen] = useState(false);
-  const [postEventFilter, setPostEventFilter] = useState<string>("all");
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [postToDelete, setPostToDelete] = useState<{ id: string; submissionsCount: number } | null>(null);
@@ -133,22 +131,45 @@ const Admin = () => {
   const [selectedSubmissionForRejection, setSelectedSubmissionForRejection] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionTemplate, setRejectionTemplate] = useState("");
-  const [kanbanView, setKanbanView] = useState(false);
   const [auditLogSubmissionId, setAuditLogSubmissionId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(30);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [rejectionTemplatesFromDB, setRejectionTemplatesFromDB] = useState<any[]>([]);
-  const [dateFilterStart, setDateFilterStart] = useState<string>("");
-  const [dateFilterEnd, setDateFilterEnd] = useState<string>("");
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [selectedImageForZoom, setSelectedImageForZoom] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [usersCount, setUsersCount] = useState(0);
   const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
   const [zoomSubmissionIndex, setZoomSubmissionIndex] = useState(0);
-  const [eventActiveFilter, setEventActiveFilter] = useState<string>("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  
+  // ✅ Sprint 3A: Hook consolidado para filtros (substituindo ~12 useState)
+  const {
+    filters: {
+      submissionEventFilter,
+      submissionPostFilter,
+      submissionStatusFilter,
+      postTypeFilter,
+      searchTerm,
+      dateFilterStart,
+      dateFilterEnd,
+      currentPage,
+      itemsPerPage,
+      kanbanView,
+      eventActiveFilter,
+      postEventFilter,
+    },
+    setSubmissionEventFilter,
+    setSubmissionPostFilter,
+    setSubmissionStatusFilter,
+    setPostTypeFilter,
+    setSearchTerm,
+    setDateFilterStart,
+    setDateFilterEnd,
+    setCurrentPage,
+    setItemsPerPage,
+    setKanbanView,
+    setEventActiveFilter,
+    setPostEventFilter,
+  } = useAdminFilters();
   
   // ✅ Sprint 2B: Usar hooks consolidados ao invés de states locais + chamadas diretas
   const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents } = useEventsQuery({
@@ -2112,7 +2133,7 @@ const Admin = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                                 disabled={currentPage === 1}
                               >
                                 Anterior
@@ -2146,7 +2167,7 @@ const Admin = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                                 disabled={currentPage === totalPages}
                               >
                                 Próxima
