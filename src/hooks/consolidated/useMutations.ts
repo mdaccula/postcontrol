@@ -47,17 +47,12 @@ export const useUpdateSubmissionStatusMutation = () => {
       userId: string;
       rejectionReason?: string;
     }) => {
-      const updates: any = {
+      const { data, error } = await updateSubmissionStatus(
+        submissionId, 
         status,
-        approved_by: userId,
-        approved_at: status === 'approved' ? new Date().toISOString() : null,
-      };
-      
-      if (rejectionReason) {
-        updates.rejection_reason = rejectionReason;
-      }
-      
-      const { data, error } = await updateSubmissionStatus(submissionId, updates);
+        userId, 
+        rejectionReason
+      );
       if (error) throw error;
       return data;
     },
