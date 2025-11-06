@@ -1,7 +1,23 @@
+/**
+ * @deprecated Este arquivo será removido na Sprint 2B
+ * ⚠️ USE: src/hooks/consolidated/ em vez disso
+ * 
+ * Migração:
+ * - useEvents → useEventsQuery (src/hooks/consolidated/useEventsQuery.ts)
+ * - useSubmissions → useSubmissionsQuery (src/hooks/consolidated/useSubmissionsQuery.ts)
+ * - useProfiles → useProfilesQuery (src/hooks/consolidated/useProfilesQuery.ts)
+ * - useUpdateSubmissionStatus → useUpdateSubmissionStatusMutation (src/hooks/consolidated/useMutations.ts)
+ * - useUpsertEvent → useUpsertEventMutation (src/hooks/consolidated/useMutations.ts)
+ * - useDeleteEvent → useDeleteEventMutation (src/hooks/consolidated/useMutations.ts)
+ * 
+ * Este código ainda funciona, mas será removido após migração completa dos componentes.
+ */
+
 import { useQuery, useQueryClient, UseMutationOptions, useMutation } from '@tanstack/react-query';
 import { sb } from '@/lib/supabaseSafe';
 
 // M7: Hook expandido para eventos com filtros
+// ⚠️ DEPRECATED: Usar useEventsQuery de src/hooks/consolidated/
 export const useEvents = (agencyId?: string, isActive?: boolean) => {
   return useQuery({
     queryKey: ['events', agencyId, isActive],

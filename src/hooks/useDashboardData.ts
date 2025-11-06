@@ -1,3 +1,16 @@
+/**
+ * @deprecated Este arquivo será removido na Sprint 2B
+ * ⚠️ USE: src/hooks/useDashboard.ts em vez disso
+ * 
+ * O hook useDashboard.ts já existe e é otimizado com React Query.
+ * Este arquivo usa useState + useEffect (menos eficiente).
+ * 
+ * Migração:
+ * - useDashboardData → useDashboard (src/hooks/useDashboard.ts)
+ * 
+ * Este código ainda funciona, mas será removido após migração completa dos componentes.
+ */
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";

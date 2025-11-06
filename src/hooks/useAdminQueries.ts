@@ -1,3 +1,17 @@
+/**
+ * @deprecated Este arquivo será removido na Sprint 2B
+ * ⚠️ USE: src/hooks/consolidated/ em vez disso
+ * 
+ * Migração:
+ * - useEvents → useEventsQuery (src/hooks/consolidated/useEventsQuery.ts)
+ * - useSubmissions → useSubmissionsQuery (src/hooks/consolidated/useSubmissionsQuery.ts)
+ * - useUpdateSubmissionStatus → useUpdateSubmissionStatusMutation (src/hooks/consolidated/useMutations.ts)
+ * - useDeleteEvent → useDeleteEventMutation (src/hooks/consolidated/useMutations.ts)
+ * - useDeleteSubmission → useDeleteSubmissionMutation (src/hooks/consolidated/useMutations.ts)
+ * 
+ * Este código ainda funciona, mas será removido após migração completa dos componentes.
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { sb } from '@/lib/supabaseSafe';
@@ -5,7 +19,7 @@ import { toast } from 'sonner';
 
 /**
  * ✅ FASE 3: React Query hooks para Admin.tsx
- * Substituem useState + useEffect por cache inteligente
+ * ⚠️ DEPRECATED: Substituem useState + useEffect por cache inteligente
  */
 
 interface UseEventsParams {
