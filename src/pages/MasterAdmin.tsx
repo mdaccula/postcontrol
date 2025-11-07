@@ -26,6 +26,7 @@ const AllUsersManagement = lazy(() => import("@/components/AllUsersManagement").
 const AdminSettings = lazy(() => import("@/components/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const ChangelogManager = lazy(() => import("@/components/ChangelogManager").then(m => ({ default: m.ChangelogManager })));
 const GuestManager = lazy(() => import("@/components/GuestManager").then(m => ({ default: m.GuestManager })));
+const MasterPostsManager = lazy(() => import("@/components/MasterPostsManager").then(m => ({ default: m.MasterPostsManager })));
 import { AgencyRequestsManager } from "@/components/AgencyRequestsManager";
 import { ConversionDashboard } from "@/components/ConversionDashboard";
 
@@ -399,11 +400,12 @@ const MasterAdmin = () => {
         {/* Tabs com diferentes áreas */}
         <Tabs defaultValue="agencies" className="space-y-6">
           <div className="space-y-2">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="conversion">Conversão</TabsTrigger>
               <TabsTrigger value="agencies">Agências</TabsTrigger>
               <TabsTrigger value="requests">Solicitações</TabsTrigger>
               <TabsTrigger value="events">Eventos</TabsTrigger>
+              <TabsTrigger value="posts">Postagens</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
             </TabsList>
             <TabsList className="grid w-full grid-cols-5">
@@ -527,6 +529,12 @@ const MasterAdmin = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="posts" className="space-y-6">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <MasterPostsManager />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="users">
