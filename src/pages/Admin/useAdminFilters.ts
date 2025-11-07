@@ -50,7 +50,7 @@ export const useAdminFilters = () => {
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
   const itemsPerPage = parseInt(searchParams.get('perPage') || '30', 10);
   const kanbanView = searchParams.get('view') === 'kanban';
-  const eventActiveFilter = searchParams.get('eventActive') || 'all';
+  const eventActiveFilter = searchParams.get('eventActive') || 'active'; // ✅ ITEM 8: Padrão 'active'
   const postEventFilter = searchParams.get('postEvent') || 'all';
 
   /**

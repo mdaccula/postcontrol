@@ -169,10 +169,18 @@ export const GuestDashboard = () => {
                 Acesso válido até {new Date(guestData.access_end_date).toLocaleDateString('pt-BR')}
               </p>
             </div>
-            <Badge variant="secondary" className="text-lg px-4 py-2">
-              <Eye className="mr-2 h-4 w-4" />
-              Convidado
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/dashboard')}
+              >
+                ← Voltar ao Dashboard
+              </Button>
+              <Badge variant="secondary" className="text-lg px-4 py-2">
+                <Eye className="mr-2 h-4 w-4" />
+                Convidado
+              </Badge>
+            </div>
           </div>
         </div>
 

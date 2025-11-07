@@ -132,7 +132,7 @@ const Submit = () => {
           // Verificar se o evento existe na lista carregada
           const eventExists = events.find(e => e.id === eventContext.eventId);
           if (eventExists) {
-            setSelectedEvent(eventContext.eventId);
+            setSelectedEvent(eventContext.eventId); // ✅ ITEM 1 FASE 1: Auto-seleciona evento (já logado ou não)
             console.log("✅ [ITEM 1] Evento pré-selecionado:", eventExists.title);
           } else {
             console.warn("⚠️ [ITEM 1] Evento do contexto não encontrado na lista");

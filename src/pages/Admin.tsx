@@ -172,6 +172,7 @@ const Admin = () => {
     setKanbanView,
     setEventActiveFilter,
     setPostEventFilter,
+    clearFilters, // ✅ ITEM 3 FASE 1: Adicionar clearFilters
   } = useAdminFilters();
   
   // ✅ Sprint 2B: Usar hooks consolidados ao invés de states locais + chamadas diretas
@@ -1399,7 +1400,16 @@ const Admin = () => {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="events" className="space-y-6">
+        <Tabs 
+          defaultValue="events" 
+          className="space-y-6"
+          onValueChange={(value) => {
+            // ✅ ITEM 3 FASE 1: Limpar filtros de submissões ao sair da aba
+            if (value !== 'submissions') {
+              clearFilters();
+            }
+          }}
+        >
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1 h-auto">
             <TabsTrigger value="events" className="text-xs sm:text-sm py-2">
               Eventos
