@@ -997,6 +997,7 @@ export type Database = {
           display_order: number | null
           features: Json | null
           id: string
+          is_popular: boolean | null
           is_visible: boolean | null
           max_events: number
           max_influencers: number
@@ -1012,6 +1013,7 @@ export type Database = {
           display_order?: number | null
           features?: Json | null
           id?: string
+          is_popular?: boolean | null
           is_visible?: boolean | null
           max_events: number
           max_influencers: number
@@ -1027,6 +1029,7 @@ export type Database = {
           display_order?: number | null
           features?: Json | null
           id?: string
+          is_popular?: boolean | null
           is_visible?: boolean | null
           max_events?: number
           max_influencers?: number
@@ -1076,6 +1079,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "subscriptions_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suggestions: {
+        Row: {
+          agency_id: string | null
+          created_at: string | null
+          description: string
+          id: string
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agency_id?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agency_id?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestions_agency_id_fkey"
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"

@@ -41,6 +41,7 @@ import {
   Clock,
   XCircle,
   MessageSquare,
+  Lightbulb, // ✅ ITEM 5 FASE 2
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserRoleQuery } from "@/hooks/useUserRoleQuery";
@@ -70,6 +71,7 @@ const SubmissionImageDisplay = lazy(() =>
 );
 const GuestManager = lazy(() => import("@/components/GuestManager").then((m) => ({ default: m.GuestManager })));
 const GuestAuditLog = lazy(() => import("@/components/GuestAuditLog").then((m) => ({ default: m.GuestAuditLog })));
+const SuggestionDialog = lazy(() => import("@/components/SuggestionDialog").then((m) => ({ default: m.SuggestionDialog }))); // ✅ ITEM 5 FASE 2
 
 // FASE 2: Componentes memoizados para performance
 const MemoizedDashboardStats = lazy(() =>
@@ -125,6 +127,7 @@ const Admin = () => {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false); // ✅ ITEM 5 FASE 2
   const [addSubmissionDialogOpen, setAddSubmissionDialogOpen] = useState(false);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
@@ -819,6 +822,7 @@ const Admin = () => {
 
   const handleDuplicateEvent = async (event: any) => {
     try {
+      // ✅ ITEM 6 FASE 2: Incluir agency_id, created_by e todos os campos importantes
       const { data: newEvent, error } = await sb
         .from("events")
         .insert({
@@ -833,13 +837,26 @@ const Admin = () => {
           is_active: false, // Criar inativo por padrão
           require_instagram_link: event.require_instagram_link,
           event_image_url: event.event_image_url,
+          agency_id: event.agency_id, // ✅ Copiar agency_id
+          created_by: user?.id || event.created_by, // ✅ Usar usuário atual
+          event_purpose: event.event_purpose,
+          whatsapp_group_url: event.whatsapp_group_url,
+          whatsapp_group_title: event.whatsapp_group_title,
+          accept_posts: event.accept_posts,
+          accept_sales: event.accept_sales,
+          require_profile_screenshot: event.require_profile_screenshot,
+          require_post_screenshot: event.require_post_screenshot,
+          target_gender: event.target_gender,
+          internal_notes: event.internal_notes,
+          total_required_posts: event.total_required_posts,
+          is_approximate_total: event.is_approximate_total,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Duplicar requisitos também
+      // ✅ Duplicar requisitos
       const { data: requirements } = await sb.from("event_requirements").select("*").eq("event_id", event.id);
 
       if (requirements && requirements.length > 0) {
@@ -854,7 +871,22 @@ const Admin = () => {
         await sb.from("event_requirements").insert(newRequirements);
       }
 
-      toast.success("Evento duplicado com sucesso! Você pode editá-lo agora.");
+      // ✅ ITEM 6 FASE 2: Duplicar FAQs também
+      const { data: faqs } = await sb.from("event_faqs").select("*").eq("event_id", event.id);
+
+      if (faqs && faqs.length > 0) {
+        const newFaqs = faqs.map((faq: any) => ({
+          event_id: newEvent.id,
+          question: faq.question,
+          answer: faq.answer,
+          is_visible: faq.is_visible,
+          display_order: faq.display_order,
+        }));
+
+        await sb.from("event_faqs").insert(newFaqs);
+      }
+
+      toast.success("Evento duplicado com sucesso! Requisitos e FAQs foram copiados.");
       refetchEvents();
     } catch (error) {
       console.error("Error duplicating event:", error);
@@ -2393,6 +2425,16 @@ const Admin = () => {
           hasPrevious={zoomSubmissionIndex > 0}
         />
       )}
+
+      {/* ✅ ITEM 5 FASE 2: Dialog de Sugestões */}
+      <Suspense fallback={null}>
+        <SuggestionDialog
+          open={suggestionDialogOpen}
+          onOpenChange={setSuggestionDialogOpen}
+          userId={user?.id || ""}
+          agencyId={currentAgency?.id}
+        />
+      </Suspense>
     </div>
   );
 };

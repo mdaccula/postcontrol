@@ -18,6 +18,7 @@ interface Plan {
   max_events: number;
   features: string[];
   is_visible: boolean;
+  is_popular: boolean;
   display_order: number;
 }
 
@@ -171,6 +172,14 @@ const handleSave = async () => {
                   <Label>Visível na página inicial</Label>
                 </div>
 
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={editData.is_popular}
+                    onCheckedChange={(checked) => setEditData({ ...editData, is_popular: checked })}
+                  />
+                  <Label>Plano Popular (destaque na home)</Label>
+                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={handleSave} className="bg-gradient-primary">
                     <Save className="mr-2 h-4 w-4" />
@@ -217,10 +226,15 @@ const handleSave = async () => {
                   </ul>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 flex gap-2">
                   <span className={`text-xs px-2 py-1 rounded ${plan.is_visible ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                     {plan.is_visible ? 'Visível' : 'Oculto'}
                   </span>
+                  {plan.is_popular && (
+                    <span className="text-xs px-2 py-1 rounded bg-gradient-primary text-white">
+                      ⭐ Popular
+                    </span>
+                  )}
                 </div>
               </div>
             )}

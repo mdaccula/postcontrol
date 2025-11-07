@@ -490,59 +490,59 @@ const Home = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {plans.map((plan, index) => {
-                const isPopular = index === Math.floor(plans.length / 2); // Middle plan is most popular
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
+              {plans.map((plan) => {
+                const isPopular = plan.is_popular === true; // ✅ Usa campo do banco
                 const features = Array.isArray(plan.features) ? plan.features : [];
                 
                 return (
                   <Card 
                     key={plan.id} 
-                    className={`p-8 relative ${
-                      isPopular ? 'border-4 border-primary shadow-glow scale-105' : 'border-2'
+                    className={`p-6 relative flex flex-col ${
+                      isPopular ? 'border-4 border-primary shadow-glow scale-105 z-10' : 'border-2'
                     }`}
                   >
                     {isPopular && (
                       <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-gradient-primary px-6 py-2 text-base shadow-lg">
+                        <Badge className="bg-gradient-primary px-6 py-2 text-sm shadow-lg whitespace-nowrap">
                           ⭐ MAIS POPULAR
                         </Badge>
                       </div>
                     )}
                     
-                    <div className="text-center mb-6">
-                      <h3 className="text-2xl font-bold mb-2">{plan.plan_name}</h3>
-                      <div className="flex items-baseline justify-center gap-2 mb-4">
-                        <span className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    <div className="text-center mb-4">
+                      <h3 className="text-xl font-bold mb-2">{plan.plan_name}</h3>
+                      <div className="flex items-baseline justify-center gap-1 mb-2">
+                        <span className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                           R$ {Number(plan.monthly_price).toFixed(2)}
                         </span>
-                        <span className="text-muted-foreground">/mês</span>
+                        <span className="text-sm text-muted-foreground">/mês</span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {plan.max_influencers} divulgadores • {plan.max_events} eventos
+                      <p className="text-xs text-muted-foreground">
+                        {plan.max_influencers === 99999 ? 'Ilimitado' : plan.max_influencers} divulgadores • {plan.max_events === 99999 ? 'Ilimitado' : plan.max_events} eventos
                       </p>
                     </div>
 
-                    <div className="space-y-3 mb-8">
+                    <div className="space-y-2 mb-6 flex-grow">
                       {features.map((feature: string, idx: number) => (
                         <div key={idx} className="flex items-start gap-2">
-                          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm">{feature}</span>
+                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs">{feature}</span>
                         </div>
                       ))}
                     </div>
 
                     <Button 
-  size="lg" 
-  className={`w-full ${
-    isPopular ? 'bg-gradient-primary' : 'bg-gradient-secondary'
-  }`}
-  onClick={handleTrialClick}
-  disabled={isLoading}
->
-  {isLoading ? 'Processando...' : 'Teste 7 dias grátis'}
-  <ArrowRight className="ml-2 h-4 w-4" />
-</Button>
+                      size="lg" 
+                      className={`w-full ${
+                        isPopular ? 'bg-gradient-primary' : 'bg-gradient-secondary'
+                      }`}
+                      onClick={handleTrialClick}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Processando...' : 'Teste 7 dias grátis'}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
 
                   </Card>
                 );
