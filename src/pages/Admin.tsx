@@ -235,7 +235,7 @@ const Admin = () => {
     agencyId: currentAgency?.id,
     eventId: submissionEventFilter !== "all" ? submissionEventFilter : undefined,
     enrichProfiles: true,
-    itemsPerPage: 10000, // 🔴 ITEM 2: Reduzido de 10000 para 50 (performance crítica)
+    itemsPerPage: 50, // 🔴 ITEM 2: Reduzido de 10000 para 50 (performance crítica)
     page: currentPage, // 🔴 ITEM 2: Usar currentPage para paginação real
     enabled: !!user && (isAgencyAdmin || isMasterAdmin) && !!currentAgency,
   });
