@@ -23,6 +23,12 @@ import {
   useDeleteEventMutation,
   useDeleteSubmissionMutation,
 } from "@/hooks/consolidated";
+
+// 🆕 SPRINT 2: Importar funções de contagem agregada
+import { 
+  getSubmissionCountsByEvent, 
+  getSubmissionCountsByPost 
+} from "@/services/submissionService";
 import {
   Calendar,
   Users,
@@ -227,6 +233,38 @@ const Admin = () => {
     })),
   );
 
+  // 🆕 SPRINT 2: Estados para contadores agregados do backend
+  const [submissionsByEvent, setSubmissionsByEvent] = useState<Record<string, number>>({});
+  const [submissionsByPost, setSubmissionsByPost] = useState<Record<string, number>>({});
+  const [loadingCounters, setLoadingCounters] = useState(false);
+
+  // 🆕 SPRINT 2: Buscar contadores agregados quando agência mudar
+  useEffect(() => {
+    const fetchCounters = async () => {
+      if (!currentAgency?.id) return;
+      
+      setLoadingCounters(true);
+      console.log("📊 [Admin] Buscando contadores agregados para agência:", currentAgency.id);
+
+      try {
+        const [eventCounts, postCounts] = await Promise.all([
+          getSubmissionCountsByEvent(currentAgency.id),
+          getSubmissionCountsByPost(currentAgency.id),
+        ]);
+
+        setSubmissionsByEvent(eventCounts);
+        setSubmissionsByPost(postCounts);
+        console.log("✅ [Admin] Contadores carregados:", { eventCounts, postCounts });
+      } catch (error) {
+        console.error("❌ [Admin] Erro ao buscar contadores:", error);
+      } finally {
+        setLoadingCounters(false);
+      }
+    };
+
+    fetchCounters();
+  }, [currentAgency?.id]);
+
   const {
     data: submissionsData,
     isLoading: submissionsLoading,
@@ -284,31 +322,6 @@ const Admin = () => {
     events.forEach((event) => map.set(event.id, event));
     return map;
   }, [events]);
-
-  // 🔧 CORREÇÃO 2: Calcular submissões por evento
-  const submissionsByEvent = useMemo(() => {
-    const counts: Record<string, number> = {};
-    submissions.forEach((sub) => {
-      if (sub.post_id) {
-        const post = posts.find((p) => p.id === sub.post_id);
-        if (post?.event_id) {
-          counts[post.event_id] = (counts[post.event_id] || 0) + 1;
-        }
-      }
-    });
-    return counts;
-  }, [submissions, posts]);
-
-  // ✅ ITEM 2: Calcular submissões por post
-  const submissionsByPost = useMemo(() => {
-    const counts: Record<string, number> = {};
-    submissions.forEach((sub) => {
-      if (sub.post_id) {
-        counts[sub.post_id] = (counts[sub.post_id] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [submissions]);
 
   // ✅ ITEM 10: Helper memoizado com useCallback para evitar re-renders
   const getEventTitle = useCallback(

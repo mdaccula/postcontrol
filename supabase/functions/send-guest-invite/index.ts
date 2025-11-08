@@ -82,12 +82,17 @@ const handler = async (req: Request): Promise<Response> => {
       .map((perm: any) => `• ${perm.events.title} (${perm.permission_level})`)
       .join("\n");
 
+    console.log("📧 Tentando enviar email para:", guest.guest_email);
+    console.log("📧 URL do convite:", inviteUrl);
+    console.log("📧 Eventos:", eventsList);
+
     // Enviar email
-    const emailResponse = await sendEmail({
-      from: "Sua Agência <onboarding@resend.dev>", // TODO: Customizar com domínio verificado
-      to: [guest.guest_email],
-      subject: `Convite: Acesso aos Eventos - ${guest.agencies.name}`,
-      html: `
+    try {
+      const emailResponse = await sendEmail({
+        from: "Sua Agência <onboarding@resend.dev>", // TODO: Customizar com domínio verificado
+        to: [guest.guest_email],
+        subject: `Convite: Acesso aos Eventos - ${guest.agencies.name}`,
+        html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -174,29 +179,54 @@ const handler = async (req: Request): Promise<Response> => {
         </body>
         </html>
       `,
-    });
+      });
 
-    console.log("Email sent successfully:", emailResponse);
+      console.log("✅ Email enviado com sucesso:", emailResponse);
 
-    // Atualizar última tentativa de envio
-    await supabase
-      .from("agency_guests")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", guestId);
+      // Atualizar última tentativa de envio
+      await supabase
+        .from("agency_guests")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", guestId);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        emailId: emailResponse.id,
-        inviteUrl 
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          emailId: emailResponse.id,
+          inviteUrl 
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    } catch (emailError: any) {
+      console.error("❌ Erro detalhado ao enviar email:", {
+        message: emailError.message,
+        stack: emailError.stack,
+        resendKey: RESEND_API_KEY ? "✅ Configurado" : "❌ NÃO CONFIGURADO",
+        guestEmail: guest.guest_email,
+      });
+
+      // Mesmo com erro no email, convite foi criado
+      return new Response(
+        JSON.stringify({ 
+          error: `Erro ao enviar email: ${emailError.message}. Verifique se RESEND_API_KEY está configurado e o domínio verificado.`,
+          inviteCreated: true,
+          inviteUrl,
+          details: {
+            hasResendKey: !!RESEND_API_KEY,
+            guestEmail: guest.guest_email
+          }
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
   } catch (error: any) {
-    console.error("Error in send-guest-invite function:", error);
+    console.error("❌ Erro geral na função send-guest-invite:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -101,6 +101,92 @@ export async function getSubmissions(
 }
 
 /**
+ * 🆕 SPRINT 2: Busca contadores agregados de submissões por evento
+ * @param agencyId - ID da agência para filtrar (opcional)
+ * @returns Record com event_id como chave e contagem como valor
+ */
+export async function getSubmissionCountsByEvent(
+  agencyId?: string
+): Promise<Record<string, number>> {
+  try {
+    console.log('📊 [Backend] Buscando contadores por evento, agencyId:', agencyId);
+
+    let query = supabase
+      .from('submissions')
+      .select('post_id, posts!inner(event_id, agency_id)');
+
+    if (agencyId) {
+      query = query.eq('posts.agency_id', agencyId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ Erro ao buscar contadores por evento:', error);
+      throw error;
+    }
+
+    // Agregar contagens por evento
+    const counts: Record<string, number> = {};
+    data?.forEach((submission: any) => {
+      const eventId = submission.posts?.event_id;
+      if (eventId) {
+        counts[eventId] = (counts[eventId] || 0) + 1;
+      }
+    });
+
+    console.log('✅ [Backend] Contadores por evento:', counts);
+    return counts;
+  } catch (error) {
+    console.error('❌ Erro na função getSubmissionCountsByEvent:', error);
+    return {};
+  }
+}
+
+/**
+ * 🆕 SPRINT 2: Busca contadores agregados de submissões por post
+ * @param agencyId - ID da agência para filtrar (opcional)
+ * @returns Record com post_id como chave e contagem como valor
+ */
+export async function getSubmissionCountsByPost(
+  agencyId?: string
+): Promise<Record<string, number>> {
+  try {
+    console.log('📊 [Backend] Buscando contadores por post, agencyId:', agencyId);
+
+    let query = supabase
+      .from('submissions')
+      .select('post_id, posts!inner(agency_id)');
+
+    if (agencyId) {
+      query = query.eq('posts.agency_id', agencyId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ Erro ao buscar contadores por post:', error);
+      throw error;
+    }
+
+    // Agregar contagens por post
+    const counts: Record<string, number> = {};
+    data?.forEach((submission: any) => {
+      const postId = submission.post_id;
+      if (postId) {
+        counts[postId] = (counts[postId] || 0) + 1;
+      }
+    });
+
+    console.log('✅ [Backend] Contadores por post:', counts);
+    return counts;
+  } catch (error) {
+    console.error('❌ Erro na função getSubmissionCountsByPost:', error);
+    return {};
+  }
+}
+
+/**
  * Fetches a single submission by ID with relations
  * @param id - Submission ID
  * @returns Submission with relations

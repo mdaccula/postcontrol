@@ -119,7 +119,7 @@ const AdminFiltersComponent = ({
         <div>
           <h2 className="text-2xl font-bold">Submissões de Usuários</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Total: {filteredCount} submiss{filteredCount === 1 ? 'ão' : 'ões'}
+            Total: {totalCount} submiss{totalCount === 1 ? 'ão' : 'ões'}
             {submissionEventFilter !== 'all' && <span className="text-xs ml-1">(filtrado por evento)</span>}
           </p>
         </div>
