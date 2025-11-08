@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { sb } from "@/lib/supabaseSafe";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
@@ -156,8 +157,38 @@ export default function PublicEvent() {
     );
   }
 
+  const pageUrl = `${window.location.origin}/agencia/${agencySlug}/evento/${eventSlug}`;
+  const eventImageUrl = event.event_image_url || agency.logo_url || `${window.location.origin}/placeholder.svg`;
+  const eventDateFormatted = event.event_date 
+    ? format(new Date(event.event_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+    : '';
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
+      <Helmet>
+        <title>{event.title} - {agency.name}</title>
+        <meta name="description" content={event.description || `Participe do evento ${event.title} organizado por ${agency.name}`} />
+        
+        {/* Open Graph Meta Tags */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={`${event.title} - ${agency.name}`} />
+        <meta property="og:description" content={event.description || `Participe do evento ${event.title} organizado por ${agency.name}`} />
+        <meta property="og:image" content={eventImageUrl} />
+        <meta property="og:site_name" content={agency.name} />
+        
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={pageUrl} />
+        <meta name="twitter:title" content={`${event.title} - ${agency.name}`} />
+        <meta name="twitter:description" content={event.description || `Participe do evento ${event.title} organizado por ${agency.name}`} />
+        <meta name="twitter:image" content={eventImageUrl} />
+        
+        {/* Additional SEO */}
+        {event.event_date && <meta property="event:start_time" content={event.event_date} />}
+        {event.location && <meta property="og:locale" content="pt_BR" />}
+      </Helmet>
+
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
