@@ -50,10 +50,17 @@ export const SubmissionZoomDialog = ({
   const isMobile = useIsMobile();
   const touchStartX = useRef<number>(0);
   
-  // 🔴 GUARD: Fechar diálogo se submission for undefined
+  // ✅ SPRINT 1: Fechar diálogo se submission for undefined (com feedback visual)
   useEffect(() => {
     if (open && !submission) {
       console.warn('⚠️ SubmissionZoomDialog: submission is undefined, closing dialog');
+      import('@/hooks/use-toast').then(({ toast }) => {
+        toast({
+          title: "📋 Submissão não encontrada",
+          description: "A lista foi atualizada. Por favor, tente novamente.",
+          variant: "default",
+        });
+      });
       onOpenChange(false);
     }
   }, [open, submission, onOpenChange]);

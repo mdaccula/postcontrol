@@ -125,8 +125,8 @@ export const useSubmissionsQuery = ({
       };
     },
     enabled,
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    gcTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000, // ✅ SPRINT 1: Cache inteligente - 5 minutos
+    gcTime: 10 * 60 * 1000,   // ✅ SPRINT 1: Cache inteligente - 10 minutos
   });
 };
 

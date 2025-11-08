@@ -150,6 +150,23 @@ const Admin = () => {
   const [zoomSubmissionIndex, setZoomSubmissionIndex] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
+  // ✅ SPRINT 1: Persistir índice de zoom entre filtros
+  useEffect(() => {
+    // Restaurar índice salvo ao montar componente
+    const savedIndex = sessionStorage.getItem('adminZoomIndex');
+    if (savedIndex && !isNaN(Number(savedIndex))) {
+      setZoomSubmissionIndex(Number(savedIndex));
+    }
+  }, []);
+
+  // ✅ SPRINT 1: Salvar índice quando diálogo abrir
+  useEffect(() => {
+    if (zoomDialogOpen) {
+      sessionStorage.setItem('adminZoomIndex', zoomSubmissionIndex.toString());
+      console.log('💾 [Zoom] Índice salvo:', zoomSubmissionIndex);
+    }
+  }, [zoomDialogOpen, zoomSubmissionIndex]);
+  
   // ✅ Sprint 3A: Hook consolidado para filtros (substituindo ~12 useState)
   const {
     filters: {
@@ -833,7 +850,7 @@ const Admin = () => {
       return {
         events: events.length,
         posts: posts.length,
-        submissions: submissions.length,
+        submissions: submissionsData?.count || 0, // ✅ SPRINT 1: Usar count real do backend
         users: usersCount,
         sales: submissions.filter((s) => s.submission_type === "sale" && s.status === "approved").length,
       };
@@ -1819,7 +1836,7 @@ const Admin = () => {
               onCardsGridViewToggle={() => setCardsGridView(!cardsGridView)}
               onExport={handleExportToExcel}
               filteredCount={getFilteredSubmissions.length}
-              totalCount={submissions.length}
+              totalCount={submissionsData?.count || 0} // ✅ SPRINT 1: Usar count real do backend
               isLoadingSubmissions={loadingSubmissions}
             />
 
