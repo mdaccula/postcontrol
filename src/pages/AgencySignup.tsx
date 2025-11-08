@@ -79,6 +79,17 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
     setSubmitting(true);
 
     try {
+      // 🟡 ITEM 5: Validação explícita de gênero antes do submit
+      if (!formData.gender || formData.gender.trim() === '') {
+        toast({
+          title: "Campo obrigatório",
+          description: "Por favor, selecione seu gênero antes de continuar.",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
       // 1. Criar usuário no auth
       const { data: authData, error: authError } = await sb.auth.signUp({
         email: formData.email,
@@ -87,6 +98,7 @@ export default function AgencySignup({ tokenFromSlug }: AgencySignupProps = {}) 
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             full_name: formData.fullName,
+            gender: formData.gender, // 🟡 ITEM 5: Passar gender no metadata
           },
         },
       });

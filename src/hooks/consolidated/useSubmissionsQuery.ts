@@ -48,6 +48,9 @@ export const useSubmissionsQuery = ({
   return useQuery({
     queryKey: ['submissions', eventId, status, userId, agencyId, page, itemsPerPage],
     queryFn: async () => {
+      // 🔴 ITEM 2: Log de performance
+      console.time(`⏱️ [Performance] Fetch Submissions (page ${page})`);
+      
       // ✅ Usa submissionService da Sprint 1
       const { data: submissions, count, error } = await getSubmissions({
         eventId,
@@ -58,10 +61,13 @@ export const useSubmissionsQuery = ({
         itemsPerPage
       });
 
+      console.timeEnd(`⏱️ [Performance] Fetch Submissions (page ${page})`);
       if (error) throw error;
 
       // Se enrichProfiles = true, buscar perfis e contagens
       if (enrichProfiles && submissions && submissions.length > 0) {
+        console.time('⏱️ [Performance] Enrich Profiles');
+        
         const userIds = Array.from(new Set(submissions.map(s => s.user_id)));
 
         // Buscar perfis e contagens em paralelo
@@ -82,6 +88,8 @@ export const useSubmissionsQuery = ({
               return counts;
             })
         ]);
+        
+        console.timeEnd('⏱️ [Performance] Enrich Profiles');
 
         // Criar mapa de perfis por ID
         const profilesById: Record<string, any> = {};

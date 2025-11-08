@@ -48,10 +48,18 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
       
       setEventId(resolvedEventId);
       setPostNumber(post.post_number?.toString() || "");
-      // ✅ ITEM 8: Forçar horário fixo sem conversão de timezone
+      
+      // 🟡 ITEM 3: Corrigir fuso horário - não usar toISOString que converte para UTC
       if (post.deadline) {
-        const dateStr = new Date(post.deadline).toISOString();
-        setDeadline(dateStr.slice(0, 16));
+        const date = new Date(post.deadline);
+        // Extrair componentes manualmente para evitar conversão UTC
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        setDeadline(`${year}-${month}-${day}T${hours}:${minutes}`);
       } else {
         setDeadline("");
       }
@@ -157,12 +165,15 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
 
       if (post) {
         // Update existing post
+        // 🟡 ITEM 3: Corrigir salvamento - usar apenas new Date() sem forçar timezone
+        const deadlineDate = new Date(deadline + ':00').toISOString();
+        
         const { error } = await sb
           .from('posts')
           .update({
             event_id: eventId,
             post_number: finalPostNumber,
-            deadline: new Date(deadline + ':00-03:00').toISOString(),
+            deadline: deadlineDate,
             agency_id: userAgencyId,
             post_type: finalPostType, // ✅ ITEM 6
           })
@@ -179,12 +190,15 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
         });
       } else {
         // Create new post
+        // 🟡 ITEM 3: Corrigir salvamento - usar apenas new Date() sem forçar timezone
+        const deadlineDate = new Date(deadline + ':00').toISOString();
+        
         const { error } = await sb
           .from('posts')
           .insert({
             event_id: eventId,
             post_number: finalPostNumber,
-            deadline: new Date(deadline + ':00-03:00').toISOString(),
+            deadline: deadlineDate,
             created_by: user.id,
             agency_id: userAgencyId,
             post_type: finalPostType, // ✅ ITEM 6

@@ -966,7 +966,7 @@ const setCachedStats = (key: string, data: any) => {
 
     setTimelineData(sortedTimeline.map(d => ({ date: d.date, submissions: d.count })));
 
-    // Gender data - buscar gênero real dos usuários
+    // 🟡 ITEM 7: Gender data - normalizar gêneros antes de contar
     const uniqueUserIds = Array.from(uniqueUsers);
     if (uniqueUserIds.length > 0) {
       const { data: profilesGender } = await sb
@@ -974,15 +974,34 @@ const setCachedStats = (key: string, data: any) => {
         .select('gender')
         .in('id', uniqueUserIds);
       
+      // 🟡 ITEM 7: Mapa de normalização case-insensitive
+      const GENDER_NORMALIZATION: Record<string, string> = {
+        'masculino': 'Masculino',
+        'feminino': 'Feminino',
+        'lgbtq+': 'LGBTQ+',
+        'lgbtqia+': 'LGBTQ+',
+        'lgbt': 'LGBTQ+',
+        'outro': 'LGBTQ+',
+        'prefiro não informar': 'Não informado',
+        'não informado': 'Não informado',
+        '': 'Não informado',
+      };
+      
+      console.log('🔍 [Item 7] Gêneros brutos do banco:', profilesGender);
+      
       const genderCount = new Map<string, number>();
       (profilesGender || []).forEach((p: any) => {
-        if (p.gender) {
-          genderCount.set(p.gender, (genderCount.get(p.gender) || 0) + 1);
-        }
+        const rawGender = (p.gender || '').toLowerCase().trim();
+        const normalized = GENDER_NORMALIZATION[rawGender] || 'Não informado';
+        
+        console.log(`🔍 [Item 7] Normalizando: "${p.gender}" -> "${normalized}"`);
+        genderCount.set(normalized, (genderCount.get(normalized) || 0) + 1);
       });
       
+      console.log('🔍 [Item 7] Contagem final por gênero:', Array.from(genderCount.entries()));
+      
       const genderArray = Array.from(genderCount.entries()).map(([gender, count]) => ({
-        gender: gender === 'masculino' ? 'Masculino' : gender === 'feminino' ? 'Feminino' : 'LGBTQ+',
+        gender,
         count
       }));
       setGenderData(genderArray);
