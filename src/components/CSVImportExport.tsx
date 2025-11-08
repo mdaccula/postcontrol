@@ -31,7 +31,7 @@ export const CSVImportExport = ({
     } else {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("full_name, email, instagram, phone, gender, followers_range, created_at")
+        .select("id, full_name, email, instagram, phone, gender, followers_range, created_at")
         .order("created_at", { ascending: false });
 
       profilesToExport = profiles || [];
@@ -42,45 +42,37 @@ export const CSVImportExport = ({
       return;
     }
 
-    // 🔧 ITEM 8 CORRIGIDO: Buscar contagem de posts (aprovados E total)
+    // 🔧 ITEM 4: Buscar contagem de posts agrupada por usuário (1 linha por usuário)
     const userIds = profilesToExport.map((p) => p.id).filter(Boolean);
-    let approvedPostsMap: Record<string, number> = {};
-    let totalPostsMap: Record<string, number> = {};
+    let postsCountMap: Record<string, { approved: number; total: number }> = {};
 
     if (userIds.length > 0 && eventFilter !== "all" && eventFilter !== "no_event") {
-      // Query 1: Posts APROVADOS
-      const { data: approvedSubs } = await supabase
+      // Query única: contar posts por usuário e status
+      const { data: submissions } = await supabase
         .from("submissions")
-        .select("user_id, posts!inner(event_id)")
+        .select("user_id, status, posts!inner(event_id)")
         .in("user_id", userIds)
         .eq("submission_type", "post")
-        .eq("status", "approved")
         .eq("posts.event_id", eventFilter);
 
-      (approvedSubs || []).forEach((sub: any) => {
-        approvedPostsMap[sub.user_id] = (approvedPostsMap[sub.user_id] || 0) + 1;
+      // Agrupar contagens por usuário
+      (submissions || []).forEach((sub: any) => {
+        if (!postsCountMap[sub.user_id]) {
+          postsCountMap[sub.user_id] = { approved: 0, total: 0 };
+        }
+        postsCountMap[sub.user_id].total += 1;
+        if (sub.status === "approved") {
+          postsCountMap[sub.user_id].approved += 1;
+        }
       });
 
-      // Query 2: TODOS os posts (aprovados + pendentes)
-      const { data: allSubs } = await supabase
-        .from("submissions")
-        .select("user_id, posts!inner(event_id)")
-        .in("user_id", userIds)
-        .eq("submission_type", "post")
-        .in("status", ["approved", "pending"]) // 🔧 Incluir pendentes
-        .eq("posts.event_id", eventFilter);
-
-      (allSubs || []).forEach((sub: any) => {
-        totalPostsMap[sub.user_id] = (totalPostsMap[sub.user_id] || 0) + 1;
-      });
-
-      console.log("📊 Posts mapeados:", {
-        aprovados: Object.keys(approvedPostsMap).length,
-        total: Object.keys(totalPostsMap).length,
+      console.log("📊 Posts agrupados por usuário:", {
+        usuariosComPosts: Object.keys(postsCountMap).length,
+        totalUsuarios: userIds.length,
       });
     }
 
-    // Formatar dados para export
+    // Formatar dados para export (1 linha por usuário)
     const formattedProfiles = profilesToExport.map((profile) => {
       const baseData = {
         full_name: profile.full_name,
@@ -93,13 +85,14 @@ export const CSVImportExport = ({
         created_at: profile.created_at,
       };
 
-      // 🔧 ITEM 8 CORRIGIDO: Adicionar contagens quando filtro ativo
+      // 🔧 ITEM 4: Adicionar "Total de Postagens" quando filtro ativo
       if (eventFilter !== "all" && eventFilter !== "no_event") {
+        const counts = postsCountMap[profile.id] || { approved: 0, total: 0 };
         return {
           ...baseData,
-          posts_aprovados: approvedPostsMap[profile.id] || 0, // 🆕 Coluna 1
-          posts_total: totalPostsMap[profile.id] || 0, // 🆕 Coluna 2
-          posts_pendentes: (totalPostsMap[profile.id] || 0) - (approvedPostsMap[profile.id] || 0), // 🆕 Calculado
+          total_postagens: counts.total,
+          posts_aprovados: counts.approved,
+          posts_pendentes: counts.total - counts.approved,
         };
       }
 

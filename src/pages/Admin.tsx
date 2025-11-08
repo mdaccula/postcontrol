@@ -42,7 +42,8 @@ import {
   Clock,
   XCircle,
   MessageSquare,
-  Lightbulb, // ✅ ITEM 5 FASE 2
+  Lightbulb,
+  CreditCard, // ✅ ITEM 1
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserRoleQuery } from "@/hooks/useUserRoleQuery";
@@ -1200,25 +1201,25 @@ const Admin = () => {
               <Badge variant="secondary" className="text-base px-4 py-2">
                 Plano: {currentAgency.subscription_plan?.toUpperCase() || "BASIC"}
               </Badge>
-              {/* ✅ FASE 1 - Item 1.2: Corrigir botão "Gerenciar Assinatura" */}
+              {/* ✅ ITEM 1: Botão "Gerenciar Assinatura" com melhor visibilidade */}
               <Button
                 onClick={() => {
                   window.location.href = '/#precos';
                 }}
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="font-semibold"
+                className="font-semibold hidden md:flex"
               >
+                <CreditCard className="h-4 w-4 mr-2" />
                 {trialInfo?.inTrial ? "Assinar Agora" : "Gerenciar Assinatura"}
               </Button>
-              {/* ✅ FASE 1 - Item 1.3: Adicionar botão "Enviar Sugestão" */}
+              {/* ✅ ITEM 1: Botão "Enviar Sugestão" com gradiente amarelo */}
               <Button
                 onClick={() => setSuggestionDialogOpen(true)}
-                variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="hidden md:flex gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-2.5"
               >
-                <Lightbulb className="h-4 w-4" />
+                <Lightbulb className="h-5 w-5" />
                 Enviar Sugestão
               </Button>
             </div>
