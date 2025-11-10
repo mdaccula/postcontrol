@@ -46,6 +46,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Trash2 } from "lucide-react";
 // ✅ ITEM 7: Importar hook para verificar se é guest
 import { useIsGuest } from "@/hooks/useIsGuest";
+import { PushNotificationSettings } from "@/components/PushNotificationSettings";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide"));
@@ -770,6 +771,9 @@ const Dashboard = () => {
                 await updateProfileMutation.mutateAsync({ full_name: newName });
               }}
             />
+            
+            {/* Push Notifications Settings */}
+            <PushNotificationSettings />
           </TabsContent>
         </Tabs>
 

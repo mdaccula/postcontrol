@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.send-guest-invite]
 verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.event-reminders-cron]
+verify_jwt = false
