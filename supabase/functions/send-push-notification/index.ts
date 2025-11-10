@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "https://esm.sh/web-push@3.6.7";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +38,13 @@ async function sendWebPush(
 
   logStep('Preparando envio Web Push', { endpoint: subscription.endpoint });
 
+  // Configurar VAPID details
+  webpush.setVapidDetails(
+    vapidSubject,
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+
   // Preparar payload
   const message = JSON.stringify({
     title: payload.title,
@@ -46,52 +54,27 @@ async function sendWebPush(
     data: payload.data || {},
   });
 
-  // Usar web-push API nativa do Deno
-  const urlBase64ToUint8Array = (base64String: string) => {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
-    const rawData = atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
+  // Montar objeto de subscription no formato esperado pelo web-push
+  const pushSubscription = {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: subscription.p256dh,
+      auth: subscription.auth,
+    },
   };
-
-  // Extrair endpoint URL
-  const url = new URL(subscription.endpoint);
-  
-  // Criar headers para Web Push
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/octet-stream',
-    'TTL': '86400',
-  };
-
-  // Adicionar chaves de encriptação
-  headers['Crypto-Key'] = `p256ecdsa=${vapidPublicKey}`;
-  headers['Encryption'] = `salt=${subscription.auth}`;
-  
-  // VAPID headers (simplified - production should use proper JWT)
-  headers['Authorization'] = `vapid t=${vapidPublicKey}, k=${vapidPrivateKey}`;
 
   try {
-    const response = await fetch(subscription.endpoint, {
-      method: 'POST',
-      headers,
-      body: message,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Web Push falhou: ${response.status} - ${errorText}`);
-    }
-
+    await webpush.sendNotification(pushSubscription, message);
     logStep('✅ Push enviado com sucesso');
     return true;
-  } catch (error) {
+  } catch (error: any) {
     logStep('❌ Erro ao enviar push', error);
+    
+    // Se erro 410 (Gone), significa que o endpoint expirou
+    if (error.statusCode === 410) {
+      throw new Error('SUBSCRIPTION_EXPIRED');
+    }
+    
     throw error;
   }
 }
@@ -161,7 +144,12 @@ serve(async (req) => {
 
     // Remover inscrições inválidas (endpoint expirado)
     const invalidIndexes = results
-      .map((r, i) => (r.status === 'rejected' ? i : -1))
+      .map((r, i) => {
+        if (r.status === 'rejected' && r.reason?.message === 'SUBSCRIPTION_EXPIRED') {
+          return i;
+        }
+        return -1;
+      })
       .filter((i) => i !== -1);
 
     if (invalidIndexes.length > 0) {
