@@ -44,7 +44,8 @@ export const GuestDashboard = () => {
   const { data: submissionsResponse, isLoading: loadingSubmissions, refetch: refetchSubmissions } = useSubmissionsQuery({
     eventId: selectedEventId || undefined,
     enrichProfiles: true,
-    enabled: !!selectedEventId
+    enabled: !!selectedEventId,
+    itemsPerPage: 999999 // Guest vê todas as submissões dos eventos autorizados
   });
 
   // Extrair array de submissions do objeto paginado
