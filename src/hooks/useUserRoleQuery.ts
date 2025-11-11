@@ -54,7 +54,7 @@ export const useUserRoleQuery = (): UseUserRoleQueryReturn => {
 
   return {
     roles,
-    loading: isLoading,
+    loading: isLoading || isFetching,
     hasRole,
     isAgencyAdmin: roles.includes('agency_admin'),
     isMasterAdmin: roles.includes('master_admin'),
