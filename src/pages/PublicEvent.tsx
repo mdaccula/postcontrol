@@ -175,6 +175,10 @@ export default function PublicEvent() {
         <meta property="og:title" content={`${event.title} - ${agency.name}`} />
         <meta property="og:description" content={event.description || `Participe do evento ${event.title} organizado por ${agency.name}`} />
         <meta property="og:image" content={eventImageUrl} />
+        <meta property="og:image:secure_url" content={eventImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:site_name" content={agency.name} />
         
         {/* Twitter Card Meta Tags */}
@@ -183,6 +187,7 @@ export default function PublicEvent() {
         <meta name="twitter:title" content={`${event.title} - ${agency.name}`} />
         <meta name="twitter:description" content={event.description || `Participe do evento ${event.title} organizado por ${agency.name}`} />
         <meta name="twitter:image" content={eventImageUrl} />
+        <meta name="twitter:image:alt" content={event.title} />
         
         {/* Additional SEO */}
         {event.event_date && <meta property="event:start_time" content={event.event_date} />}

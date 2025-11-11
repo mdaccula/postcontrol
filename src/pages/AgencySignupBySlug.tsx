@@ -1,5 +1,6 @@
 import { useParams, Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { sb } from "@/lib/supabaseSafe";
 import { useAuthStore } from "@/stores/authStore";
 import AgencySignup from "./AgencySignup";
@@ -106,6 +107,32 @@ export default function AgencySignupBySlug() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Meta Tags para Link Preview */}
+      {agencyLogo && (
+        <Helmet>
+          <title>Cadastro - {agencyName}</title>
+          <meta name="description" content={`Faça seu cadastro na ${agencyName} e comece a divulgar eventos`} />
+          
+          {/* Open Graph */}
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content={window.location.href} />
+          <meta property="og:title" content={`Cadastro - ${agencyName}`} />
+          <meta property="og:description" content={`Faça seu cadastro na ${agencyName} e comece a divulgar eventos`} />
+          <meta property="og:image" content={agencyLogo} />
+          <meta property="og:image:secure_url" content={agencyLogo} />
+          <meta property="og:image:width" content="400" />
+          <meta property="og:image:height" content="400" />
+          <meta property="og:site_name" content={agencyName} />
+          
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:title" content={`Cadastro - ${agencyName}`} />
+          <meta name="twitter:description" content={`Faça seu cadastro na ${agencyName} e comece a divulgar eventos`} />
+          <meta name="twitter:image" content={agencyLogo} />
+          <meta name="twitter:image:alt" content={`Logo ${agencyName}`} />
+        </Helmet>
+      )}
+      
       {/* Agency Branding Header */}
       <div className="w-full bg-gradient-to-r from-primary/10 via-primary/5 to-background border-b">
         <div className="container mx-auto px-4 py-8">

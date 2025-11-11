@@ -55,7 +55,7 @@ interface AgencyStats {
 const MasterAdmin = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { isMasterAdmin } = useUserRoleQuery();
+  const { isMasterAdmin, loading: roleLoading } = useUserRoleQuery();
   const { toast } = useToast();
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +79,11 @@ const MasterAdmin = () => {
   });
 
   useEffect(() => {
+    // Se ainda está carregando roles, não fazer nada
+    if (roleLoading) {
+      return;
+    }
+
     if (!user) {
       navigate("/auth");
       return;
@@ -96,7 +101,7 @@ const MasterAdmin = () => {
 
     loadAgencies();
     loadPlans();
-  }, [user, isMasterAdmin, navigate]);
+  }, [user, isMasterAdmin, roleLoading, navigate]);
 
   const loadPlans = async () => {
     const { data } = await sb

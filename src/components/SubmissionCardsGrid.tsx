@@ -192,12 +192,10 @@ const SubmissionCardsGridComponent = ({
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p className="font-medium truncate">
                     {formatPostName(submission.posts?.post_type, submission.posts?.post_number)}
+                    {submission.posts?.events?.title && (
+                      <span className="text-muted-foreground"> – {submission.posts.events.title}</span>
+                    )}
                   </p>
-                  {submission.posts?.events?.title && (
-                    <p className="truncate">
-                      {submission.posts.events.title}
-                    </p>
-                  )}
                 </div>
 
                 {/* Ações Rápidas */}

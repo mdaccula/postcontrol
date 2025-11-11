@@ -574,7 +574,16 @@ export const GuestDashboard = () => {
                             <TableCell className="text-center font-semibold">
                               {getUserApprovedCount(submission.user_id)}
                             </TableCell>
-                            <TableCell>{selectedEvent.title}</TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-medium">{selectedEvent.title}</p>
+                                {submission.posts?.post_number && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Post #{submission.posts.post_number}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell>
                               {format(new Date(submission.submitted_at), 'dd/MM/yyyy HH:mm')}
                             </TableCell>

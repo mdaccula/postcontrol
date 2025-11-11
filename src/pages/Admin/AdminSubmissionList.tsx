@@ -201,10 +201,16 @@ const AdminSubmissionListComponent = ({
                   <div className="mt-3 space-y-1 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>
-                        {formatPostName(submission.posts?.post_type, submission.posts?.post_number)} 
-                        {submission.posts?.events?.title && ` - ${submission.posts.events.title}`}
-                      </span>
+                      <div>
+                        <span className="font-medium">
+                          {formatPostName(submission.posts?.post_type, submission.posts?.post_number)}
+                        </span>
+                        {submission.posts?.events?.title && (
+                          <span className="block text-xs text-muted-foreground mt-0.5">
+                            {submission.posts.events.title}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />

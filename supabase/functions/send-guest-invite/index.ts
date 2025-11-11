@@ -89,7 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Enviar email
     try {
       const emailResponse = await sendEmail({
-        from: "Sua Agência <onboarding@resend.dev>", // TODO: Customizar com domínio verificado
+        from: "Sua Agência <noreply@projetopost.infoprolab.com.br>",
         to: [guest.guest_email],
         subject: `Convite: Acesso aos Eventos - ${guest.agencies.name}`,
         html: `
