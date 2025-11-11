@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.event-reminders-cron]
 verify_jwt = false
+
+[functions.auto-deactivate-events]
+verify_jwt = false
