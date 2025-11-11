@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsGuest } from '@/hooks/useIsGuest';
 import { useGuestPermissions } from '@/hooks/useGuestPermissions';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +30,7 @@ export const GuestDashboard = () => {
   const { isGuest, guestData, loading: guestLoading } = useIsGuest();
   const { hasPermission, getPermissionLevel, allowedEvents, loading: permissionsLoading } = useGuestPermissions();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string>('all');
   const [zoomedSubmission, setZoomedSubmission] = useState<any>(null); // ✅ FASE 2 - Item 2.2
   const [searchTerm, setSearchTerm] = useState(''); // ✅ FASE 2 - Item 2.3
 
@@ -180,15 +182,42 @@ export const GuestDashboard = () => {
     }
   };
 
-  // ✅ FASE 2 - Item 2.3: Filtrar submissões por busca
+  // ✅ FASE 2 - Item 2.3: Filtrar submissões por busca e post
   const filteredSubmissions = submissions.filter((s: any) => {
+    // Filtro por post
+    if (selectedPostId !== 'all' && s.post_id !== selectedPostId) return false;
+    
+    // Filtro por busca
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
       s.profiles?.full_name?.toLowerCase().includes(searchLower) ||
       s.profiles?.instagram?.toLowerCase().includes(searchLower) ||
-      s.followers_range?.toLowerCase().includes(searchLower)
+      s.profiles?.followers_range?.toLowerCase().includes(searchLower)
     );
+  });
+
+  // Contar total de posts aprovados por usuário
+  const getUserApprovedCount = (userId: string) => {
+    return submissions.filter((s: any) => 
+      s.user_id === userId && s.status === 'approved'
+    ).length;
+  };
+
+  // Extrair posts únicos do evento atual
+  const uniquePosts = Array.from(
+    new Set(submissions.map((s: any) => s.post_id).filter(Boolean))
+  ).map((postId) => {
+    const submission = submissions.find((s: any) => s.post_id === postId);
+    return {
+      id: postId,
+      number: submission?.posts?.post_number || 'N/A'
+    };
+  }).sort((a, b) => {
+    if (typeof a.number === 'number' && typeof b.number === 'number') {
+      return a.number - b.number;
+    }
+    return 0;
   });
 
   if (guestLoading || permissionsLoading) {
@@ -343,6 +372,19 @@ export const GuestDashboard = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-semibold">Submissões - {selectedEvent.title}</h3>
                   <div className="flex items-center gap-2">
+                    <Select value={selectedPostId} onValueChange={setSelectedPostId}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Filtrar por post" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os posts</SelectItem>
+                        {uniquePosts.map((post) => (
+                          <SelectItem key={post.id} value={post.id}>
+                            Post {post.number}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
@@ -376,6 +418,7 @@ export const GuestDashboard = () => {
                         <TableRow>
                           <TableHead>Usuário</TableHead>
                           <TableHead>Faixa de Seguidores</TableHead>
+                          <TableHead>Total Posts</TableHead>
                           <TableHead>Evento</TableHead>
                           <TableHead>Data de Envio</TableHead>
                           <TableHead>Status</TableHead>
@@ -392,13 +435,21 @@ export const GuestDashboard = () => {
                               <div>
                                 <p className="font-medium">{submission.profiles?.full_name || 'N/A'}</p>
                                 {submission.profiles?.instagram && (
-                                  <p className="text-sm text-muted-foreground">
-                                    @{submission.profiles.instagram}
-                                  </p>
+                                  <a 
+                                    href={`https://instagram.com/${submission.profiles.instagram.replace(/^@+/, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    @{submission.profiles.instagram.replace(/^@+/, '')}
+                                  </a>
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>{submission.followers_range || 'N/A'}</TableCell>
+                            <TableCell>{submission.profiles?.followers_range || 'N/A'}</TableCell>
+                            <TableCell className="text-center font-semibold">
+                              {getUserApprovedCount(submission.user_id)}
+                            </TableCell>
                             <TableCell>{selectedEvent.title}</TableCell>
                             <TableCell>
                               {format(new Date(submission.submitted_at), 'dd/MM/yyyy HH:mm')}
@@ -444,29 +495,26 @@ export const GuestDashboard = () => {
                               </div>
                             </TableCell>
                             {permissionLevel && hasPermission(selectedEventId!, 'moderator') && (
-                              <TableCell className="text-right">
-                                {submission.status === 'pending' && (
-                                  <div className="flex gap-2 justify-end">
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleApproveSubmission(submission.id)}
-                                    >
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Aprovar
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => {
-                                        const reason = prompt('Motivo da reprovação:');
-                                        if (reason) handleRejectSubmission(submission.id, reason);
-                                      }}
-                                    >
-                                      <XCircle className="h-4 w-4 mr-1" />
-                                      Reprovar
-                                    </Button>
-                                  </div>
-                                )}
+                              <TableCell>
+                                <div className="flex gap-2 justify-end">
+                                  {submission.status === 'pending' && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleApproveSubmission(submission.id)}
+                                      >
+                                        Aprovar
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleRejectWithPrompt(submission.id)}
+                                      >
+                                        Reprovar
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </TableCell>
                             )}
                           </TableRow>
