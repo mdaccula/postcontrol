@@ -192,6 +192,7 @@ const Admin = () => {
       eventActiveFilter,
       postEventFilter,
       postEventActiveFilter,
+      eventSortOrder,
     },
     setSubmissionEventFilter,
     setSubmissionPostFilter,
@@ -207,6 +208,7 @@ const Admin = () => {
     setEventActiveFilter,
     setPostEventFilter,
     setPostEventActiveFilter,
+    setEventSortOrder,
     clearFilters, // ✅ ITEM 3 FASE 1: Adicionar clearFilters
   } = useAdminFilters();
 
@@ -861,11 +863,43 @@ const Admin = () => {
   }, [events, posts, submissions, usersCount, currentAgency, submissionsData?.count]);
 
   // ✅ Item 9: Filtrar eventos por ativo/inativo
+  // ✅ Item 7: Ordenar eventos por data
   const filteredEvents = useMemo(() => {
-    if (eventActiveFilter === "all") return events;
-    if (eventActiveFilter === "active") return events.filter((e) => e.is_active === true);
-    return events.filter((e) => e.is_active === false);
-  }, [events, eventActiveFilter]);
+    // 1. Aplicar filtro de status
+    let filtered = events;
+    if (eventActiveFilter === "active") {
+      filtered = events.filter((e) => e.is_active === true);
+    } else if (eventActiveFilter === "inactive") {
+      filtered = events.filter((e) => e.is_active === false);
+    }
+
+    // 2. Aplicar ordenação
+    const sorted = [...filtered];
+    switch (eventSortOrder) {
+      case 'newest':
+        return sorted.sort((a, b) => 
+          new Date(b.event_date || b.created_at).getTime() - new Date(a.event_date || a.created_at).getTime()
+        );
+      
+      case 'oldest':
+        return sorted.sort((a, b) => 
+          new Date(a.event_date || a.created_at).getTime() - new Date(b.event_date || b.created_at).getTime()
+        );
+      
+      case 'upcoming':
+        return sorted
+          .filter(e => e.event_date && new Date(e.event_date) >= new Date())
+          .sort((a, b) => new Date(a.event_date!).getTime() - new Date(b.event_date!).getTime());
+      
+      case 'past':
+        return sorted
+          .filter(e => e.event_date && new Date(e.event_date) < new Date())
+          .sort((a, b) => new Date(b.event_date!).getTime() - new Date(a.event_date!).getTime());
+      
+      default:
+        return sorted;
+    }
+  }, [events, eventActiveFilter, eventSortOrder]);
 
   // ✅ Item 10 + FASE 3: Filtrar postagens por evento e status do evento
   const filteredPosts = useMemo(() => {
@@ -1569,6 +1603,19 @@ const Admin = () => {
                     <SelectItem value="inactive">❌ Apenas Inativos</SelectItem>
                   </SelectContent>
                 </Select>
+                
+                <Select value={eventSortOrder} onValueChange={setEventSortOrder}>
+                  <SelectTrigger className="w-full sm:w-[220px]">
+                    <SelectValue placeholder="Ordenar eventos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">📅 Mais Recentes</SelectItem>
+                    <SelectItem value="oldest">📅 Mais Antigos</SelectItem>
+                    <SelectItem value="upcoming">⏰ Próximos Eventos</SelectItem>
+                    <SelectItem value="past">📜 Eventos Passados</SelectItem>
+                  </SelectContent>
+                </Select>
+                
                 <Button
                   id="create-event-button"
                   className="bg-gradient-primary w-full sm:w-auto"

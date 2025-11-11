@@ -54,6 +54,7 @@ export const useAdminFilters = () => {
   const eventActiveFilter = searchParams.get('eventActive') || 'active'; // ✅ ITEM 8: Padrão 'active'
   const postEventFilter = searchParams.get('postEvent') || 'all';
   const postEventActiveFilter = searchParams.get('postEventActive') || 'active'; // ✅ FASE 3: Padrão 'active'
+  const eventSortOrder = searchParams.get('eventSort') || 'newest'; // ✅ ITEM 7: Ordenação de eventos
 
   /**
    * Atualizador genérico de filtros
@@ -137,6 +138,10 @@ export const useAdminFilters = () => {
     updateFilter({ postEventActive: value });
   }, [updateFilter]);
 
+  const setEventSortOrder = useCallback((value: string) => {
+    updateFilter({ eventSort: value });
+  }, [updateFilter]);
+
   /**
    * Limpar todos os filtros e voltar ao estado inicial
    */
@@ -162,6 +167,7 @@ export const useAdminFilters = () => {
     eventActiveFilter,
     postEventFilter,
     postEventActiveFilter,
+    eventSortOrder,
   }), [
     submissionEventFilter,
     submissionPostFilter,
@@ -177,6 +183,7 @@ export const useAdminFilters = () => {
     eventActiveFilter,
     postEventFilter,
     postEventActiveFilter,
+    eventSortOrder,
   ]);
 
   return {
@@ -198,6 +205,7 @@ export const useAdminFilters = () => {
     setEventActiveFilter,
     setPostEventFilter,
     setPostEventActiveFilter,
+    setEventSortOrder,
     
     // Utilities
     updateFilter,
