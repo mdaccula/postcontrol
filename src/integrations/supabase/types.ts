@@ -594,7 +594,13 @@ export type Database = {
           deadline_3days: boolean
           deadline_7days: boolean
           email_notifications: boolean
+          event_filter_type: string | null
           id: string
+          notify_event_reminders: boolean | null
+          notify_new_events: boolean | null
+          notify_submission_approved: boolean | null
+          notify_submission_rejected: boolean | null
+          selected_event_ids: string[] | null
           updated_at: string
           user_id: string
         }
@@ -604,7 +610,13 @@ export type Database = {
           deadline_3days?: boolean
           deadline_7days?: boolean
           email_notifications?: boolean
+          event_filter_type?: string | null
           id?: string
+          notify_event_reminders?: boolean | null
+          notify_new_events?: boolean | null
+          notify_submission_approved?: boolean | null
+          notify_submission_rejected?: boolean | null
+          selected_event_ids?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -614,7 +626,13 @@ export type Database = {
           deadline_3days?: boolean
           deadline_7days?: boolean
           email_notifications?: boolean
+          event_filter_type?: string | null
           id?: string
+          notify_event_reminders?: boolean | null
+          notify_new_events?: boolean | null
+          notify_submission_approved?: boolean | null
+          notify_submission_rejected?: boolean | null
+          selected_event_ids?: string[] | null
           updated_at?: string
           user_id?: string
         }

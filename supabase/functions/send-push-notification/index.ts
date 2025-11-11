@@ -92,13 +92,38 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { userId, title, body, data }: NotificationPayload = await req.json();
+    const { userId, title, body, data, notificationType }: NotificationPayload & { notificationType?: string } = await req.json();
 
     if (!userId || !title || !body) {
       return new Response(
         JSON.stringify({ error: 'userId, title e body são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    logStep('Verificando preferências de notificação', { userId, notificationType });
+
+    // Verificar preferências do usuário
+    const { data: prefs, error: prefsError } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (prefsError) {
+      logStep('⚠️ Erro ao buscar preferências, prosseguindo com envio', prefsError);
+    }
+
+    // Verificar se usuário desabilitou este tipo de notificação
+    if (prefs && notificationType) {
+      const prefKey = `notify_${notificationType}`;
+      if (prefs[prefKey] === false) {
+        logStep('❌ Usuário desabilitou este tipo de notificação', { notificationType });
+        return new Response(
+          JSON.stringify({ message: 'Usuário desabilitou este tipo de notificação', sent: 0 }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     logStep('Buscando inscrições push do usuário', { userId });
