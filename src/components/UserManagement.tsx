@@ -233,7 +233,8 @@ export const UserManagement = () => {
             onImportComplete={loadUsers} 
             currentAgencyId={currentAgencyId}
             isMasterAdmin={isMasterAdmin}
-            eventFilter={eventFilter} // 🔧 ITEM 8: Passar filtro
+            eventFilter={eventFilter}
+            exportMode="submissions"
           />
         </div>
 

@@ -39,5 +39,7 @@ export const useAdminSettingsQuery = (keys?: string[]) => {
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };

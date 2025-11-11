@@ -11,7 +11,8 @@ interface CSVImportExportProps {
   users?: any[];
   currentAgencyId?: string | null;
   isMasterAdmin?: boolean;
-  eventFilter?: string; // 🆕 ITEM 8: Filtro de evento
+  eventFilter?: string;
+  exportMode?: 'users' | 'submissions';
 }
 
 export const CSVImportExport = ({
@@ -19,7 +20,8 @@ export const CSVImportExport = ({
   users,
   currentAgencyId,
   isMasterAdmin,
-  eventFilter = "all", // 🆕 ITEM 8: Default
+  eventFilter = "all",
+  exportMode = "users",
 }: CSVImportExportProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -114,6 +116,76 @@ export const CSVImportExport = ({
     toast.success("Usuários exportados com sucesso!");
   };
 
+  const handleExportSubmissions = async () => {
+    if (eventFilter === "all" || eventFilter === "no_event") {
+      toast.error("Selecione um evento específico para exportar submissões");
+      return;
+    }
+
+    // 1. Buscar TODAS as submissões do evento
+    const { data: submissions } = await supabase
+      .from("submissions")
+      .select(`
+        id,
+        submitted_at,
+        status,
+        user_id,
+        posts!inner(post_number, event_id, events!inner(title)),
+        profiles!inner(full_name, email, instagram)
+      `)
+      .eq("posts.event_id", eventFilter)
+      .eq("submission_type", "post")
+      .order("submitted_at", { ascending: false });
+
+    if (!submissions || submissions.length === 0) {
+      toast.error("Nenhuma submissão encontrada para este evento");
+      return;
+    }
+
+    // 2. Calcular total de submissões aprovadas POR USUÁRIO (1 query)
+    const userIds = [...new Set(submissions.map((s: any) => s.user_id))];
+    
+    const { data: approvedCounts } = await supabase
+      .from("submissions")
+      .select("user_id, status")
+      .in("user_id", userIds)
+      .eq("status", "approved")
+      .eq("submission_type", "post");
+
+    // Criar mapa: user_id => total aprovados
+    const approvedCountMap: Record<string, number> = {};
+    (approvedCounts || []).forEach((item: any) => {
+      approvedCountMap[item.user_id] = (approvedCountMap[item.user_id] || 0) + 1;
+    });
+
+    // 3. Formatar dados (1 linha por submissão)
+    const formattedSubmissions = submissions.map((sub: any) => ({
+      nome: sub.profiles.full_name,
+      email: sub.profiles.email,
+      instagram: sub.profiles.instagram ? `@${sub.profiles.instagram.replace("@", "")}` : "",
+      evento: sub.posts.events.title,
+      post: `Post #${sub.posts.post_number}`,
+      data_submissao: new Date(sub.submitted_at).toLocaleString('pt-BR'),
+      status: sub.status === "approved" ? "Aprovado" : sub.status === "rejected" ? "Reprovado" : "Pendente",
+      total_submissoes_aprovadas: approvedCountMap[sub.user_id] || 0,
+    }));
+
+    // 4. Exportar CSV
+    const csv = Papa.unparse(formattedSubmissions);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `submissoes_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`${formattedSubmissions.length} submissões exportadas!`);
+  };
+
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -170,9 +242,13 @@ export const CSVImportExport = ({
         <Upload className="h-4 w-4" />
         Importar CSV
       </Button>
-      <Button variant="outline" onClick={handleExport} className="gap-2">
+      <Button 
+        variant="outline" 
+        onClick={exportMode === 'submissions' ? handleExportSubmissions : handleExport} 
+        className="gap-2"
+      >
         <Download className="h-4 w-4" />
-        Exportar CSV
+        {exportMode === 'submissions' ? 'Exportar Submissões' : 'Exportar Usuários'}
       </Button>
     </div>
   );
