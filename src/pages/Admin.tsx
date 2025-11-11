@@ -1114,13 +1114,20 @@ const Admin = () => {
         profilesMap[profile.id] = profile;
       });
 
-      // 🆕 Buscar total de submissões aprovadas por usuário
-      const { data: approvedCountsData } = await sb
+      // 🆕 Buscar total de submissões aprovadas por usuário no evento específico
+      let approvedQuery = sb
         .from("submissions")
-        .select("user_id, status")
+        .select("user_id, post_id, posts!inner(event_id)")
         .in("user_id", userIds)
         .eq("status", "approved")
         .eq("submission_type", "post");
+
+      // Filtrar por evento específico se não for "all"
+      if (submissionEventFilter !== "all") {
+        approvedQuery = approvedQuery.eq("posts.event_id", submissionEventFilter);
+      }
+
+      const { data: approvedCountsData } = await approvedQuery;
 
       // Criar map: user_id => total de submissões aprovadas
       const approvedCountsMap: Record<string, number> = {};
@@ -1131,6 +1138,7 @@ const Admin = () => {
       console.log("✅ Contagens de aprovados carregadas:", {
         usuariosComAprovados: Object.keys(approvedCountsMap).length,
         totalUsuarios: userIds.length,
+        eventoFiltrado: submissionEventFilter !== "all" ? submissionEventFilter : "todos",
       });
 
       // Enriquecer submissions com profiles
