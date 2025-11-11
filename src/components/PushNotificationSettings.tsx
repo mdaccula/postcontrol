@@ -89,11 +89,73 @@ export const PushNotificationSettings = () => {
         </div>
 
         {permission === 'denied' && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Você bloqueou as notificações. Para ativar, vá nas configurações do seu navegador e permita notificações para este site.
-            </AlertDescription>
+          <Alert variant="destructive" className="space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 mt-0.5" />
+              <div className="space-y-2 flex-1">
+                <p className="font-medium">Notificações Bloqueadas</p>
+                <p className="text-sm">
+                  Você bloqueou as notificações push para este site. Para ativar, siga as instruções abaixo:
+                </p>
+              </div>
+            </div>
+            
+            <div className="pl-8 space-y-3 text-sm">
+              {/* Chrome/Edge */}
+              <details className="cursor-pointer group">
+                <summary className="font-medium group-hover:text-destructive-foreground list-none flex items-center gap-2">
+                  <span className="text-base">▶</span>
+                  <span>🌐 Google Chrome / Microsoft Edge</span>
+                </summary>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-muted-foreground pl-6">
+                  <li>Clique no ícone de cadeado 🔒 na barra de endereço</li>
+                  <li>Clique em "Permissões do site" ou "Site settings"</li>
+                  <li>Encontre "Notificações" e altere para "Permitir"</li>
+                  <li>Recarregue a página (F5)</li>
+                </ol>
+              </details>
+
+              {/* Firefox */}
+              <details className="cursor-pointer group">
+                <summary className="font-medium group-hover:text-destructive-foreground list-none flex items-center gap-2">
+                  <span className="text-base">▶</span>
+                  <span>🦊 Mozilla Firefox</span>
+                </summary>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-muted-foreground pl-6">
+                  <li>Clique no ícone de cadeado 🔒 na barra de endereço</li>
+                  <li>Clique em "Permissões" → "Notificações"</li>
+                  <li>Desmarque "Bloquear" e marque "Permitir"</li>
+                  <li>Recarregue a página (F5)</li>
+                </ol>
+              </details>
+
+              {/* Safari */}
+              <details className="cursor-pointer group">
+                <summary className="font-medium group-hover:text-destructive-foreground list-none flex items-center gap-2">
+                  <span className="text-base">▶</span>
+                  <span>🧭 Safari (macOS)</span>
+                </summary>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-muted-foreground pl-6">
+                  <li>Menu Safari → Preferências (⌘,)</li>
+                  <li>Aba "Sites" → "Notificações"</li>
+                  <li>Encontre este site e altere para "Permitir"</li>
+                  <li>Recarregue a página (⌘R)</li>
+                </ol>
+              </details>
+
+              {/* Mobile */}
+              <details className="cursor-pointer group">
+                <summary className="font-medium group-hover:text-destructive-foreground list-none flex items-center gap-2">
+                  <span className="text-base">▶</span>
+                  <span>📱 Mobile (Android/iOS)</span>
+                </summary>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-muted-foreground pl-6">
+                  <li>Configurações do dispositivo → Apps → Navegador</li>
+                  <li>Notificações → Permitir notificações</li>
+                  <li>Volte ao app e recarregue</li>
+                </ol>
+              </details>
+            </div>
           </Alert>
         )}
 

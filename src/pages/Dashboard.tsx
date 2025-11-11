@@ -47,6 +47,8 @@ import { Trash2 } from "lucide-react";
 // ✅ ITEM 7: Importar hook para verificar se é guest
 import { useIsGuest } from "@/hooks/useIsGuest";
 import { PushNotificationSettings } from "@/components/PushNotificationSettings";
+import { GTMDiagnostic } from "@/components/GTMDiagnostic";
+import { PushNotificationTest } from "@/components/PushNotificationTest";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide"));
@@ -774,6 +776,12 @@ const Dashboard = () => {
             
             {/* Push Notifications Settings */}
             <PushNotificationSettings />
+            
+            {/* Push Notification Tests - ITEM 1 */}
+            <PushNotificationTest />
+            
+            {/* GTM Diagnostic - ITEM 3 */}
+            <GTMDiagnostic />
           </TabsContent>
         </Tabs>
 
