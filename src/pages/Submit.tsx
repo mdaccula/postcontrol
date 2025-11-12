@@ -124,23 +124,23 @@ const Submit = () => {
   // ✅ ITEM 1: Separar lógica de pré-seleção do evento para rodar DEPOIS dos eventos carregarem
   useEffect(() => {
     if (events.length > 0) {
-      const eventContextStr = localStorage.getItem('event_context');
+      const eventContextStr = localStorage.getItem("event_context");
       if (eventContextStr) {
         try {
           const eventContext = JSON.parse(eventContextStr);
           console.log("🎯 [ITEM 1] Pré-selecionando evento do contexto:", eventContext);
-          
+
           // Verificar se o evento existe na lista carregada
-          const eventExists = events.find(e => e.id === eventContext.eventId);
+          const eventExists = events.find((e) => e.id === eventContext.eventId);
           if (eventExists) {
             setSelectedEvent(eventContext.eventId); // ✅ ITEM 1 FASE 1: Auto-seleciona evento (já logado ou não)
             console.log("✅ [ITEM 1] Evento pré-selecionado:", eventExists.title);
           } else {
             console.warn("⚠️ [ITEM 1] Evento do contexto não encontrado na lista");
           }
-          
+
           // Limpar contexto após usar
-          localStorage.removeItem('event_context');
+          localStorage.removeItem("event_context");
         } catch (err) {
           console.error("❌ [ITEM 1] Erro ao processar contexto do evento:", err);
         }
@@ -151,12 +151,12 @@ const Submit = () => {
   useEffect(() => {
     if (selectedEvent) {
       setSelectedPost(""); // ✅ Limpar postagem selecionada ao trocar evento
-      loadPostsForEvent(selectedEvent, submissionType as 'post' | 'sale');
+      loadPostsForEvent(selectedEvent, submissionType as "post" | "sale");
       loadRequirementsForEvent(selectedEvent);
       // ✅ FASE 4: Carregar submissions do usuário para este evento
       loadUserSubmissionsForEvent(selectedEvent);
       // ✅ Carregar contador de vendas se tipo for sale
-      if (submissionType === 'sale') {
+      if (submissionType === "sale") {
         loadSalesCount(selectedEvent);
       }
     } else {
@@ -166,7 +166,7 @@ const Submit = () => {
       setUserSubmissions([]);
       setSalesCount(0);
     }
-    console.log('🔄 submissionType mudou:', submissionType);
+    console.log("🔄 submissionType mudou:", submissionType);
   }, [selectedEvent, submissionType]);
 
   const loadEvents = async () => {
@@ -262,12 +262,12 @@ const Submit = () => {
       });
 
       // ✅ ITEM 1: Filtrar por slug se houver contexto de evento
-      const eventContextStr = localStorage.getItem('event_context');
+      const eventContextStr = localStorage.getItem("event_context");
       if (eventContextStr) {
         try {
           const eventContext = JSON.parse(eventContextStr);
-          const filteredData = data.filter(e => e.id === eventContext.eventId);
-          
+          const filteredData = data.filter((e) => e.id === eventContext.eventId);
+
           if (filteredData.length > 0) {
             console.log("🎯 [ITEM 1] Eventos filtrados por slug:", filteredData[0].title);
             setEvents(filteredData);
@@ -291,13 +291,13 @@ const Submit = () => {
     }
   };
 
-  const loadPostsForEvent = async (eventId: string, submissionType: 'post' | 'sale') => {
+  const loadPostsForEvent = async (eventId: string, submissionType: "post" | "sale") => {
     if (!user) return;
 
     // Buscar informações do evento para verificar o tipo
     const { data: eventData } = await sb.from("events").select("event_purpose").eq("id", eventId).maybeSingle();
 
-    const postType = eventData?.event_purpose || 'divulgacao';
+    const postType = eventData?.event_purpose || "divulgacao";
     const isProfileSelection = postType === "selecao_perfil";
 
     // ✅ Log para confirmar tipo do evento
@@ -311,19 +311,19 @@ const Submit = () => {
     });
 
     // ✅ SIMPLIFICADO: Buscar post #0 real para vendas
-    if (submissionType === 'sale') {
-      console.log('💰 Buscando post #0 para venda...');
-      
+    if (submissionType === "sale") {
+      console.log("💰 Buscando post #0 para venda...");
+
       const { data: salesPost, error } = await sb
-        .from('posts')
-        .select('id, post_number, deadline, event_id, post_type')
-        .eq('event_id', eventId)
-        .eq('post_number', 0)
-        .eq('post_type', 'sale')
+        .from("posts")
+        .select("id, post_number, deadline, event_id, post_type")
+        .eq("event_id", eventId)
+        .eq("post_number", 0)
+        .eq("post_type", "sale")
         .maybeSingle();
-      
+
       if (error) {
-        console.error('Erro ao buscar post de venda:', error);
+        console.error("Erro ao buscar post de venda:", error);
         toast({
           title: "Erro ao carregar",
           description: "Não foi possível carregar o post de venda.",
@@ -332,13 +332,13 @@ const Submit = () => {
         setPosts([]);
         return;
       }
-      
+
       if (salesPost) {
-        console.log('✅ Post #0 encontrado:', salesPost.id);
+        console.log("✅ Post #0 encontrado:", salesPost.id);
         setPosts([salesPost]);
         setSelectedPost(salesPost.id);
       } else {
-        console.log('⚠️ Post #0 não encontrado para este evento');
+        console.log("⚠️ Post #0 não encontrado para este evento");
         toast({
           title: "Post de venda não disponível",
           description: "A agência ainda não criou o post para comprovantes de venda neste evento.",
@@ -350,14 +350,10 @@ const Submit = () => {
     }
 
     // Para postagens normais: EXCLUIR post #0
-    console.log('📸 Carregando posts normais (excluindo #0)...');
+    console.log("📸 Carregando posts normais (excluindo #0)...");
 
     // 1. Buscar IDs dos posts do evento (excluindo #0)
-    const { data: eventPosts } = await sb
-      .from("posts")
-      .select("id")
-      .eq("event_id", eventId)
-      .neq("post_number", 0); // ✅ EXCLUIR post #0
+    const { data: eventPosts } = await sb.from("posts").select("id").eq("event_id", eventId).neq("post_number", 0); // ✅ EXCLUIR post #0
 
     const eventPostIds = (eventPosts || []).map((p: any) => p.id);
 
@@ -369,7 +365,7 @@ const Submit = () => {
     // 2. Para divulgação, excluir posts já enviados
     let submittedPostIds: string[] = [];
 
-    if (postType === 'divulgacao') {
+    if (postType === "divulgacao") {
       const { data: userSubmissions } = await sb
         .from("submissions")
         .select("post_id")
@@ -508,21 +504,21 @@ const Submit = () => {
 
   const loadSalesCount = async (eventId: string) => {
     if (!user) return;
-    
-    console.log('📊 Carregando contador de vendas...');
-    
+
+    console.log("📊 Carregando contador de vendas...");
+
     const { count, error } = await sb
-      .from('submissions')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('event_id', eventId)
-      .eq('submission_type', 'sale');
-    
+      .from("submissions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("event_id", eventId)
+      .eq("submission_type", "sale");
+
     if (error) {
-      console.error('Erro ao carregar contador:', error);
+      console.error("Erro ao carregar contador:", error);
       return;
     }
-    
+
     console.log(`✅ Total de vendas enviadas: ${count || 0}`);
     setSalesCount(count || 0);
   };
@@ -806,7 +802,10 @@ const Submit = () => {
         const now = new Date();
 
         if (now > postDeadline) {
-          const postName = formatPostName(selectedEventData?.event_purpose === 'selecao_perfil' ? 'selecao_perfil' : null, selectedPostData.post_number);
+          const postName = formatPostName(
+            selectedEventData?.event_purpose === "selecao_perfil" ? "selecao_perfil" : null,
+            selectedPostData.post_number,
+          );
           toast({
             title: "⏰ Prazo Expirado",
             description: `O prazo para ${postName} expirou em ${postDeadline.toLocaleString("pt-BR")}.`,
@@ -928,7 +927,7 @@ const Submit = () => {
         }
       } else if (submissionType === "sale") {
         // ✅ Para vendas: PERMITIR múltiplas submissões
-        console.log('[Submit] Comprovante de venda: múltiplas submissões permitidas');
+        console.log("[Submit] Comprovante de venda: múltiplas submissões permitidas");
       }
 
       // Rate limiting check (5 submissions per hour)
@@ -1034,22 +1033,22 @@ const Submit = () => {
       // ✅ ITEM 5: Verificar se já enviou para seleção de perfil
       if (selectedEventData?.event_purpose === "selecao_perfil" && selectedPost) {
         const { data: existingSubmissions } = await sb
-          .from('submissions')
-          .select('id, status')
-          .eq('user_id', user.id)
-          .eq('post_id', selectedPost)
-          .in('status', ['pending', 'approved']);
-        
+          .from("submissions")
+          .select("id, status")
+          .eq("user_id", user.id)
+          .eq("post_id", selectedPost)
+          .in("status", ["pending", "approved"]);
+
         if (existingSubmissions && existingSubmissions.length > 0) {
           const status = existingSubmissions[0].status;
-          const statusText = status === 'pending' ? 'aguardando aprovação' : 'aprovada';
-          
+          const statusText = status === "pending" ? "aguardando aprovação" : "aprovada";
+
           toast({
             title: "Submissão já existe",
             description: `Você já enviou uma submissão para este evento de seleção de perfil (status: ${statusText}). Aguarde a avaliação ou delete a anterior no seu Dashboard.`,
             variant: "destructive",
           });
-          
+
           setIsSubmitting(false);
           return;
         }
@@ -1060,27 +1059,26 @@ const Submit = () => {
         insertData.post_id = selectedPost;
         // event_id virá do post automaticamente
       } else {
-} else {
-  // Para vendas: validar que post #0 existe antes de inserir
-  if (!selectedPost) {
-    throw new Error('Selecione o post de venda');
-  }
-  
-  // Validar que o post existe e é do tipo correto
-  const { data: postValidation } = await sb
-    .from('posts')
-    .select('id, post_number, post_type')
-    .eq('id', selectedPost)
-    .eq('post_type', 'sale')
-    .maybeSingle();
-  
-  if (!postValidation) {
-    throw new Error('Post de venda não encontrado');
-  }
-  
-  insertData.post_id = selectedPost;
-  // event_id virá do post automaticamente via trigger
-}
+        // Para vendas: validar que post #0 existe antes de inserir
+        if (!selectedPost) {
+          throw new Error("Selecione o post de venda");
+        }
+
+        // Validar que o post existe e é do tipo correto
+        const { data: postValidation } = await sb
+          .from("posts")
+          .select("id, post_number, post_type")
+          .eq("id", selectedPost)
+          .eq("post_type", "sale")
+          .maybeSingle();
+
+        if (!postValidation) {
+          throw new Error("Post de venda não encontrado");
+        }
+
+        insertData.post_id = selectedPost;
+        // event_id virá do post automaticamente via trigger
+      }
       const { error } = await sb.from("submissions").insert(insertData);
 
       if (error) throw error;
@@ -1094,7 +1092,7 @@ const Submit = () => {
       });
 
       // 🔧 ITEM 1: Redirecionar para /dashboard sem query params
-      navigate('/dashboard');
+      navigate("/dashboard");
 
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -1258,36 +1256,41 @@ const Submit = () => {
                       <Label htmlFor="post-select">
                         {submissionType === "post" ? "Escolha a Postagem *" : "Comprovante de Venda *"}
                       </Label>
-                      
+
                       {posts.length > 0 ? (
                         <>
                           <Select value={selectedPost} onValueChange={setSelectedPost} disabled={isSubmitting}>
                             <SelectTrigger id="post-select" className="w-full bg-background">
-                              <SelectValue placeholder={
-                                submissionType === "post" 
-                                  ? "Selecione qual postagem você está enviando"
-                                  : "Postagem #0 (Venda)"
-                              } />
+                              <SelectValue
+                                placeholder={
+                                  submissionType === "post"
+                                    ? "Selecione qual postagem você está enviando"
+                                    : "Postagem #0 (Venda)"
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent className="bg-popover border-border z-50">
                               {posts.map((post) => {
                                 const alreadySubmitted = userSubmissions.includes(post.id);
                                 const isExpired = new Date(post.deadline) < new Date();
-                                
+
                                 return (
                                   <SelectItem key={post.id} value={post.id} disabled={isExpired || alreadySubmitted}>
                                     <div className="flex items-center gap-2">
                                       <span>
-                                        {submissionType === "sale" 
+                                        {submissionType === "sale"
                                           ? "💰 Postagem #0 (Venda)"
-                                          : `${formatPostName(null, post.post_number, null)} - Prazo: ${new Date(post.deadline).toLocaleDateString("pt-BR")} às ${new Date(post.deadline).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                                        }
+                                          : `${formatPostName(null, post.post_number, null)} - Prazo: ${new Date(post.deadline).toLocaleDateString("pt-BR")} às ${new Date(post.deadline).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
                                       </span>
                                       {alreadySubmitted && submissionType === "post" && (
-                                        <Badge variant="secondary" className="text-xs ml-2">✓ Já enviada</Badge>
+                                        <Badge variant="secondary" className="text-xs ml-2">
+                                          ✓ Já enviada
+                                        </Badge>
                                       )}
                                       {isExpired && (
-                                        <Badge variant="destructive" className="text-xs ml-2">⏰ Prazo expirado</Badge>
+                                        <Badge variant="destructive" className="text-xs ml-2">
+                                          ⏰ Prazo expirado
+                                        </Badge>
                                       )}
                                     </div>
                                   </SelectItem>
@@ -1301,8 +1304,8 @@ const Submit = () => {
                               <p className="font-semibold text-primary mb-1">📌 Postagem Selecionada:</p>
                               <p className="text-sm">
                                 {formatPostName(
-                                  selectedEventData?.event_purpose === 'selecao_perfil' ? 'selecao_perfil' : null,
-                                  posts.find((p) => p.id === selectedPost)?.post_number || 0
+                                  selectedEventData?.event_purpose === "selecao_perfil" ? "selecao_perfil" : null,
+                                  posts.find((p) => p.id === selectedPost)?.post_number || 0,
                                 )}
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
@@ -1321,7 +1324,8 @@ const Submit = () => {
                                     💰 Comprovantes Enviados
                                   </p>
                                   <p className="text-sm text-muted-foreground">
-                                    Você já enviou {salesCount} comprovante{salesCount !== 1 ? 's' : ''} de venda para este evento
+                                    Você já enviou {salesCount} comprovante{salesCount !== 1 ? "s" : ""} de venda para
+                                    este evento
                                   </p>
                                 </div>
                                 <Badge variant="secondary" className="text-2xl px-4 py-2">
@@ -1334,10 +1338,9 @@ const Submit = () => {
                       ) : (
                         <div className="bg-muted/50 border border-border rounded-lg p-4">
                           <p className="text-sm text-muted-foreground text-center">
-                            {submissionType === "post" 
+                            {submissionType === "post"
                               ? "⏰ Nenhuma postagem dentro do prazo disponível"
-                              : "💰 Post de venda será criado automaticamente"
-                            }
+                              : "💰 Post de venda será criado automaticamente"}
                           </p>
                         </div>
                       )}
@@ -1413,9 +1416,9 @@ const Submit = () => {
                   value={instagram}
                   onChange={(e) => {
                     // Remove espaços e garante formato @usuario
-                    let value = e.target.value.trim().replace(/\s/g, '');
-                    if (value && !value.startsWith('@')) {
-                      value = '@' + value;
+                    let value = e.target.value.trim().replace(/\s/g, "");
+                    if (value && !value.startsWith("@")) {
+                      value = "@" + value;
                     }
                     setInstagram(value.slice(0, 31)); // @ + 30 caracteres
                   }}
@@ -1508,10 +1511,10 @@ const Submit = () => {
                   {/* Select de Faixa de Seguidores */}
                   <div className="space-y-2">
                     <Label htmlFor="followersRange">Quantos seguidores você tem? *</Label>
-                    <Select 
-                      value={followersRange || ""} 
-                      onValueChange={setFollowersRange} 
-                      required 
+                    <Select
+                      value={followersRange || ""}
+                      onValueChange={setFollowersRange}
+                      required
                       disabled={isSubmitting}
                     >
                       <SelectTrigger id="followersRange">
@@ -1727,9 +1730,10 @@ const Submit = () => {
                     <strong>Evento:</strong> {selectedEventData?.title}
                   </p>
                   <p>
-                    <strong>Postagem:</strong> {formatPostName(
-                      selectedEventData?.event_purpose === 'selecao_perfil' ? 'selecao_perfil' : null,
-                      posts.find((p) => p.id === selectedPost)?.post_number || 0
+                    <strong>Postagem:</strong>{" "}
+                    {formatPostName(
+                      selectedEventData?.event_purpose === "selecao_perfil" ? "selecao_perfil" : null,
+                      posts.find((p) => p.id === selectedPost)?.post_number || 0,
                     )}
                   </p>
                 </div>
