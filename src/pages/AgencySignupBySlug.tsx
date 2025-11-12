@@ -13,6 +13,7 @@ export default function AgencySignupBySlug() {
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState<string>("");
   const [agencyLogo, setAgencyLogo] = useState<string | null>(null);
+  const [ogImage, setOgImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,6 +76,15 @@ export default function AgencySignupBySlug() {
       setAgencyId(agency.id);
       setAgencyName(agency.name || "");
       setAgencyLogo(agency.logo_url);
+      
+      // Buscar og_image separadamente
+      const { data: agencyData } = await sb
+        .from('agencies')
+        .select('og_image_url')
+        .eq('id', agency.id)
+        .maybeSingle();
+      
+      setOgImage(agencyData?.og_image_url || agency.logo_url);
     }
     
     setLoading(false);
@@ -107,8 +117,8 @@ export default function AgencySignupBySlug() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Meta Tags para Link Preview */}
-      {agencyLogo && (
+      {/* Meta Tags para Link Preview - FASE 6 */}
+      {ogImage && (
         <Helmet>
           <title>Cadastro - {agencyName}</title>
           <meta name="description" content={`Faça seu cadastro na ${agencyName} e comece a divulgar eventos`} />
@@ -118,18 +128,16 @@ export default function AgencySignupBySlug() {
           <meta property="og:url" content={window.location.href} />
           <meta property="og:title" content={`Cadastro - ${agencyName}`} />
           <meta property="og:description" content={`Faça seu cadastro na ${agencyName} e comece a divulgar eventos`} />
-          <meta property="og:image" content={agencyLogo} />
-          <meta property="og:image:secure_url" content={agencyLogo} />
-          <meta property="og:image:width" content="400" />
-          <meta property="og:image:height" content="400" />
-          <meta property="og:site_name" content={agencyName} />
+          <meta property="og:image" content={ogImage} />
+          <meta property="og:image:secure_url" content={ogImage} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
           
           {/* Twitter Card */}
-          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content={`Cadastro - ${agencyName}`} />
           <meta name="twitter:description" content={`Faça seu cadastro na ${agencyName} e comece a divulgar eventos`} />
-          <meta name="twitter:image" content={agencyLogo} />
-          <meta name="twitter:image:alt" content={`Logo ${agencyName}`} />
+          <meta name="twitter:image" content={ogImage} />
         </Helmet>
       )}
       
