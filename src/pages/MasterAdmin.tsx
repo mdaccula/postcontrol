@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, lazy, Suspense, Profiler } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, Profiler, useMemo } from "react";
+import { debounce } from "lodash";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -106,32 +107,13 @@ const MasterAdmin = () => {
   // 🆕 FASE 1: Debug mode
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has('debug'));
   const [isStabilizing, setIsStabilizing] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // ✅ FASE D: Logs de diagnóstico para detectar recarregamentos
+  // ✅ Logs simplificados de diagnóstico
   useEffect(() => {
-    console.warn('[MasterAdmin] 🟢 Componente montado', {
-      timestamp: new Date().toISOString(),
-      user: user?.id,
-      isMasterAdmin,
-      roleLoading,
-    });
-    
-    return () => {
-      console.warn('[MasterAdmin] 🔴 Componente desmontado', {
-        timestamp: new Date().toISOString(),
-      });
-    };
+    console.log('[MasterAdmin]', 'mount', new Date().toISOString());
+    return () => console.log('[MasterAdmin]', 'unmount', new Date().toISOString());
   }, []);
-
-  useEffect(() => {
-    console.warn('[MasterAdmin] 🔄 Refetch disparado', {
-      timestamp: new Date().toISOString(),
-      isStabilizing,
-      user: user?.id,
-      isMasterAdmin,
-      roleLoading,
-    });
-  }, [isStabilizing, user, isMasterAdmin, roleLoading]);
 
   // ✅ FASE 1: useEffect separado para autenticação/redirecionamento com guard de estabilização
   useEffect(() => {
@@ -177,25 +159,15 @@ const MasterAdmin = () => {
     if (debugMode) console.log('✅ [MasterAdmin] Acesso autorizado');
   }, [user, isMasterAdmin, roleLoading, isStabilizing]);
 
-  // ✅ SOLUÇÃO 2: useEffect separado para carregar dados (executa uma única vez quando autorizado)
+  // ✅ Carregar dados uma única vez quando autorizado
   useEffect(() => {
-    if (!roleLoading && user && isMasterAdmin) {
+    if (!roleLoading && user && isMasterAdmin && !hasLoaded) {
+      setHasLoaded(true);
       loadAgencies();
       loadPlans();
     }
-  }, [user, isMasterAdmin, roleLoading]);
+  }, [user, isMasterAdmin, roleLoading, hasLoaded]);
 
-  const loadPlans = async () => {
-    const { data } = await sb
-      .from("subscription_plans")
-      .select("*")
-      .eq("is_visible", true)
-      .order("monthly_price", { ascending: true });
-
-    if (data) {
-      setPlans(data);
-    }
-  };
 
   const loadEventStats = async (eventIds: string[]) => {
     const participants: Record<string, number> = {};
@@ -233,7 +205,7 @@ const MasterAdmin = () => {
     setEventSubmissions(submissions);
   };
 
-  const loadAgencies = async () => {
+  const loadAgenciesInternal = async () => {
     setLoading(true);
 
     const { data, error } = await sb.from("agencies").select("*").order("created_at", { ascending: false });
@@ -305,6 +277,20 @@ const MasterAdmin = () => {
 
     setLoading(false);
   };
+
+  // ✅ Debounced versions
+  const loadAgencies = useMemo(() => debounce(loadAgenciesInternal, 500), []);
+  const loadPlans = useMemo(() => debounce(async () => {
+    const { data } = await sb
+      .from("subscription_plans")
+      .select("*")
+      .eq("is_visible", true)
+      .order("monthly_price", { ascending: true });
+
+    if (data) {
+      setPlans(data);
+    }
+  }, 500), []);
 
   // ✅ FASE E: Memoizar callback para evitar re-renders desnecessários
   const handleCreateAgency = useCallback(async (e: React.FormEvent) => {
@@ -393,16 +379,8 @@ const MasterAdmin = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
+  // ✅ Conditional rendering flag
+  const shouldRenderContent = !loading && !roleLoading && user && isMasterAdmin;
 
   // ✅ FASE E: Callback do Profiler para medir performance
   const onRenderProfiler = useCallback(
@@ -427,6 +405,14 @@ const MasterAdmin = () => {
 
   return (
     <Profiler id="MasterAdmin" onRender={onRenderProfiler}>
+      {!shouldRenderContent ? (
+        <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+      ) : (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -862,6 +848,7 @@ const MasterAdmin = () => {
         </div>
       )}
     </div>
+    )}
     </Profiler>
   );
 };

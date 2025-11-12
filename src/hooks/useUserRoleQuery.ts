@@ -64,9 +64,8 @@ export const useUserRoleQuery = (): UseUserRoleQueryReturn => {
     staleTime: 5 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: true,
-    retry: 3, // 🆕 FASE 1: Tentar 3x em caso de erro
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 🆕 FASE 1: Backoff exponencial
+    refetchOnReconnect: false,
+    retry: false,
   });
 
   const hasRole = (role: UserRole): boolean => {

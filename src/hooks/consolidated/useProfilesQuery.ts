@@ -37,6 +37,9 @@ export const useProfilesQuery = ({
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   });
 };
 
@@ -56,6 +59,9 @@ export const useCurrentUserProfileQuery = () => {
     },
     staleTime: 10 * 60 * 1000, // 10 minutos (perfil muda raramente)
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   });
 };
 
@@ -76,6 +82,9 @@ export const useAgencyProfilesQuery = (agencyId: string) => {
     enabled: !!agencyId,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   });
 };
 
@@ -96,5 +105,8 @@ export const useUserStatsQuery = (userId: string) => {
     enabled: !!userId,
     staleTime: 3 * 60 * 1000, // 3 minutos
     gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   });
 };
