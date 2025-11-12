@@ -1060,14 +1060,27 @@ const Submit = () => {
         insertData.post_id = selectedPost;
         // event_id virá do post automaticamente
       } else {
-        // ✅ SIMPLIFICADO: Para vendas, usar post #0 real que já existe
-        if (!selectedPost) {
-          throw new Error('Nenhum post selecionado');
-        }
-        insertData.post_id = selectedPost;
-        insertData.event_id = selectedEvent;
-      }
-
+} else {
+  // Para vendas: validar que post #0 existe antes de inserir
+  if (!selectedPost) {
+    throw new Error('Selecione o post de venda');
+  }
+  
+  // Validar que o post existe e é do tipo correto
+  const { data: postValidation } = await sb
+    .from('posts')
+    .select('id, post_number, post_type')
+    .eq('id', selectedPost)
+    .eq('post_type', 'sale')
+    .maybeSingle();
+  
+  if (!postValidation) {
+    throw new Error('Post de venda não encontrado');
+  }
+  
+  insertData.post_id = selectedPost;
+  // event_id virá do post automaticamente via trigger
+}
       const { error } = await sb.from("submissions").insert(insertData);
 
       if (error) throw error;
