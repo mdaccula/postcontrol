@@ -124,45 +124,62 @@ export const AdminManager = () => {
   };
 
   const loadAdmins = async () => {
+    // ✅ Query 1: Buscar user_roles de agency_admin
     const { data: userRoles } = await sb
       .from('user_roles')
-      .select(`
-        user_id,
-        created_at,
-        profiles:user_id (
-          email,
-          full_name,
-          phone,
-          instagram
-        )
-      `)
+      .select('user_id, created_at')
       .eq('role', 'agency_admin');
 
-    if (userRoles) {
-      const adminsWithAgencies = await Promise.all(
-        userRoles.map(async (role: any) => {
-          const { data: agency } = await sb
-            .from('agencies')
-            .select('id, name, slug')
-            .eq('owner_id', role.user_id)
-            .maybeSingle();
-
-          return {
-            user_id: role.user_id,
-            email: role.profiles?.email || '',
-            full_name: role.profiles?.full_name || '',
-            phone: role.profiles?.phone,
-            instagram: role.profiles?.instagram,
-            agency_id: agency?.id,
-            agency_name: agency?.name,
-            agency_slug: agency?.slug,
-            created_at: role.created_at,
-          };
-        })
-      );
-
-      setAdmins(adminsWithAgencies);
+    if (!userRoles) {
+      setAdmins([]);
+      return;
     }
+
+    // ✅ Query 2: Buscar profiles dos user_ids encontrados
+    const userIds = userRoles.map(r => r.user_id);
+    
+    if (userIds.length === 0) {
+      setAdmins([]);
+      return;
+    }
+
+    const { data: profilesData } = await sb
+      .from('profiles')
+      .select('id, email, full_name, phone, instagram')
+      .in('id', userIds);
+
+    // Criar map de profiles
+    const profilesMap: Record<string, any> = {};
+    (profilesData || []).forEach((profile) => {
+      profilesMap[profile.id] = profile;
+    });
+
+    // ✅ Query 3: Buscar agências dos owners
+    const adminsWithAgencies = await Promise.all(
+      userRoles.map(async (role: any) => {
+        const { data: agency } = await sb
+          .from('agencies')
+          .select('id, name, slug')
+          .eq('owner_id', role.user_id)
+          .maybeSingle();
+
+        const profile = profilesMap[role.user_id] || {};
+
+        return {
+          user_id: role.user_id,
+          email: profile.email || '',
+          full_name: profile.full_name || '',
+          phone: profile.phone,
+          instagram: profile.instagram,
+          agency_id: agency?.id,
+          agency_name: agency?.name,
+          agency_slug: agency?.slug,
+          created_at: role.created_at,
+        };
+      })
+    );
+
+    setAdmins(adminsWithAgencies);
   };
 
   const loadAgencies = async () => {

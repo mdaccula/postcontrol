@@ -45,7 +45,6 @@ export async function getSubmissions(
     .select(
       `
       *,
-      event_id,
       posts!inner(id, post_number, deadline, event_id, post_type, events!inner(title))
     `,
       { count: 'exact' }

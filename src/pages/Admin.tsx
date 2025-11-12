@@ -1087,11 +1087,37 @@ const Admin = () => {
         return;
       }
 
-      // Aplicar filtros client-side (post number, dates)
+      // ✅ RESTAURAR: Aplicar filtros client-side (post number, dates)
       let filteredSubmissions = freshSubmissions;
 
-      if (!filteredSubmissions || filteredSubmissions.length === 0) {
-        toast.error(`❌ Nenhuma submissão encontrada para o evento selecionado com os filtros aplicados`);
+      // Filtro de Post Number
+      if (submissionPostFilter && submissionPostFilter !== "all") {
+        filteredSubmissions = filteredSubmissions.filter((s: any) => 
+          s.posts?.post_number?.toString() === submissionPostFilter
+        );
+      }
+
+      // Filtro de Data Início
+      if (dateFilterStart) {
+        filteredSubmissions = filteredSubmissions.filter((s: any) => {
+          const submitDate = new Date(s.submitted_at);
+          const filterDate = new Date(dateFilterStart);
+          return submitDate >= filterDate;
+        });
+      }
+
+      // Filtro de Data Fim
+      if (dateFilterEnd) {
+        filteredSubmissions = filteredSubmissions.filter((s: any) => {
+          const submitDate = new Date(s.submitted_at);
+          const filterDate = new Date(dateFilterEnd);
+          return submitDate <= filterDate;
+        });
+      }
+
+      // ✅ AGORA SIM: Verificar se sobrou algo após filtros
+      if (filteredSubmissions.length === 0) {
+        toast.error(`❌ Nenhuma submissão encontrada com os filtros de data/post aplicados`);
         return;
       }
 
