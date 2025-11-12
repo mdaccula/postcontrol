@@ -1104,7 +1104,7 @@ const Admin = () => {
       }
 
       // 🔧 CORREÇÃO 1: Buscar submissions e profiles separadamente
-      const { data: submissionsData, error: submissionsError } = await sb
+      const { data: fullSubmissionsData, error: submissionsError } = await sb
         .from("submissions")
         .select("*")
         .in("id", submissionIds);
