@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 
-type UserRole = 'user' | 'agency_admin' | 'master_admin';
+type UserRole = 'user' | 'agency_admin' | 'master_admin' | 'guest';
 
 interface UseUserRoleReturn {
   roles: UserRole[];

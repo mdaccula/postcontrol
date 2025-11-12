@@ -36,10 +36,11 @@ export const GuestManager = ({ agencyId }: GuestManagerProps) => {
   const [isPermissionEditorOpen, setIsPermissionEditorOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // 🆕 FASE 5
 
   // ✅ ITEM 4: Se não houver agencyId, buscar de todas as agências (Master Admin)
   const effectiveAgencyId = agencyId || '';
-  const { invites, loading, revokeInvite, resendInvite } = useGuestInvites(effectiveAgencyId);
+  const { invites, loading, revokeInvite, resendInvite, deleteInvite } = useGuestInvites(effectiveAgencyId);
 
   const handleEditPermissions = (guest: any) => {
     setSelectedGuest(guest);
@@ -55,6 +56,20 @@ export const GuestManager = ({ agencyId }: GuestManagerProps) => {
     if (selectedGuest) {
       revokeInvite(selectedGuest.id);
       setIsRevokeDialogOpen(false);
+      setSelectedGuest(null);
+    }
+  };
+
+  // 🆕 FASE 5: Handler para deletar
+  const handleDeleteClick = (guest: any) => {
+    setSelectedGuest(guest);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedGuest) {
+      deleteInvite(selectedGuest.id);
+      setIsDeleteDialogOpen(false);
       setSelectedGuest(null);
     }
   };
@@ -183,6 +198,16 @@ export const GuestManager = ({ agencyId }: GuestManagerProps) => {
                         Revogar Acesso
                       </DropdownMenuItem>
                     )}
+                    {/* 🆕 FASE 5: Opção de deletar para convites não aceitos */}
+                    {(guest.status === 'pending' || guest.status === 'expired' || guest.status === 'revoked') && (
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteClick(guest)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Deletar Convite
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -219,6 +244,25 @@ export const GuestManager = ({ agencyId }: GuestManagerProps) => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRevoke} className="bg-destructive text-destructive-foreground">
               Revogar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🆕 FASE 5: AlertDialog para deletar */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar Convite</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar permanentemente o convite de {selectedGuest?.guest_email}? 
+              Esta ação não pode ser desfeita e o convite será removido do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+              Deletar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

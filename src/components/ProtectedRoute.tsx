@@ -4,7 +4,7 @@ import { useUserRoleQuery } from '@/hooks/useUserRoleQuery';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type UserRole = 'user' | 'agency_admin' | 'master_admin';
+type UserRole = 'user' | 'agency_admin' | 'master_admin' | 'guest';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

@@ -119,8 +119,6 @@ export const useGuestInvites = (agencyId?: string) => {
   // Reenviar convite
   const resendInvite = useMutation({
     mutationFn: async (guestId: string) => {
-      // Aqui você pode adicionar lógica para reenviar o email
-      // Por enquanto, apenas atualiza a data de expiração
       const { error } = await supabase
         .from('agency_guests')
         .update({
@@ -136,6 +134,26 @@ export const useGuestInvites = (agencyId?: string) => {
     onError: (error: any) => {
       console.error('Error resending invite:', error);
       toast.error('Erro ao reenviar convite: ' + error.message);
+    },
+  });
+
+  // 🆕 FASE 5: Deletar convite
+  const deleteInvite = useMutation({
+    mutationFn: async (guestId: string) => {
+      const { error } = await supabase
+        .from('agency_guests')
+        .delete()
+        .eq('id', guestId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guestInvites', agencyId] });
+      toast.success('Convite deletado permanentemente');
+    },
+    onError: (error: any) => {
+      console.error('Error deleting invite:', error);
+      toast.error('Erro ao deletar: ' + error.message);
     },
   });
 
@@ -188,6 +206,7 @@ export const useGuestInvites = (agencyId?: string) => {
     createInvite: createInvite.mutate,
     revokeInvite: revokeInvite.mutate,
     resendInvite: resendInvite.mutate,
+    deleteInvite: deleteInvite.mutate,
     updatePermissions: updatePermissions.mutate,
     isCreating: createInvite.isPending,
     isRevoking: revokeInvite.isPending,

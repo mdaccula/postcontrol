@@ -23,6 +23,8 @@ export const AgencyAdminSettings = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [ogImageUrl, setOgImageUrl] = useState<string | null>(null);
+  const [ogImageFile, setOgImageFile] = useState<File | null>(null);
   
   // Personal Data
   const [fullName, setFullName] = useState("");
@@ -72,7 +74,7 @@ export const AgencyAdminSettings = () => {
       if (profileData.agency_id) {
         const { data: agencyData } = await sb
           .from('agencies')
-          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url')
+          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url')
           .eq('id', profileData.agency_id)
           .maybeSingle();
 
@@ -83,6 +85,7 @@ export const AgencyAdminSettings = () => {
           setSubscriptionStatus(agencyData.subscription_status || "active");
           setAgencyLogoUrl(agencyData.logo_url);
           setLogoPreview(agencyData.logo_url);
+          setOgImageUrl(agencyData.og_image_url);
         }
       }
     }
@@ -336,6 +339,54 @@ export const AgencyAdminSettings = () => {
         
         {/* ✅ ITEM 3: Seção de logo REMOVIDA - Logo agora é sincronizado automaticamente com avatar do admin */}
         
+        <div className="space-y-2">
+          <Label htmlFor="ogImage">Imagem de Preview (Open Graph)</Label>
+          <p className="text-xs text-muted-foreground">
+            Imagem que aparece ao compartilhar o link de cadastro no WhatsApp, Facebook, etc.
+          </p>
+          {ogImageUrl && (
+            <img src={ogImageUrl} alt="Preview OG" className="w-full h-32 object-cover rounded-md" />
+          )}
+          <Input
+            id="ogImage"
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !agencyId) return;
+              
+              const fileExt = file.name.split('.').pop();
+              const fileName = `${agencyId}-og-${Date.now()}.${fileExt}`;
+              
+              const { error: uploadError } = await sb.storage
+                .from('agency-og-images')
+                .upload(fileName, file);
+              
+              if (uploadError) {
+                toast.error('Erro ao fazer upload');
+                return;
+              }
+              
+              const { data: { publicUrl } } = sb.storage
+                .from('agency-og-images')
+                .getPublicUrl(fileName);
+              
+              const { error: updateError } = await sb
+                .from('agencies')
+                .update({ og_image_url: publicUrl })
+                .eq('id', agencyId);
+              
+              if (updateError) {
+                toast.error('Erro ao salvar');
+                return;
+              }
+              
+              setOgImageUrl(publicUrl);
+              toast.success('Imagem de preview atualizada!');
+            }}
+          />
+        </div>
+
         <Button 
           onClick={handleSaveProfile} 
           disabled={saving}
