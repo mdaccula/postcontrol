@@ -793,6 +793,16 @@ const MasterAdmin = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 🆕 FASE 1: Badge de Debug */}
+      {debugMode && (
+        <div className="fixed bottom-4 right-4 bg-yellow-500 text-black p-3 rounded-md text-xs font-mono z-50 shadow-lg">
+          <div className="font-bold mb-2">🐛 Debug Mode</div>
+          <div>User: {user ? '✅' : '❌'}</div>
+          <div>Master: {isMasterAdmin ? '✅' : '❌'}</div>
+          <div>Loading: {roleLoading ? '⏳' : '✅'}</div>
+        </div>
+      )}
     </div>
   );
 };
