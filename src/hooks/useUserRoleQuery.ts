@@ -52,6 +52,20 @@ export const useUserRoleQuery = (): UseUserRoleQueryReturn => {
     return roles.includes(role);
   };
 
+  // 🆕 Logger de estado em modo debug
+  useEffect(() => {
+    if (debugMode) {
+      console.log('📊 [useUserRoleQuery] Estado atual:', {
+        user: user?.id,
+        roles,
+        loading: isLoading,
+        isAgencyAdmin: roles.includes('agency_admin'),
+        isMasterAdmin: roles.includes('master_admin'),
+        error: error?.message,
+      });
+    }
+  }, [user, roles, isLoading, error, debugMode]);
+
   return {
     roles,
     loading: isLoading, // ✅ SOLUÇÃO 3: Removido isFetching para evitar loading desnecessário
