@@ -150,7 +150,7 @@ const Submit = () => {
   useEffect(() => {
     if (selectedEvent) {
       setSelectedPost(""); // ✅ Limpar postagem selecionada ao trocar evento
-      loadPostsForEvent(selectedEvent);
+      loadPostsForEvent(selectedEvent, submissionType as 'post' | 'sale');
       loadRequirementsForEvent(selectedEvent);
       // ✅ FASE 4: Carregar submissions do usuário para este evento
       loadUserSubmissionsForEvent(selectedEvent);
@@ -160,7 +160,7 @@ const Submit = () => {
       setSelectedPost("");
       setUserSubmissions([]);
     }
-  }, [selectedEvent]);
+  }, [selectedEvent, submissionType]);
 
   const loadEvents = async () => {
     if (!user) {
@@ -284,7 +284,7 @@ const Submit = () => {
     }
   };
 
-  const loadPostsForEvent = async (eventId: string) => {
+  const loadPostsForEvent = async (eventId: string, submissionType: 'post' | 'sale') => {
     if (!user) return;
 
     // Buscar informações do evento para verificar o tipo
@@ -298,26 +298,31 @@ const Submit = () => {
       eventId,
       eventPurpose: postType,
       isProfileSelection,
+      submissionType,
       currentTime: new Date().toISOString(),
       currentTimeBR: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
     });
 
-    // ✅ ITEM 6: Para VENDA, sempre mostrar o post 0 (único)
-    if (postType === 'venda') {
+    // ✅ FASE C: Filtrar post #0 baseado no submissionType
+    if (submissionType === 'sale') {
+      // Para vendas: carregar APENAS post #0
+      console.log('📦 Carregando post virtual para venda...');
       const { data: salesPost } = await sb
         .from('posts')
         .select('id, post_number, deadline, event_id')
         .eq('event_id', eventId)
         .eq('post_number', 0)
+        .eq('post_type', 'venda')
         .gte('deadline', new Date().toISOString())
         .maybeSingle();
       
       if (salesPost) {
         setPosts([salesPost]);
+        setSelectedPost(salesPost.id); // Auto-selecionar
       } else {
         toast({
-          title: "Nenhuma postagem de venda disponível",
-          description: "Aguarde o administrador criar a postagem de vendas.",
+          title: "Post de venda não encontrado",
+          description: "O post virtual será criado automaticamente ao enviar.",
           variant: "default",
         });
         setPosts([]);
@@ -325,8 +330,15 @@ const Submit = () => {
       return;
     }
 
-    // 1. Buscar IDs dos posts do evento
-    const { data: eventPosts } = await sb.from("posts").select("id").eq("event_id", eventId);
+    // Para postagens normais: EXCLUIR post #0
+    console.log('📸 Carregando posts normais (excluindo #0)...');
+
+    // 1. Buscar IDs dos posts do evento (excluindo #0)
+    const { data: eventPosts } = await sb
+      .from("posts")
+      .select("id")
+      .eq("event_id", eventId)
+      .neq("post_number", 0); // ✅ EXCLUIR post #0
 
     const eventPostIds = (eventPosts || []).map((p: any) => p.id);
 
@@ -357,7 +369,11 @@ const Submit = () => {
     });
 
     // 3. Buscar postagens disponíveis
-    let query = sb.from("posts").select("id, post_number, deadline, event_id").eq("event_id", eventId);
+    let query = sb
+      .from("posts")
+      .select("id, post_number, deadline, event_id")
+      .eq("event_id", eventId)
+      .neq("post_number", 0); // ✅ GARANTIR que post #0 seja excluído
 
     // ✅ TODOS os eventos devem respeitar deadline
     query = query.gte("deadline", new Date().toISOString());
@@ -1001,23 +1017,40 @@ const Submit = () => {
         insertData.post_id = selectedPost;
         // event_id virá do post automaticamente
       } else {
-        // ✅ SOLUÇÃO A: Criar post virtual via Edge Function (bypassa RLS com segurança)
-        console.log('[Submit] Criando post virtual via Edge Function...');
+        // ✅ FASE B: Criar post virtual diretamente (RLS permite agora)
+        console.log('[Submit] Verificando post virtual existente...');
 
-        const { data: virtualPostData, error: functionError } = await supabase.functions.invoke(
-          'create-virtual-post',
-          {
-            body: { event_id: selectedEvent },
-          }
-        );
+        // 1️⃣ Verificar se já existe post #0 para este evento
+        const { data: existingPost } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('event_id', selectedEvent)
+          .eq('post_number', 0)
+          .eq('post_type', 'venda')
+          .maybeSingle();
 
-        if (functionError || !virtualPostData?.post_id) {
-          console.error('[Submit] Edge Function error:', functionError);
-          throw new Error('Falha ao criar registro de venda');
+        if (existingPost) {
+          console.log('[Submit] Reutilizando post virtual:', existingPost.id);
+          insertData.post_id = existingPost.id;
+        } else {
+          // 2️⃣ Criar novo post virtual (RLS permite agora)
+          console.log('[Submit] Criando post virtual...');
+          const { data: newPost, error: postError } = await supabase
+            .from('posts')
+            .insert({
+              event_id: selectedEvent,
+              post_number: 0,
+              deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              created_by: user.id,
+              agency_id: agencyId,
+              post_type: 'venda',
+            })
+            .select('id')
+            .single();
+
+          if (postError) throw postError;
+          insertData.post_id = newPost.id;
         }
-
-        console.log('[Submit] Post virtual criado:', virtualPostData.post_id);
-        insertData.post_id = virtualPostData.post_id;
       }
 
       const { error } = await sb.from("submissions").insert(insertData);
