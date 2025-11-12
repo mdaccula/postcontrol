@@ -305,27 +305,34 @@ const Submit = () => {
 
     // ✅ FASE C: Filtrar post #0 baseado no submissionType
     if (submissionType === 'sale') {
-      // Para vendas: carregar APENAS post #0
-      console.log('📦 Carregando post virtual para venda...');
+      // ✅ Para vendas: sempre criar objeto virtual para post #0
+      console.log('📦 Preparando post virtual para venda (será criado no submit)...');
+      
+      // Buscar se já existe post #0 (sem filtro de deadline)
       const { data: salesPost } = await sb
         .from('posts')
         .select('id, post_number, deadline, event_id')
         .eq('event_id', eventId)
         .eq('post_number', 0)
         .eq('post_type', 'venda')
-        .gte('deadline', new Date().toISOString())
         .maybeSingle();
       
       if (salesPost) {
+        // Post já existe, usar o real
+        console.log('📦 Post #0 existente encontrado:', salesPost.id);
         setPosts([salesPost]);
-        setSelectedPost(salesPost.id); // Auto-selecionar
+        setSelectedPost(salesPost.id);
       } else {
-        toast({
-          title: "Post de venda não encontrado",
-          description: "O post virtual será criado automaticamente ao enviar.",
-          variant: "default",
-        });
-        setPosts([]);
+        // Post não existe, criar objeto virtual temporário
+        console.log('📦 Post #0 não existe, será criado no submit');
+        const virtualPost = {
+          id: 'virtual-sale-post', // ID temporário
+          post_number: 0,
+          deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          event_id: eventId,
+        };
+        setPosts([virtualPost]);
+        setSelectedPost(virtualPost.id);
       }
       return;
     }
@@ -1018,39 +1025,45 @@ const Submit = () => {
         // event_id virá do post automaticamente
       } else {
         // ✅ FASE B: Criar post virtual diretamente (RLS permite agora)
-        console.log('[Submit] Verificando post virtual existente...');
+        console.log('[Submit] Verificando post virtual para venda...');
 
-        // 1️⃣ Verificar se já existe post #0 para este evento
-        const { data: existingPost } = await supabase
-          .from('posts')
-          .select('id')
-          .eq('event_id', selectedEvent)
-          .eq('post_number', 0)
-          .eq('post_type', 'venda')
-          .maybeSingle();
-
-        if (existingPost) {
-          console.log('[Submit] Reutilizando post virtual:', existingPost.id);
-          insertData.post_id = existingPost.id;
-        } else {
-          // 2️⃣ Criar novo post virtual (RLS permite agora)
-          console.log('[Submit] Criando post virtual...');
-          const { data: newPost, error: postError } = await supabase
+        // Se selectedPost for virtual, buscar/criar o real
+        if (selectedPost === 'virtual-sale-post') {
+          const { data: existingPost } = await supabase
             .from('posts')
-            .insert({
-              event_id: selectedEvent,
-              post_number: 0,
-              deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-              created_by: user.id,
-              agency_id: agencyId,
-              post_type: 'venda',
-            })
             .select('id')
-            .single();
+            .eq('event_id', selectedEvent)
+            .eq('post_number', 0)
+            .eq('post_type', 'venda')
+            .maybeSingle();
 
-          if (postError) throw postError;
-          insertData.post_id = newPost.id;
+          if (existingPost) {
+            console.log('[Submit] Post #0 já existe:', existingPost.id);
+            insertData.post_id = existingPost.id;
+          } else {
+            console.log('[Submit] Criando post #0...');
+            const { data: newPost, error: postError } = await supabase
+              .from('posts')
+              .insert({
+                event_id: selectedEvent,
+                post_number: 0,
+                deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                created_by: user.id,
+                agency_id: agencyId,
+                post_type: 'venda',
+              })
+              .select('id')
+              .single();
+
+            if (postError) throw postError;
+            insertData.post_id = newPost.id;
+          }
+        } else {
+          // Post real já selecionado
+          insertData.post_id = selectedPost;
         }
+        
+        insertData.event_id = selectedEvent;
       }
 
       const { error } = await sb.from("submissions").insert(insertData);
