@@ -112,6 +112,7 @@ const Submit = () => {
   const [followersRange, setFollowersRange] = useState<string>("");
   // ✅ FASE 4: Estado para rastrear posts já enviados
   const [userSubmissions, setUserSubmissions] = useState<string[]>([]);
+  const [salesCount, setSalesCount] = useState<number>(0);
 
   useEffect(() => {
     loadEvents();
@@ -154,11 +155,16 @@ const Submit = () => {
       loadRequirementsForEvent(selectedEvent);
       // ✅ FASE 4: Carregar submissions do usuário para este evento
       loadUserSubmissionsForEvent(selectedEvent);
+      // ✅ Carregar contador de vendas se tipo for sale
+      if (submissionType === 'sale') {
+        loadSalesCount(selectedEvent);
+      }
     } else {
       setPosts([]);
       setRequirements([]);
       setSelectedPost("");
       setUserSubmissions([]);
+      setSalesCount(0);
     }
     console.log('🔄 submissionType mudou:', submissionType);
   }, [selectedEvent, submissionType]);
@@ -493,6 +499,27 @@ const Submit = () => {
       console.error("Erro ao carregar submissions:", error);
       setUserSubmissions([]);
     }
+  };
+
+  const loadSalesCount = async (eventId: string) => {
+    if (!user) return;
+    
+    console.log('📊 Carregando contador de vendas...');
+    
+    const { count, error } = await sb
+      .from('submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('event_id', eventId)
+      .eq('submission_type', 'sale');
+    
+    if (error) {
+      console.error('Erro ao carregar contador:', error);
+      return;
+    }
+    
+    console.log(`✅ Total de vendas enviadas: ${count || 0}`);
+    setSalesCount(count || 0);
   };
 
   const loadUserProfile = async () => {
@@ -1241,41 +1268,42 @@ const Submit = () => {
                     </div>
                   )}
 
-                  {/* Mostrar seleção de postagem APENAS se tipo for "post" */}
-                  {submissionType === "post" && (
+                  {/* Seleção de postagem para ambos os tipos */}
+                  {selectedEvent && (
                     <div className="space-y-2">
-                      <Label htmlFor="post-select">Escolha a Postagem *</Label>
+                      <Label htmlFor="post-select">
+                        {submissionType === "post" ? "Escolha a Postagem *" : "Comprovante de Venda *"}
+                      </Label>
+                      
                       {posts.length > 0 ? (
                         <>
                           <Select value={selectedPost} onValueChange={setSelectedPost} disabled={isSubmitting}>
                             <SelectTrigger id="post-select" className="w-full bg-background">
-                              <SelectValue placeholder="Selecione qual postagem você está enviando" />
+                              <SelectValue placeholder={
+                                submissionType === "post" 
+                                  ? "Selecione qual postagem você está enviando"
+                                  : "Postagem #0 (Venda)"
+                              } />
                             </SelectTrigger>
                             <SelectContent className="bg-popover border-border z-50">
                               {posts.map((post) => {
                                 const alreadySubmitted = userSubmissions.includes(post.id);
                                 const isExpired = new Date(post.deadline) < new Date();
-
+                                
                                 return (
                                   <SelectItem key={post.id} value={post.id} disabled={isExpired || alreadySubmitted}>
                                     <div className="flex items-center gap-2">
                                       <span>
-                                        {formatPostName(null, post.post_number, null)} - Prazo:{" "}
-                                        {new Date(post.deadline).toLocaleDateString("pt-BR")} às{" "}
-                                        {new Date(post.deadline).toLocaleTimeString("pt-BR", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
+                                        {submissionType === "sale" 
+                                          ? "💰 Postagem #0 (Venda)"
+                                          : `${formatPostName(null, post.post_number, null)} - Prazo: ${new Date(post.deadline).toLocaleDateString("pt-BR")} às ${new Date(post.deadline).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                                        }
                                       </span>
-                                      {alreadySubmitted && (
-                                        <Badge variant="secondary" className="text-xs ml-2">
-                                          ✓ Já enviada
-                                        </Badge>
+                                      {alreadySubmitted && submissionType === "post" && (
+                                        <Badge variant="secondary" className="text-xs ml-2">✓ Já enviada</Badge>
                                       )}
                                       {isExpired && (
-                                        <Badge variant="destructive" className="text-xs ml-2">
-                                          ⏰ Prazo expirado
-                                        </Badge>
+                                        <Badge variant="destructive" className="text-xs ml-2">⏰ Prazo expirado</Badge>
                                       )}
                                     </div>
                                   </SelectItem>
@@ -1284,7 +1312,7 @@ const Submit = () => {
                             </SelectContent>
                           </Select>
 
-                          {selectedPost && (
+                          {selectedPost && submissionType === "post" && (
                             <div className="bg-primary/10 border border-primary rounded-lg p-4 mt-2">
                               <p className="font-semibold text-primary mb-1">📌 Postagem Selecionada:</p>
                               <p className="text-sm">
@@ -1300,25 +1328,35 @@ const Submit = () => {
                               </p>
                             </div>
                           )}
+
+                          {selectedPost && submissionType === "sale" && (
+                            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-blue-700 dark:text-blue-300 mb-1">
+                                    💰 Comprovantes Enviados
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Você já enviou {salesCount} comprovante{salesCount !== 1 ? 's' : ''} de venda para este evento
+                                  </p>
+                                </div>
+                                <Badge variant="secondary" className="text-2xl px-4 py-2">
+                                  {salesCount}
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="bg-muted/50 border border-border rounded-lg p-4">
                           <p className="text-sm text-muted-foreground text-center">
-                            ⏰ Nenhuma postagem dentro do prazo disponível
+                            {submissionType === "post" 
+                              ? "⏰ Nenhuma postagem dentro do prazo disponível"
+                              : "💰 Post de venda será criado automaticamente"
+                            }
                           </p>
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Para vendas, mostrar apenas informação */}
-                  {submissionType === "sale" && (
-                    <div className="bg-muted/50 border border-border rounded-lg p-4">
-                      <p className="text-sm text-center">
-                        💰 <strong>Envio de Comprovante de Venda</strong>
-                        <br />
-                        Vendas não estão vinculadas a números de postagem
-                      </p>
                     </div>
                   )}
 
