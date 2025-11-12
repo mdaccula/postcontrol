@@ -59,6 +59,7 @@ export type Database = {
           max_events: number | null
           max_influencers: number | null
           name: string
+          og_image_url: string | null
           owner_id: string | null
           plan_expiry_date: string | null
           signup_token: string | null
@@ -79,6 +80,7 @@ export type Database = {
           max_events?: number | null
           max_influencers?: number | null
           name: string
+          og_image_url?: string | null
           owner_id?: string | null
           plan_expiry_date?: string | null
           signup_token?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           max_events?: number | null
           max_influencers?: number | null
           name?: string
+          og_image_url?: string | null
           owner_id?: string | null
           plan_expiry_date?: string | null
           signup_token?: string | null
@@ -970,6 +973,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          event_id: string | null
           followers_range: string | null
           id: string
           instagram_verified: boolean | null
@@ -990,6 +994,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          event_id?: string | null
           followers_range?: string | null
           id?: string
           instagram_verified?: boolean | null
@@ -1010,6 +1015,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          event_id?: string | null
           followers_range?: string | null
           id?: string
           instagram_verified?: boolean | null
@@ -1031,6 +1037,13 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
           {

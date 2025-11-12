@@ -1073,14 +1073,22 @@ const Admin = () => {
     try {
       const XLSX = await import("xlsx");
 
-      // 🆕 FASE 2: Validação aprimorada
+      // ✅ FASE 2: Validação aprimorada com dados frescos
       if (submissionEventFilter === "all" || !submissionEventFilter) {
         toast.error("⚠️ Selecione um evento específico para exportar");
         return;
       }
 
-      // Aplicar TODOS os filtros ativos
-      let filteredSubmissions = getFilteredSubmissions;
+      // Usar dados diretos do React Query (sempre frescos)
+      const freshSubmissions = submissionsData?.data || [];
+
+      if (!freshSubmissions || freshSubmissions.length === 0) {
+        toast.error(`❌ Nenhuma submissão encontrada para o evento selecionado`);
+        return;
+      }
+
+      // Aplicar filtros client-side (post number, dates)
+      let filteredSubmissions = freshSubmissions;
 
       if (!filteredSubmissions || filteredSubmissions.length === 0) {
         toast.error(`❌ Nenhuma submissão encontrada para o evento selecionado com os filtros aplicados`);
