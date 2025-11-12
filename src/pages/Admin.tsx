@@ -1073,14 +1073,22 @@ const Admin = () => {
     try {
       const XLSX = await import("xlsx");
 
-      // 🆕 FASE 2: Validação aprimorada
+      // ✅ FASE 2: Validação aprimorada com dados frescos
       if (submissionEventFilter === "all" || !submissionEventFilter) {
         toast.error("⚠️ Selecione um evento específico para exportar");
         return;
       }
 
-      // Aplicar TODOS os filtros ativos
-      let filteredSubmissions = getFilteredSubmissions;
+      // Usar dados diretos do React Query (sempre frescos)
+      const freshSubmissions = submissionsData?.data || [];
+
+      if (!freshSubmissions || freshSubmissions.length === 0) {
+        toast.error(`❌ Nenhuma submissão encontrada para o evento selecionado`);
+        return;
+      }
+
+      // Aplicar filtros client-side (post number, dates)
+      let filteredSubmissions = freshSubmissions;
 
       if (!filteredSubmissions || filteredSubmissions.length === 0) {
         toast.error(`❌ Nenhuma submissão encontrada para o evento selecionado com os filtros aplicados`);
@@ -1096,7 +1104,7 @@ const Admin = () => {
       }
 
       // 🔧 CORREÇÃO 1: Buscar submissions e profiles separadamente
-      const { data: submissionsData, error: submissionsError } = await sb
+      const { data: fullSubmissionsData, error: submissionsError } = await sb
         .from("submissions")
         .select("*")
         .in("id", submissionIds);
@@ -1108,7 +1116,7 @@ const Admin = () => {
       }
 
       // Buscar perfis dos usuários
-      const userIds = [...new Set(submissionsData.map((s) => s.user_id))];
+      const userIds = [...new Set(fullSubmissionsData.map((s) => s.user_id))];
       const { data: profilesData } = await sb
         .from("profiles")
         .select("id, full_name, instagram, email, gender, followers_range")
@@ -1148,7 +1156,7 @@ const Admin = () => {
       });
 
       // Enriquecer submissions com profiles
-      const enrichedSubmissions = submissionsData.map((sub) => ({
+      const enrichedSubmissions = fullSubmissionsData.map((sub) => ({
         ...sub,
         profiles: profilesMap[sub.user_id] || {
           full_name: "Usuário Desconhecido",
@@ -2067,11 +2075,68 @@ const Admin = () => {
                                         </a>
                                       )}
                                     </div>
-                                    <div className="sm:text-right">
-                                      <div className="flex flex-col sm:items-end gap-2">
-                                        {/* ✅ ITEM 4: Dropdown editável para trocar post_id */}
-                                        <div className="flex items-center gap-2">
-                                          <Select
+                                     <div className="sm:text-right">
+                                       <div className="flex flex-col sm:items-end gap-2">
+                                         {/* ✅ FASE 5: Dropdown para trocar evento */}
+                                         <div className="space-y-1">
+                                           <label className="text-sm text-muted-foreground">
+                                             Evento:
+                                           </label>
+                                           <Select
+                                             value={submission.event_id || "none"}
+                                             onValueChange={async (newEventId) => {
+                                               if (newEventId === "none") return;
+
+                                               const currentEvent = events.find((e) => e.id === submission.event_id);
+                                               const newEvent = events.find((e) => e.id === newEventId);
+
+                                               const confirma = window.confirm(
+                                                 `Deseja mover esta submissão de:\n"${currentEvent?.title}" → "${newEvent?.title}"?\n\nO post será resetado e deverá ser selecionado novamente.\n\nEsta ação não pode ser desfeita.`,
+                                               );
+
+                                               if (!confirma) return;
+
+                                               try {
+                                                 const { error } = await sb
+                                                   .from("submissions")
+                                                   .update({ 
+                                                     event_id: newEventId,
+                                                     post_id: null,
+                                                     submission_type: "post"
+                                                   })
+                                                   .eq("id", submission.id);
+
+                                                 if (error) throw error;
+
+                                                 toast.success(`✅ Submissão movida para: ${newEvent?.title}`);
+                                                 refetchSubmissions();
+                                               } catch (err: any) {
+                                                 console.error("Erro ao trocar evento:", err);
+                                                 toast.error(`❌ Erro: ${err.message}`);
+                                               }
+                                             }}
+                                             disabled={isReadOnly}
+                                           >
+                                             <SelectTrigger className="w-48 h-8 text-xs">
+                                               <SelectValue>
+                                                 {events.find((e) => e.id === submission.event_id)?.title || "Selecione evento"}
+                                               </SelectValue>
+                                             </SelectTrigger>
+                                             <SelectContent>
+                                               {events
+                                                 .filter((e) => e.is_active)
+                                                 .map((event) => (
+                                                   <SelectItem key={event.id} value={event.id}>
+                                                     📅 {event.title}
+                                                   </SelectItem>
+                                                 ))}
+                                             </SelectContent>
+                                           </Select>
+                                         </div>
+
+                                         {/* ✅ ITEM 4: Dropdown editável para trocar post_id */}
+                                         <div className="flex items-center gap-2">
+                                           <Select
                                             value={submission.post_id || "none"}
                                             onValueChange={async (newPostId) => {
                                               if (newPostId === "none") return;
@@ -2084,25 +2149,30 @@ const Admin = () => {
 
                                                 if (!confirma) return;
 
-                                                try {
-                                                  const { error } = await sb
-                                                    .from("submissions")
-                                                    .update({ 
-                                                      post_id: null, // 🆕 FASE 4: Setar null para vendas
-                                                      submission_type: "sale" 
-                                                    })
-                                                    .eq("id", submission.id);
+                                                 try {
+                                                   // ✅ FASE 4: Buscar event_id do post atual para manter rastreabilidade
+                                                   const currentPost = posts.find((p) => p.id === submission.post_id);
+                                                   const eventId = currentPost?.event_id || null;
 
-                                                  if (error) throw error;
+                                                   const { error } = await sb
+                                                     .from("submissions")
+                                                     .update({ 
+                                                       post_id: null,
+                                                       submission_type: "sale",
+                                                       event_id: eventId // ✅ Manter event_id mesmo sem post_id
+                                                     })
+                                                     .eq("id", submission.id);
 
-                                                  toast.success(`✅ Post alterado para: Comprovante de Venda`);
-                                                  refetchSubmissions();
-                                                } catch (err: any) {
-                                                  console.error("Erro ao atualizar post:", err);
-                                                  toast.error(`❌ Erro: ${err.message}`);
-                                                }
-                                                return;
-                                              }
+                                                   if (error) throw error;
+
+                                                   toast.success(`✅ Post alterado para: Comprovante de Venda`);
+                                                   refetchSubmissions();
+                                                 } catch (err: any) {
+                                                   console.error("Erro ao atualizar post:", err);
+                                                   toast.error(`❌ Erro: ${err.message}`);
+                                                 }
+                                                 return;
+                                               }
 
                                               // Para posts normais
                                               const postAtual = posts.find((p) => p.id === submission.post_id);

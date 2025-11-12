@@ -54,7 +54,7 @@ export const useAdminFilters = () => {
   const eventActiveFilter = searchParams.get('eventActive') || 'active'; // ✅ ITEM 8: Padrão 'active'
   const postEventFilter = searchParams.get('postEvent') || 'all';
   const postEventActiveFilter = searchParams.get('postEventActive') || 'active'; // ✅ FASE 3: Padrão 'active'
-  const eventSortOrder = searchParams.get('eventSort') || 'newest'; // ✅ ITEM 7: Ordenação de eventos
+  const eventSortOrder = searchParams.get('eventSort') || 'oldest'; // ✅ FASE 3: Ordenação padrão para mais antigos
 
   /**
    * Atualizador genérico de filtros

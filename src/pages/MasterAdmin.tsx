@@ -105,15 +105,23 @@ const MasterAdmin = () => {
 
   // 🆕 FASE 1: Debug mode
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has('debug'));
+  const [isStabilizing, setIsStabilizing] = useState(true);
 
-  // ✅ SOLUÇÃO 1 e 2: useEffect separado para autenticação/redirecionamento
+  // ✅ FASE 1: useEffect separado para autenticação/redirecionamento com guard de estabilização
   useEffect(() => {
     if (debugMode) {
       console.log('🔐 [MasterAdmin] Estado:', {
         user: !!user,
         isMasterAdmin,
         roleLoading,
+        isStabilizing,
       });
+    }
+
+    // ✅ Guard: Dar 500ms para estabilizar antes de redirecionar
+    if (isStabilizing) {
+      const timer = setTimeout(() => setIsStabilizing(false), 500);
+      return () => clearTimeout(timer);
     }
 
     // Enquanto estiver carregando, não faz nada
@@ -141,7 +149,7 @@ const MasterAdmin = () => {
     }
 
     if (debugMode) console.log('✅ [MasterAdmin] Acesso autorizado');
-  }, [user, isMasterAdmin, roleLoading]); // ✅ SOLUÇÃO 1: Removido navigate das dependências
+  }, [user, isMasterAdmin, roleLoading, isStabilizing]);
 
   // ✅ SOLUÇÃO 2: useEffect separado para carregar dados (executa uma única vez quando autorizado)
   useEffect(() => {
@@ -801,6 +809,7 @@ const MasterAdmin = () => {
           <div>User: {user ? '✅' : '❌'}</div>
           <div>Master: {isMasterAdmin ? '✅' : '❌'}</div>
           <div>Loading: {roleLoading ? '⏳' : '✅'}</div>
+          <div>Stabilizing: {isStabilizing ? '⏳' : '✅'}</div>
         </div>
       )}
     </div>
