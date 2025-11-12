@@ -31,7 +31,7 @@ export interface UseEventsQueryParams {
  */
 export const useEventsQuery = ({ 
   agencyId, 
-  isActive, 
+  isActive = true, // 🆕 FASE 3: Filtro ativo por padrão
   includePosts = false,
   enabled = true 
 }: UseEventsQueryParams = {}) => {
@@ -43,10 +43,17 @@ export const useEventsQuery = ({
       
       if (error) throw error;
 
+      // 🆕 FASE 3: Ordenar por data (mais próximo primeiro)
+      const sortedEvents = (events || []).sort((a, b) => {
+        const dateA = a.event_date ? new Date(a.event_date).getTime() : Infinity;
+        const dateB = b.event_date ? new Date(b.event_date).getTime() : Infinity;
+        return dateA - dateB;
+      });
+
       // Se includePosts = true, buscar posts para cada evento
-      if (includePosts && events && events.length > 0) {
+      if (includePosts && sortedEvents && sortedEvents.length > 0) {
         // Buscar posts de cada evento em paralelo
-        const postsPromises = events.map(event => getEventPosts(event.id));
+        const postsPromises = sortedEvents.map(event => getEventPosts(event.id));
         const postsResults = await Promise.all(postsPromises);
         
         // Consolidar todos os posts
@@ -54,7 +61,7 @@ export const useEventsQuery = ({
         
         // Enriquecer posts com dados do evento
         const enrichedPosts = allPosts.map(post => {
-          const matchedEvent = events.find(e => e.id === post.event_id);
+          const matchedEvent = sortedEvents.find(e => e.id === post.event_id);
           return {
             ...post,
             events: matchedEvent ? { id: matchedEvent.id, title: matchedEvent.title } : null
@@ -62,13 +69,13 @@ export const useEventsQuery = ({
         });
 
         return {
-          events: events || [],
+          events: sortedEvents || [],
           posts: enrichedPosts
         };
       }
 
       return {
-        events: events || [],
+        events: sortedEvents || [],
         posts: []
       };
     },

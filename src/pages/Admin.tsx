@@ -1073,11 +1073,17 @@ const Admin = () => {
     try {
       const XLSX = await import("xlsx");
 
+      // 🆕 FASE 2: Validação aprimorada
+      if (submissionEventFilter === "all" || !submissionEventFilter) {
+        toast.error("⚠️ Selecione um evento específico para exportar");
+        return;
+      }
+
       // Aplicar TODOS os filtros ativos
       let filteredSubmissions = getFilteredSubmissions;
 
       if (!filteredSubmissions || filteredSubmissions.length === 0) {
-        toast.error("Nenhuma submissão encontrada com os filtros aplicados");
+        toast.error(`❌ Nenhuma submissão encontrada para o evento selecionado com os filtros aplicados`);
         return;
       }
 
@@ -2070,6 +2076,35 @@ const Admin = () => {
                                             onValueChange={async (newPostId) => {
                                               if (newPostId === "none") return;
 
+                                              // 🆕 FASE 4: Tratar seleção de venda especial
+                                              if (newPostId === "__SALE__") {
+                                                const confirma = window.confirm(
+                                                  `Deseja alterar para "Comprovante de Venda"?\n\nEsta ação não pode ser desfeita.`,
+                                                );
+
+                                                if (!confirma) return;
+
+                                                try {
+                                                  const { error } = await sb
+                                                    .from("submissions")
+                                                    .update({ 
+                                                      post_id: null, // 🆕 FASE 4: Setar null para vendas
+                                                      submission_type: "sale" 
+                                                    })
+                                                    .eq("id", submission.id);
+
+                                                  if (error) throw error;
+
+                                                  toast.success(`✅ Post alterado para: Comprovante de Venda`);
+                                                  refetchSubmissions();
+                                                } catch (err: any) {
+                                                  console.error("Erro ao atualizar post:", err);
+                                                  toast.error(`❌ Erro: ${err.message}`);
+                                                }
+                                                return;
+                                              }
+
+                                              // Para posts normais
                                               const postAtual = posts.find((p) => p.id === submission.post_id);
                                               const postNovo = posts.find((p) => p.id === newPostId);
 
@@ -2088,12 +2123,10 @@ const Admin = () => {
 
                                               try {
                                                 // Atualizar post_id e submission_type automaticamente
-                                                const updates: any = { post_id: newPostId };
-                                                if (newPostId === "sale") {
-                                                  updates.submission_type = "sale";
-                                                } else {
-                                                  updates.submission_type = "post";
-                                                }
+                                                const updates: any = { 
+                                                  post_id: newPostId,
+                                                  submission_type: "post"
+                                                };
 
                                                 const { error } = await sb
                                                   .from("submissions")
@@ -2119,20 +2152,36 @@ const Admin = () => {
                                               </SelectValue>
                                             </SelectTrigger>
                                             <SelectContent>
-                                              <SelectItem value="sale">💰 Comprovante de Venda</SelectItem>
                                               {(() => {
                                                 // Buscar evento da submissão atual
                                                 const currentPost = posts.find((p) => p.id === submission.post_id);
                                                 const eventId = currentPost?.event_id;
+                                                const currentEvent = events.find((e) => e.id === eventId);
+                                                const items = [];
 
-                                                // Filtrar posts do mesmo evento
-                                                const eventPosts = posts.filter((p) => p.event_id === eventId);
+                                                // 🆕 FASE 4: Se evento aceita vendas, adicionar opção especial
+                                                if (currentEvent?.accept_sales) {
+                                                  items.push(
+                                                    <SelectItem key="sale-option" value="__SALE__">
+                                                      💰 Comprovante de Venda
+                                                    </SelectItem>
+                                                  );
+                                                }
 
-                                                return eventPosts.map((post) => (
-                                                  <SelectItem key={post.id} value={post.id}>
-                                                    📱 {formatPostName(post.post_type, post.post_number)}
-                                                  </SelectItem>
-                                                ));
+                                                // Adicionar posts normais (filtrar posts de venda para evitar duplicata)
+                                                const eventPosts = posts
+                                                  .filter((p) => p.event_id === eventId)
+                                                  .filter((post) => post.post_type !== 'venda'); // 🆕 FASE 4: Filtrar posts de venda
+
+                                                eventPosts.forEach((post) => {
+                                                  items.push(
+                                                    <SelectItem key={post.id} value={post.id}>
+                                                      📱 {formatPostName(post.post_type, post.post_number)}
+                                                    </SelectItem>
+                                                  );
+                                                });
+
+                                                return items;
                                               })()}
                                             </SelectContent>
                                           </Select>
