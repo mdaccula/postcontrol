@@ -27,7 +27,7 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
   const [deadline, setDeadline] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedPostType, setSelectedPostType] = useState<'divulgacao' | 'venda'>('divulgacao'); // ✅ ITEM 6
+  const [selectedPostType, setSelectedPostType] = useState<'divulgacao' | 'sale'>('divulgacao'); // ✅ ITEM 6
   const { toast } = useToast();
 
   useEffect(() => {
@@ -153,13 +153,13 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
       let finalPostNumber = parseInt(postNumber);
       
       // Se evento aceita vendas E usuário selecionou venda
-      if (acceptSales && eventPurpose === 'divulgacao' && selectedPostType === 'venda') {
-        finalPostType = 'venda';
+      if (acceptSales && eventPurpose === 'divulgacao' && selectedPostType === 'sale') {
+        finalPostType = 'sale';
         finalPostNumber = 0;
       }
       
       // Se evento é exclusivamente venda
-      if (eventPurpose === 'venda') {
+      if (eventPurpose === 'sale') {
         finalPostNumber = 0;
       }
 
@@ -276,13 +276,13 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
                   
                   <div className="space-y-2">
                     <Label htmlFor="postType">Tipo de Post *</Label>
-                    <Select value={selectedPostType} onValueChange={(value) => setSelectedPostType(value as 'divulgacao' | 'venda')}>
+                    <Select value={selectedPostType} onValueChange={(value) => setSelectedPostType(value as 'divulgacao' | 'sale')}>
                       <SelectTrigger id="postType">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="divulgacao">📢 Divulgação</SelectItem>
-                        <SelectItem value="venda">💰 Comprovante de Vendas</SelectItem>
+                        <SelectItem value="sale">💰 Comprovante de Vendas</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -291,7 +291,7 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
             }
             
             // Eventos normais (apenas 1 tipo)
-            const typeInfo = eventPurpose === 'venda' 
+            const typeInfo = eventPurpose === 'sale' 
               ? { emoji: '💰', label: 'Comprovante de Vendas', desc: 'usuários podem enviar múltiplas vezes' }
               : eventPurpose === 'selecao_perfil'
               ? { emoji: '🎯', label: 'Seleção de Perfil', desc: 'usuário envia 1x: post + perfil' }
@@ -311,7 +311,7 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
               {(() => {
                 const event = events.find(e => e.id === eventId);
                 const eventPurpose = (event as any)?.event_purpose || 'divulgacao';
-                return eventPurpose === 'venda' 
+                return eventPurpose === 'sale' 
                   ? 'Número (sempre 0 para vendas)'
                   : eventPurpose === 'selecao_perfil'
                   ? 'Número da Seleção (1, 2, 3...)'
@@ -327,11 +327,11 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
                 const acceptSales = (event as any)?.accept_sales || false;
                 
                 // ✅ ITEM 6: Se evento aceita vendas E tipo selecionado é venda, fixar em 0
-                if (acceptSales && selectedPostType === 'venda') {
+                if (acceptSales && selectedPostType === 'sale') {
                   return '0';
                 }
                 // Se evento é exclusivamente venda, fixar em 0
-                if (eventPurpose === 'venda') {
+                if (eventPurpose === 'sale') {
                   return '0';
                 }
                 return postNumber;
@@ -340,8 +340,8 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
               placeholder={(() => {
                 const event = events.find(e => e.id === eventId);
                 const acceptSales = (event as any)?.accept_sales || false;
-                if (acceptSales && selectedPostType === 'venda') return '0';
-                if ((event as any)?.event_purpose === 'venda') return '0';
+                if (acceptSales && selectedPostType === 'sale') return '0';
+                if ((event as any)?.event_purpose === 'sale') return '0';
                 return '1, 2, 3...';
               })()}
               required
@@ -351,7 +351,7 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
                 if (!event) return false;
                 const eventPurpose = (event as any).event_purpose;
                 const acceptSales = (event as any).accept_sales || false;
-                return eventPurpose === 'venda' || (acceptSales && selectedPostType === 'venda');
+                return eventPurpose === 'sale' || (acceptSales && selectedPostType === 'sale');
               })()}
             />
           </div>

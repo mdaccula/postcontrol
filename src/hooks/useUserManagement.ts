@@ -86,7 +86,7 @@ export const useUserManagement = () => {
         const eventTitle = submission.posts?.events?.title;
         const postType = submission.posts?.post_type || submission.posts?.events?.event_purpose || 'divulgacao';
         
-        const typeLabel = postType === 'venda' ? 'Vendas' : postType === 'selecao_perfil' ? 'Seleção' : 'Divulgação';
+        const typeLabel = postType === 'sale' ? 'Vendas' : postType === 'selecao_perfil' ? 'Seleção' : 'Divulgação';
         const displayName = eventTitle ? `${eventTitle} (${typeLabel})` : null;
         
         // ✅ Verificar se evento já existe pelo ID

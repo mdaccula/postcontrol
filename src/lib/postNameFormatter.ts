@@ -1,6 +1,6 @@
 /**
  * Formata o nome da postagem baseado no tipo e número
- * @param postType - Tipo da postagem (selecao_perfil, venda, divulgacao)
+ * @param postType - Tipo da postagem (selecao_perfil, sale, divulgacao)
  * @param postNumber - Número da postagem
  * @param eventPurpose - Propósito do evento (opcional)
  * @returns Nome formatado da postagem
@@ -16,7 +16,7 @@ export const formatPostName = (
   }
   
   // Se for comprovante de venda
-  if (postType === 'venda') {
+  if (postType === 'sale') {
     return 'Comprovante de Venda';
   }
   

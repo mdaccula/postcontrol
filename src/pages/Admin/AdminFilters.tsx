@@ -233,7 +233,7 @@ const AdminFiltersComponent = ({
           <SelectContent>
             <SelectItem value="all">Todos os Tipos</SelectItem>
             <SelectItem value="divulgacao">📢 Divulgação</SelectItem>
-            <SelectItem value="venda">💰 Vendas</SelectItem>
+            <SelectItem value="sale">💰 Vendas</SelectItem>
             <SelectItem value="selecao_perfil">🎯 Seleção de Perfil</SelectItem>
           </SelectContent>
         </Select>

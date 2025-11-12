@@ -2267,7 +2267,7 @@ const Admin = () => {
                                                 // Adicionar posts normais (filtrar posts de venda para evitar duplicata)
                                                 const eventPosts = posts
                                                   .filter((p) => p.event_id === eventId)
-                                                  .filter((post) => post.post_type !== 'venda'); // 🆕 FASE 4: Filtrar posts de venda
+                                                  .filter((post) => post.post_type !== 'sale'); // 🆕 FASE 4: Filtrar posts de venda
 
                                                 eventPosts.forEach((post) => {
                                                   items.push(

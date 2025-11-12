@@ -36,7 +36,7 @@ export interface AdminFilters {
   /** Submission status filter */
   submissionStatusFilter: 'all' | 'pending' | 'approved' | 'rejected';
   /** Post type filter */
-  postTypeFilter: 'all' | 'divulgacao' | 'venda' | 'selecao_perfil';
+  postTypeFilter: 'all' | 'divulgacao' | 'sale' | 'selecao_perfil';
   /** Search term for user filtering */
   searchTerm: string;
   /** Start date for date range filter */
