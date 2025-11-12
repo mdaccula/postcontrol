@@ -59,6 +59,7 @@ export type Database = {
           max_events: number | null
           max_influencers: number | null
           name: string
+          og_image_url: string | null
           owner_id: string | null
           plan_expiry_date: string | null
           signup_token: string | null
@@ -79,6 +80,7 @@ export type Database = {
           max_events?: number | null
           max_influencers?: number | null
           name: string
+          og_image_url?: string | null
           owner_id?: string | null
           plan_expiry_date?: string | null
           signup_token?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           max_events?: number | null
           max_influencers?: number | null
           name?: string
+          og_image_url?: string | null
           owner_id?: string | null
           plan_expiry_date?: string | null
           signup_token?: string | null
