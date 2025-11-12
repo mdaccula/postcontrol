@@ -103,8 +103,19 @@ const MasterAdmin = () => {
     max_events: 10, // Será atualizado baseado no plano
   });
 
+  // 🆕 FASE 1: Debug mode
+  const [debugMode] = useState(() => new URLSearchParams(window.location.search).has('debug'));
+
   // ✅ SOLUÇÃO 1 e 2: useEffect separado para autenticação/redirecionamento
   useEffect(() => {
+    if (debugMode) {
+      console.log('🔐 [MasterAdmin] Estado:', {
+        user: !!user,
+        isMasterAdmin,
+        roleLoading,
+      });
+    }
+
     // Enquanto estiver carregando, não faz nada
     if (roleLoading) {
       return;
@@ -112,12 +123,14 @@ const MasterAdmin = () => {
 
     // Redirect se não estiver autenticado
     if (!user) {
+      if (debugMode) console.log('❌ [MasterAdmin] Redirecionando para /auth - sem user');
       navigate("/auth");
       return;
     }
 
     // Redirect se não for master admin
     if (!isMasterAdmin) {
+      if (debugMode) console.log('❌ [MasterAdmin] Redirecionando para /dashboard - não é master admin');
       navigate("/dashboard");
       toast({
         title: "Acesso Negado",
@@ -126,6 +139,8 @@ const MasterAdmin = () => {
       });
       return;
     }
+
+    if (debugMode) console.log('✅ [MasterAdmin] Acesso autorizado');
   }, [user, isMasterAdmin, roleLoading]); // ✅ SOLUÇÃO 1: Removido navigate das dependências
 
   // ✅ SOLUÇÃO 2: useEffect separado para carregar dados (executa uma única vez quando autorizado)
@@ -778,6 +793,16 @@ const MasterAdmin = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 🆕 FASE 1: Badge de Debug */}
+      {debugMode && (
+        <div className="fixed bottom-4 right-4 bg-yellow-500 text-black p-3 rounded-md text-xs font-mono z-50 shadow-lg">
+          <div className="font-bold mb-2">🐛 Debug Mode</div>
+          <div>User: {user ? '✅' : '❌'}</div>
+          <div>Master: {isMasterAdmin ? '✅' : '❌'}</div>
+          <div>Loading: {roleLoading ? '⏳' : '✅'}</div>
+        </div>
+      )}
     </div>
   );
 };
