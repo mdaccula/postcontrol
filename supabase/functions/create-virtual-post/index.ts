@@ -83,7 +83,27 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ✅ Criar post virtual (service_role bypassa RLS)
+    // ✅ NOVO: Verificar se já existe post virtual para este evento (reutilizar se existir)
+    const { data: existingPost, error: existingPostError } = await supabaseClient
+      .from('posts')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('post_number', 0)
+      .eq('post_type', 'venda')
+      .maybeSingle()
+
+    if (existingPost) {
+      console.log('[create-virtual-post] Reusing existing virtual post:', existingPost.id)
+      return new Response(JSON.stringify({ 
+        post_id: existingPost.id,
+        event_id: event.id,
+        reused: true,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ✅ Criar post virtual apenas se não existir (service_role bypassa RLS)
     const { data: virtualPost, error: postError } = await supabaseClient
       .from('posts')
       .insert({
