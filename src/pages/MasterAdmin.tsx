@@ -809,6 +809,7 @@ const MasterAdmin = () => {
           <div>User: {user ? '✅' : '❌'}</div>
           <div>Master: {isMasterAdmin ? '✅' : '❌'}</div>
           <div>Loading: {roleLoading ? '⏳' : '✅'}</div>
+          <div>Stabilizing: {isStabilizing ? '⏳' : '✅'}</div>
         </div>
       )}
     </div>
