@@ -436,13 +436,20 @@ const Admin = () => {
   }, [currentAgency?.id]);
 
   // Carregar submissions apenas quando filtro ou agência mudarem
+  // 🔴 CORREÇÃO 4: Proteção contra refetch duplicado
+  const [hasLoadedSubmissions, setHasLoadedSubmissions] = useState(false);
+  const [lastSubmissionFilter, setLastSubmissionFilter] = useState('');
+
   useEffect(() => {
     if (user && (isAgencyAdmin || isMasterAdmin) && currentAgency) {
-      console.log("🔄 [Admin] Recarregando submissões...", {
-        currentAgency: currentAgency.name,
-        submissionEventFilter,
-      });
-      refetchSubmissions();
+      const filterKey = `${submissionEventFilter}-${currentAgency.id}`;
+      // Apenas refetch se filtro realmente mudou OU primeira carga
+      if (!hasLoadedSubmissions || lastSubmissionFilter !== filterKey) {
+        console.log("🔄 [Admin] Recarregando submissões...", filterKey);
+        refetchSubmissions();
+        setHasLoadedSubmissions(true);
+        setLastSubmissionFilter(filterKey);
+      }
     }
   }, [submissionEventFilter, currentAgency?.id]);
 
@@ -1136,7 +1143,7 @@ const Admin = () => {
       // Buscar perfis dos usuários com batching
       const userIds = [...new Set(fullSubmissionsData.map((s) => s.user_id))];
       
-      // Dividir em chunks de 20 para evitar URLs longas
+      // 🔴 CORREÇÃO 3: Dividir em chunks de 30 para otimizar requests
       const chunkArray = <T,>(array: T[], size: number): T[][] => {
         const chunks: T[][] = [];
         for (let i = 0; i < array.length; i += size) {
@@ -1145,7 +1152,8 @@ const Admin = () => {
         return chunks;
       };
       
-      const userIdChunks = chunkArray(userIds, 20);
+      // 🔴 CORREÇÃO 3: Aumentar batch size para 30 UUIDs
+      const userIdChunks = chunkArray(userIds, 30);
       const profilesResults = await Promise.all(
         userIdChunks.map(chunk =>
           sb.from("profiles")

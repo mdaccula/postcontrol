@@ -89,8 +89,8 @@ export const useSubmissionsQuery = ({
         console.time('⏱️ [Performance] Query Profiles');
         console.time('⏱️ [Performance] Query Counts');
         
-        // Dividir userIds em chunks de 20
-        const userIdChunks = chunkArray(userIds, 20);
+        // Dividir userIds em chunks de 30 para otimizar requests
+        const userIdChunks = chunkArray(userIds, 30);
         
         const [profilesData, countsResult] = await Promise.all([
           // Buscar perfis em batches
@@ -152,8 +152,8 @@ export const useSubmissionsQuery = ({
       };
     },
     enabled,
-    staleTime: 5 * 60 * 1000, // ✅ SPRINT 1: Cache inteligente - 5 minutos
-    gcTime: 10 * 60 * 1000,   // ✅ SPRINT 1: Cache inteligente - 10 minutos
+    staleTime: 10 * 60 * 1000, // ✅ Cache otimizado - 10 minutos
+    gcTime: 20 * 60 * 1000,    // ✅ Cache otimizado - 20 minutos
   });
 };
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar, User, Activity, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface GuestAuditLogProps {
   agencyId: string;
@@ -18,40 +20,52 @@ export const GuestAuditLog = ({ agencyId }: GuestAuditLogProps) => {
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
-
-  useEffect(() => {
-    loadLogs();
-  }, [agencyId]);
+  // 🔴 CORREÇÃO 5: Adicionar paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const itemsPerPage = 50;
 
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // 🔴 CORREÇÃO 5: Adicionar paginação com range
+      const offset = (currentPage - 1) * itemsPerPage;
+      const { data, error, count } = await supabase
         .from('guest_audit_log')
         .select(`
-          *,
-          guest:agency_guests(
+          id,
+          action,
+          action_data,
+          created_at,
+          ip_address,
+          guest:agency_guests!inner(
             guest_email,
-            agencies(name)
+            guest_user_id
           ),
           event:events(title),
           submission:submissions(
             user_id,
             profiles!submissions_user_id_fkey(full_name, email)
           )
-        `)
+        `, { count: 'exact' })
         .eq('guest.agency_id', agencyId)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .range(offset, offset + itemsPerPage - 1);
 
       if (error) throw error;
       setLogs(data || []);
-    } catch (err: any) {
-      console.error('Error loading audit logs:', err);
+      setTotalLogs(count || 0);
+    } catch (error) {
+      console.error('Erro ao carregar logs:', error);
+      toast.error('Erro ao carregar histórico de auditoria');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadLogs();
+  }, [agencyId, currentPage]);
 
   const getActionLabel = (action: string) => {
     const labels: Record<string, string> = {
@@ -102,7 +116,7 @@ export const GuestAuditLog = ({ agencyId }: GuestAuditLogProps) => {
         <div>
           <h2 className="text-2xl font-bold">Log de Auditoria</h2>
           <p className="text-muted-foreground">
-            Histórico de ações de convidados
+            Histórico de ações de convidados ({filteredLogs.length} de {totalLogs})
           </p>
         </div>
         <Badge variant="outline" className="text-lg px-4 py-2">
@@ -226,6 +240,35 @@ export const GuestAuditLog = ({ agencyId }: GuestAuditLogProps) => {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* 🔴 CORREÇÃO 5: Adicionar controles de paginação */}
+      {totalLogs > itemsPerPage && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Página {currentPage} de {Math.ceil(totalLogs / itemsPerPage)}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalLogs / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(totalLogs / itemsPerPage)}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
+        </Card>
       )}
     </div>
   );
