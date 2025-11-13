@@ -882,22 +882,10 @@ const Admin = () => {
         );
       
       case 'oldest':
+      default:
         return sorted.sort((a, b) => 
           new Date(a.event_date || a.created_at).getTime() - new Date(b.event_date || b.created_at).getTime()
         );
-      
-      case 'upcoming':
-        return sorted
-          .filter(e => e.event_date && new Date(e.event_date) >= new Date())
-          .sort((a, b) => new Date(a.event_date!).getTime() - new Date(b.event_date!).getTime());
-      
-      case 'past':
-        return sorted
-          .filter(e => e.event_date && new Date(e.event_date) < new Date())
-          .sort((a, b) => new Date(b.event_date!).getTime() - new Date(a.event_date!).getTime());
-      
-      default:
-        return sorted;
     }
   }, [events, eventActiveFilter, eventSortOrder]);
 
@@ -1674,13 +1662,11 @@ const Admin = () => {
                 
                 <Select value={eventSortOrder} onValueChange={setEventSortOrder}>
                   <SelectTrigger className="w-full sm:w-[220px]">
-                    <SelectValue placeholder="Ordenar eventos" />
+                    <SelectValue placeholder="Classificar eventos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">📅 Mais Recentes</SelectItem>
-                    <SelectItem value="oldest">📅 Mais Antigos</SelectItem>
-                    <SelectItem value="upcoming">⏰ Próximos Eventos</SelectItem>
-                    <SelectItem value="past">📜 Eventos Passados</SelectItem>
+                    <SelectItem value="newest">📅 Mais Recentes Primeiro</SelectItem>
+                    <SelectItem value="oldest">📅 Mais Antigos Primeiro</SelectItem>
                   </SelectContent>
                 </Select>
                 
