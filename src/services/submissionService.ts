@@ -152,14 +152,15 @@ export async function getSubmissionCountsByPost(
   agencyId?: string
 ): Promise<Record<string, number>> {
   try {
-    console.log('📊 [Backend] Buscando contadores por post, agencyId:', agencyId);
+    console.log('📊 [Backend] Buscando contadores por post (otimizado), agencyId:', agencyId);
 
+    // ✅ CORREÇÃO #1: Query direta sem JOINs - apenas os dados necessários
     let query = supabase
       .from('submissions')
-      .select('post_id, posts!inner(agency_id, post_number, event_id, events(title, is_active))'); // ✅ CORREÇÃO #2: LEFT JOIN com events
+      .select('post_id');
 
     if (agencyId) {
-      query = query.eq('posts.agency_id', agencyId);
+      query = query.eq('agency_id', agencyId);
     }
 
     const { data, error } = await query;
@@ -169,40 +170,9 @@ export async function getSubmissionCountsByPost(
       throw error;
     }
 
-    console.log(`📊 [Backend] Total de submissões encontradas: ${data?.length || 0}`);
+    console.log(`✅ [Backend] ${data?.length || 0} submissões encontradas`);
 
-    // ✅ CORREÇÃO #2: Logs detalhados para debug de contagens
-    const sampleData = data?.slice(0, 15).map((s: any) => ({
-      post_id: s.post_id,
-      post_num: s.posts?.post_number,
-      event: s.posts?.events?.title || 'Sem evento',
-      active: s.posts?.events?.is_active ?? 'N/A'
-    }));
-    
-    if (sampleData && sampleData.length > 0) {
-      console.table(sampleData);
-    }
-
-    // 🆕 CORREÇÃO #4: Logs detalhados para debug
-    const postDetails: Record<string, any> = {};
-    data?.forEach((submission: any) => {
-      const postId = submission.post_id;
-      if (postId && !postDetails[postId]) {
-        postDetails[postId] = {
-          post_number: submission.posts?.post_number,
-          event_title: submission.posts?.events?.title,
-          event_active: submission.posts?.events?.is_active,
-          count: 0
-        };
-      }
-      if (postId) {
-        postDetails[postId].count++;
-      }
-    });
-
-    console.table(postDetails);
-
-    // Agregar contagens por post
+    // Agregar contagens localmente (muito mais rápido que no DB)
     const counts: Record<string, number> = {};
     data?.forEach((submission: any) => {
       const postId = submission.post_id;
@@ -211,7 +181,7 @@ export async function getSubmissionCountsByPost(
       }
     });
 
-    console.log('✅ [Backend] Contadores por post:', counts);
+    console.log(`✅ [Backend] ${Object.keys(counts).length} posts com submissões`);
     return counts;
   } catch (error) {
     console.error('❌ Erro na função getSubmissionCountsByPost:', error);
