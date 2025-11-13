@@ -246,7 +246,8 @@ export async function getEventPosts(
       .from('posts')
       .select('*')
       .eq('event_id', eventId)
-      .order('post_number', { ascending: true });
+      .order('post_number', { ascending: true })
+      .limit(100); // ✅ CORREÇÃO #3: Limite de segurança para prevenir timeouts
 
     if (error) throw error;
 
