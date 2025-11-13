@@ -236,7 +236,7 @@ export const UserManagement = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
           <Input placeholder="Buscar usuário..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
 
           <select
@@ -266,6 +266,38 @@ export const UserManagement = () => {
               </option>
             ))}
           </select>
+
+          {/* 🆕 CORREÇÃO #5: Filtro de Faixa de Seguidores */}
+          <select
+            value={followersFilter}
+            onChange={(e) => setFollowersFilter(e.target.value)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="all">Todos seguidores</option>
+            <option value="0-5k">0-5k</option>
+            <option value="5k-10k">5k-10k</option>
+            <option value="10k-50k">10k-50k</option>
+            <option value="50k-100k">50k-100k</option>
+            <option value="100k+">100k+</option>
+          </select>
+
+          {/* 🆕 CORREÇÃO #5: Filtro de Min. Submissões */}
+          <Input 
+            type="number" 
+            placeholder="Min. submissões" 
+            value={minSubmissions} 
+            onChange={(e) => setMinSubmissions(e.target.value)}
+            min="0"
+          />
+
+          {/* 🆕 CORREÇÃO #5: Filtro de Min. Eventos */}
+          <Input 
+            type="number" 
+            placeholder="Min. eventos" 
+            value={minEvents} 
+            onChange={(e) => setMinEvents(e.target.value)}
+            min="0"
+          />
           
           <select
             value={itemsPerPage.toString()}
