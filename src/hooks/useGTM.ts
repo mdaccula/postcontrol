@@ -11,18 +11,25 @@ export const useGTM = () => {
   useEffect(() => {
     const loadGTM = async () => {
       try {
-        const { data: settings, error } = await sb
-          .from('admin_settings')
-          .select('setting_value')
-          .eq('setting_key', 'gtm_id')
-          .maybeSingle();
+        // 1. Tentar buscar do banco primeiro (para admins)
+        let gtmId: string | null = null;
 
-        if (error) {
-          console.error('❌ Erro ao buscar GTM ID:', error);
-          return;
+        try {
+          const { data: settings } = await sb
+            .from('admin_settings')
+            .select('setting_value')
+            .eq('setting_key', 'gtm_id')
+            .maybeSingle();
+          
+          gtmId = settings?.setting_value?.trim() || null;
+        } catch (error) {
+          console.log('ℹ️ Não foi possível buscar GTM do banco (usuário não autenticado)');
         }
 
-        const gtmId = settings?.setting_value?.trim();
+        // 2. Se não encontrou no banco, usar variável de ambiente pública
+        if (!gtmId) {
+          gtmId = import.meta.env.VITE_GTM_ID?.trim();
+        }
 
         if (!gtmId || gtmId === '') {
           console.log('ℹ️ GTM ID não configurado');

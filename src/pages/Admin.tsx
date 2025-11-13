@@ -23,6 +23,7 @@ import {
   useDeleteEventMutation,
   useDeleteSubmissionMutation,
 } from "@/hooks/consolidated";
+import { useQueryClient } from "@tanstack/react-query";
 
 // 🆕 SPRINT 2 + CACHE: Importar hook de contadores com cache
 import { 
@@ -175,6 +176,9 @@ const Admin = () => {
     }
   }, [zoomDialogOpen, zoomSubmissionIndex]);
 
+  // ✅ Inicializar queryClient para invalidação de cache
+  const queryClient = useQueryClient();
+
   // ✅ Sprint 3A: Hook consolidado para filtros (substituindo ~12 useState)
   const {
     filters: {
@@ -219,6 +223,7 @@ const Admin = () => {
     refetch: refetchEvents,
   } = useEventsQuery({
     agencyId: currentAgency?.id,
+    isActive: undefined, // ✅ Buscar TODOS os eventos (ativos + inativos)
     includePosts: true,
     enabled: !!user && (isAgencyAdmin || isMasterAdmin),
   });
@@ -449,6 +454,8 @@ const Admin = () => {
         refetchSubmissions();
         setHasLoadedSubmissions(true);
         setLastSubmissionFilter(filterKey);
+        // ✅ Invalidar cache de contadores ao trocar de agência/filtro
+        queryClient.invalidateQueries({ queryKey: ['submission-counters'] });
       }
     }
   }, [submissionEventFilter, currentAgency?.id]);

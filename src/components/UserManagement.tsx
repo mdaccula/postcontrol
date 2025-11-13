@@ -45,6 +45,9 @@ export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
+  const [followersFilter, setFollowersFilter] = useState<string>("all");
+  const [minSubmissions, setMinSubmissions] = useState<number>(0);
+  const [minEvents, setMinEvents] = useState<number>(0);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   
   const { 
@@ -143,13 +146,6 @@ export const UserManagement = () => {
   };
 
   const filteredUsers = useMemo(() => {
-    console.log('🔍 Filtrando usuários:', {
-      totalUsers: users.length,
-      eventFilter,
-      userEventsKeys: Object.keys(userEvents).length,
-      usersWithoutEvents: users.filter(u => userEvents[u.id]?.length === 0).length
-    });
-    
     return users.filter((user) => {
       const matchesSearch =
         user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -158,26 +154,26 @@ export const UserManagement = () => {
         user.phone?.includes(searchTerm);
 
       const matchesGender = genderFilter === "all" || user.gender === genderFilter;
+      const matchesFollowers = followersFilter === "all" || user.followers_range === followersFilter;
 
-      let matchesEvent = false;
-      
-      if (eventFilter === "all") {
-        matchesEvent = true;
-      } else if (eventFilter === "no_event") {
-        // Verifica se usuário existe no map E tem array vazio
-        matchesEvent = userEvents.hasOwnProperty(user.id) && userEvents[user.id].length === 0;
-        
-        if (matchesEvent) {
-          console.log('✅ Usuário SEM evento:', user.full_name, userEvents[user.id]);
+      let matchesEvent = true;
+      if (eventFilter !== "all") {
+        if (eventFilter === "no_event") {
+          matchesEvent = userEvents.hasOwnProperty(user.id) && userEvents[user.id].length === 0;
+        } else {
+          matchesEvent = userEvents[user.id]?.some((event) => event.id === eventFilter);
         }
-      } else {
-        // ✅ ITEM 4: Comparar por event_id direto
-        matchesEvent = userEvents[user.id]?.some((event) => event.id === eventFilter);
       }
 
-      return matchesSearch && matchesGender && matchesEvent;
+      const submissionCount = userSalesCount[user.id] || 0;
+      const matchesMinSubmissions = submissionCount >= minSubmissions;
+
+      const eventCount = userEvents[user.id]?.length || 0;
+      const matchesMinEvents = eventCount >= minEvents;
+
+      return matchesSearch && matchesGender && matchesFollowers && matchesEvent && matchesMinSubmissions && matchesMinEvents;
     });
-  }, [users, searchTerm, genderFilter, eventFilter, userEvents, events]);
+  }, [users, searchTerm, genderFilter, followersFilter, eventFilter, userEvents, minSubmissions, minEvents, userSalesCount]);
 
   // Paginação
   const {
@@ -231,10 +227,12 @@ export const UserManagement = () => {
           <CSVImportExport 
             users={filteredUsers} 
             onImportComplete={loadUsers} 
-            currentAgencyId={currentAgencyId}
-            isMasterAdmin={isMasterAdmin}
-            eventFilter={eventFilter}
-            exportMode="submissions"
+            currentAgencyId={currentAgencyId || undefined}
+            isMasterAdmin={isMasterAdmin || false}
+            genderFilter={genderFilter}
+            followersFilter={followersFilter}
+            minSubmissions={minSubmissions}
+            minEvents={minEvents}
           />
         </div>
 

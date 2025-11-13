@@ -11,8 +11,10 @@ interface CSVImportExportProps {
   users?: any[];
   currentAgencyId?: string | null;
   isMasterAdmin?: boolean;
-  eventFilter?: string;
-  exportMode?: 'users' | 'submissions';
+  genderFilter?: string;
+  followersFilter?: string;
+  minSubmissions?: number;
+  minEvents?: number;
 }
 
 export const CSVImportExport = ({
@@ -20,17 +22,17 @@ export const CSVImportExport = ({
   users,
   currentAgencyId,
   isMasterAdmin,
-  eventFilter = "all",
-  exportMode = "users",
+  genderFilter = "all",
+  followersFilter = "all",
+  minSubmissions = 0,
+  minEvents = 0,
 }: CSVImportExportProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = async () => {
-    let profilesToExport;
+  const handleExportUsers = async () => {
+    let profilesToExport = users || [];
 
-    if (users && users.length > 0) {
-      profilesToExport = users;
-    } else {
+    if (profilesToExport.length === 0) {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, email, instagram, phone, gender, followers_range, created_at")
@@ -39,73 +41,47 @@ export const CSVImportExport = ({
       profilesToExport = profiles || [];
     }
 
-    if (!profilesToExport || profilesToExport.length === 0) {
+    if (profilesToExport.length === 0) {
       toast.error("Nenhum usuário para exportar");
       return;
     }
 
-    // 🔧 ITEM 4: Buscar contagem de posts agrupada por usuário (1 linha por usuário)
     const userIds = profilesToExport.map((p) => p.id).filter(Boolean);
-    let postsCountMap: Record<string, { approved: number; total: number }> = {};
+    
+    const { data: submissionData } = await supabase
+      .from('submissions')
+      .select('user_id, posts!inner(event_id)')
+      .in('user_id', userIds);
 
-    if (userIds.length > 0 && eventFilter !== "all" && eventFilter !== "no_event") {
-      // Query única: contar posts por usuário e status
-      const { data: submissions } = await supabase
-        .from("submissions")
-        .select("user_id, status, posts!inner(event_id)")
-        .in("user_id", userIds)
-        .eq("submission_type", "post")
-        .eq("posts.event_id", eventFilter);
-
-      // Agrupar contagens por usuário
-      (submissions || []).forEach((sub: any) => {
-        if (!postsCountMap[sub.user_id]) {
-          postsCountMap[sub.user_id] = { approved: 0, total: 0 };
-        }
-        postsCountMap[sub.user_id].total += 1;
-        if (sub.status === "approved") {
-          postsCountMap[sub.user_id].approved += 1;
-        }
-      });
-
-      console.log("📊 Posts agrupados por usuário:", {
-        usuariosComPosts: Object.keys(postsCountMap).length,
-        totalUsuarios: userIds.length,
-      });
-    }
-
-    // Formatar dados para export (1 linha por usuário)
-    const formattedProfiles = profilesToExport.map((profile) => {
-      const baseData = {
-        full_name: profile.full_name,
-        email: profile.email,
-        instagram_arroba: profile.instagram ? `@${profile.instagram.replace("@", "")}` : "",
-        instagram_https: profile.instagram ? `https://instagram.com/${profile.instagram.replace("@", "")}` : "",
-        phone: profile.phone,
-        sexo: profile.gender || "Não informado",
-        faixa_seguidores: profile.followers_range || "Não informado",
-        created_at: profile.created_at,
-      };
-
-      // 🔧 ITEM 4: Adicionar "Total de Postagens" quando filtro ativo
-      if (eventFilter !== "all" && eventFilter !== "no_event") {
-        const counts = postsCountMap[profile.id] || { approved: 0, total: 0 };
-        return {
-          ...baseData,
-          total_postagens: counts.total,
-          posts_aprovados: counts.approved,
-          posts_pendentes: counts.total - counts.approved,
-        };
+    const userStats: Record<string, { submissionCount: number; eventIds: Set<string> }> = {};
+    
+    (submissionData || []).forEach((sub: any) => {
+      if (!userStats[sub.user_id]) {
+        userStats[sub.user_id] = { submissionCount: 0, eventIds: new Set() };
       }
-
-      return baseData;
+      userStats[sub.user_id].submissionCount += 1;
+      if (sub.posts?.event_id) {
+        userStats[sub.user_id].eventIds.add(sub.posts.event_id);
+      }
     });
+
+    const formattedProfiles = profilesToExport.map((profile) => ({
+      full_name: profile.full_name,
+      email: profile.email,
+      instagram_arroba: profile.instagram ? `@${profile.instagram.replace("@", "")}` : "",
+      instagram_https: profile.instagram ? `https://instagram.com/${profile.instagram.replace("@", "")}` : "",
+      phone: profile.phone,
+      sexo: profile.gender || "Não informado",
+      faixa_seguidores: profile.followers_range || "Não informado",
+      total_submissoes: userStats[profile.id]?.submissionCount || 0,
+      total_eventos_participados: userStats[profile.id]?.eventIds.size || 0,
+      created_at: profile.created_at,
+    }));
 
     const csv = Papa.unparse(formattedProfiles);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-
     link.setAttribute("href", url);
     link.setAttribute("download", `usuarios_${new Date().toISOString().split("T")[0]}.csv`);
     link.style.visibility = "hidden";
@@ -113,77 +89,50 @@ export const CSVImportExport = ({
     link.click();
     document.body.removeChild(link);
 
-    toast.success("Usuários exportados com sucesso!");
+    toast.success(`${profilesToExport.length} usuários exportados!`);
   };
 
   const handleExportSubmissions = async () => {
-    if (eventFilter === "all" || eventFilter === "no_event") {
-      toast.error("Selecione um evento específico para exportar submissões");
-      return;
-    }
-
-    // 1. Buscar TODAS as submissões do evento
-    const { data: submissions } = await supabase
+    let query = supabase
       .from("submissions")
-      .select(`
-        id,
-        submitted_at,
-        status,
-        user_id,
-        posts!inner(post_number, event_id, events!inner(title)),
-        profiles!inner(full_name, email, instagram)
-      `)
-      .eq("posts.event_id", eventFilter)
+      .select(`id, submitted_at, status, user_id, posts!inner(post_number, event_id, events!inner(title)), profiles!inner(full_name, email, instagram, gender, followers_range)`)
       .eq("submission_type", "post")
       .order("submitted_at", { ascending: false });
 
+    if (genderFilter !== "all") query = query.eq('profiles.gender', genderFilter);
+    if (followersFilter !== "all") query = query.eq('profiles.followers_range', followersFilter);
+
+    const { data: submissions } = await query;
+
     if (!submissions || submissions.length === 0) {
-      toast.error("Nenhuma submissão encontrada para este evento");
+      toast.error("Nenhuma submissão encontrada");
       return;
     }
 
-    // 2. Calcular total de submissões aprovadas POR USUÁRIO (1 query)
-    const userIds = [...new Set(submissions.map((s: any) => s.user_id))];
-    
-    const { data: approvedCounts } = await supabase
-      .from("submissions")
-      .select("user_id, status")
-      .in("user_id", userIds)
-      .eq("status", "approved")
-      .eq("submission_type", "post");
-
-    // Criar mapa: user_id => total aprovados
-    const approvedCountMap: Record<string, number> = {};
-    (approvedCounts || []).forEach((item: any) => {
-      approvedCountMap[item.user_id] = (approvedCountMap[item.user_id] || 0) + 1;
-    });
-
-    // 3. Formatar dados (1 linha por submissão)
     const formattedSubmissions = submissions.map((sub: any) => ({
-      nome: sub.profiles.full_name,
+      usuario: sub.profiles.full_name,
       email: sub.profiles.email,
-      instagram: sub.profiles.instagram ? `@${sub.profiles.instagram.replace("@", "")}` : "",
+      instagram: sub.profiles.instagram,
+      sexo: sub.profiles.gender || "Não informado",
+      seguidores: sub.profiles.followers_range || "Não informado",
       evento: sub.posts.events.title,
-      post: `Post #${sub.posts.post_number}`,
-      data_submissao: new Date(sub.submitted_at).toLocaleString('pt-BR'),
-      status: sub.status === "approved" ? "Aprovado" : sub.status === "rejected" ? "Reprovado" : "Pendente",
-      total_submissoes_aprovadas: approvedCountMap[sub.user_id] || 0,
+      post_numero: sub.posts.post_number,
+      status: sub.status,
+      data_submissao: sub.submitted_at,
     }));
 
-    // 4. Exportar CSV
     const csv = Papa.unparse(formattedSubmissions);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-
     link.setAttribute("href", url);
-    link.setAttribute("download", `submissoes_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `submissoes_globais_${new Date().toISOString().split("T")[0]}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast.success(`${formattedSubmissions.length} submissões exportadas!`);
+    toast.success(`${submissions.length} submissões exportadas!`);
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,44 +142,29 @@ export const CSVImportExport = ({
     Papa.parse(file, {
       header: true,
       complete: async (results) => {
-        const validUsers = results.data.filter((row: any) => {
-          return row.email && row.full_name;
-        });
-
+        const validUsers = results.data.filter((row: any) => row.email && row.full_name);
         if (validUsers.length === 0) {
-          toast.error("Nenhum usuário válido encontrado no CSV");
+          toast.error("Nenhum usuário válido encontrado");
           return;
         }
 
         toast.info(`Importando ${validUsers.length} usuários...`);
-
         const { data, error } = await supabase.functions.invoke("import-users", {
           body: { users: validUsers },
         });
 
         if (error) {
-          toast.error("Erro ao importar usuários");
-          console.error(error);
+          toast.error("Erro ao importar");
           return;
         }
 
         if (data) {
-          toast.success(`✅ ${data.success.length} usuários importados com sucesso!`);
-
-          if (data.errors.length > 0) {
-            toast.warning(`⚠️ ${data.errors.length} erros durante a importação`);
-            console.error("Erros:", data.errors);
-          }
+          toast.success(`✅ ${data.success.length} importados!`);
+          if (data.errors.length > 0) toast.warning(`⚠️ ${data.errors.length} erros`);
         }
 
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-
+        if (fileInputRef.current) fileInputRef.current.value = "";
         onImportComplete?.();
-      },
-      error: (error) => {
-        toast.error(`Erro ao processar CSV: ${error.message}`);
       },
     });
   };
@@ -238,17 +172,14 @@ export const CSVImportExport = ({
   return (
     <div className="flex gap-2">
       <Input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" id="csv-import" />
-      <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2">
-        <Upload className="h-4 w-4" />
-        Importar CSV
+      <Button variant="outline" onClick={() => fileInputRef.current?.click()} size="sm">
+        <Upload className="h-4 w-4 mr-2" />Importar CSV
       </Button>
-      <Button 
-        variant="outline" 
-        onClick={exportMode === 'submissions' ? handleExportSubmissions : handleExport} 
-        className="gap-2"
-      >
-        <Download className="h-4 w-4" />
-        {exportMode === 'submissions' ? 'Exportar Submissões' : 'Exportar Usuários'}
+      <Button variant="outline" onClick={handleExportUsers} size="sm">
+        <Download className="h-4 w-4 mr-2" />Exportar Usuários
+      </Button>
+      <Button variant="outline" onClick={handleExportSubmissions} size="sm">
+        <Download className="h-4 w-4 mr-2" />Exportar Submissões
       </Button>
     </div>
   );
