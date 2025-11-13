@@ -460,6 +460,14 @@ const Admin = () => {
     }
   }, [submissionEventFilter, currentAgency?.id]);
 
+  // 🆕 CORREÇÃO #4: Invalidar cache de contadores quando agência mudar
+  useEffect(() => {
+    if (currentAgency?.id) {
+      console.log('🔄 [Admin] Invalidando cache de contadores para agência:', currentAgency.id);
+      queryClient.invalidateQueries({ queryKey: ['submission-counters'] });
+    }
+  }, [currentAgency?.id, queryClient]);
+
   const loadAgencyById = async (id: string) => {
     const { data } = await sb
       .from("agencies")
@@ -888,7 +896,8 @@ const Admin = () => {
     if (eventActiveFilter === "active") {
       filtered = events.filter((e) => e.is_active === true);
     } else if (eventActiveFilter === "inactive") {
-      filtered = events.filter((e) => e.is_active === false);
+      // 🆕 CORREÇÃO #2: Filtrar por is_active !== true (captura false, null, undefined)
+      filtered = events.filter((e) => e.is_active !== true);
     }
 
     // 2. Aplicar ordenação

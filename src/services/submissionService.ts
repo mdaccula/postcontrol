@@ -156,7 +156,7 @@ export async function getSubmissionCountsByPost(
 
     let query = supabase
       .from('submissions')
-      .select('post_id, posts!inner(agency_id)');
+      .select('post_id, posts!inner(agency_id, post_number, event_id, events!inner(title, is_active))');
 
     if (agencyId) {
       query = query.eq('posts.agency_id', agencyId);
@@ -168,6 +168,27 @@ export async function getSubmissionCountsByPost(
       console.error('❌ Erro ao buscar contadores por post:', error);
       throw error;
     }
+
+    console.log(`📊 [Backend] Total de submissões encontradas: ${data?.length || 0}`);
+
+    // 🆕 CORREÇÃO #4: Logs detalhados para debug
+    const postDetails: Record<string, any> = {};
+    data?.forEach((submission: any) => {
+      const postId = submission.post_id;
+      if (postId && !postDetails[postId]) {
+        postDetails[postId] = {
+          post_number: submission.posts?.post_number,
+          event_title: submission.posts?.events?.title,
+          event_active: submission.posts?.events?.is_active,
+          count: 0
+        };
+      }
+      if (postId) {
+        postDetails[postId].count++;
+      }
+    });
+
+    console.table(postDetails);
 
     // Agregar contagens por post
     const counts: Record<string, number> = {};

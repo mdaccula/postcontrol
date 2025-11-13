@@ -10,6 +10,7 @@ interface Profile {
   phone: string | null;
   created_at: string;
   gender?: string | null;
+  followers_range?: string | null;
 }
 
 export const useUserManagement = () => {

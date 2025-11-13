@@ -11,28 +11,36 @@ export const useGTM = () => {
   useEffect(() => {
     const loadGTM = async () => {
       try {
-        // 1. Tentar buscar do banco primeiro (para admins)
         let gtmId: string | null = null;
 
-        try {
-          const { data: settings } = await sb
-            .from('admin_settings')
-            .select('setting_value')
-            .eq('setting_key', 'gtm_id')
-            .maybeSingle();
-          
-          gtmId = settings?.setting_value?.trim() || null;
-        } catch (error) {
-          console.log('ℹ️ Não foi possível buscar GTM do banco (usuário não autenticado)');
-        }
-
-        // 2. Se não encontrou no banco, usar variável de ambiente pública
-        if (!gtmId) {
-          gtmId = import.meta.env.VITE_GTM_ID?.trim();
+        // 🆕 CORREÇÃO #3: Priorizar variável de ambiente pública primeiro
+        console.log('🔍 [GTM] Buscando GTM ID...');
+        
+        // 1. Tentar variável de ambiente primeiro (público, funciona para todos)
+        gtmId = import.meta.env.VITE_GTM_ID?.trim() || null;
+        
+        if (gtmId) {
+          console.log('✅ [GTM] GTM ID encontrado em variável de ambiente');
+        } else {
+          // 2. Fallback: tentar buscar do banco (apenas para admins autenticados)
+          try {
+            const { data: settings } = await sb
+              .from('admin_settings')
+              .select('setting_value')
+              .eq('setting_key', 'gtm_id')
+              .maybeSingle();
+            
+            gtmId = settings?.setting_value?.trim() || null;
+            if (gtmId) {
+              console.log('✅ [GTM] GTM ID encontrado no banco de dados');
+            }
+          } catch (error) {
+            console.log('ℹ️ [GTM] Não foi possível buscar GTM do banco (usuário não autenticado ou RLS)');
+          }
         }
 
         if (!gtmId || gtmId === '') {
-          console.log('ℹ️ GTM ID não configurado');
+          console.log('⚠️ [GTM] GTM ID não configurado em nenhuma fonte');
           return;
         }
 
