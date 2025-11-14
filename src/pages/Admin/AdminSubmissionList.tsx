@@ -200,8 +200,20 @@ const AdminSubmissionListComponent = ({
                     <span>Enviado em {new Date(submission.submitted_at).toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
+                </div>
+                
+                {/* 🆕 CORREÇÃO #1: Exibir motivo de rejeição */}
+                {submission.status === 'rejected' && submission.rejection_reason && (
+                  <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                    <p className="text-sm font-semibold text-destructive mb-1">
+                      Motivo da rejeição:
+                    </p>
+                    <p className="text-sm text-destructive/90">
+                      {submission.rejection_reason}
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
 
             {/* Imagem da submissão */}
             {SubmissionImageDisplay && submission.screenshot_url && (

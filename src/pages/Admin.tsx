@@ -821,10 +821,8 @@ const Admin = () => {
   const getFilteredSubmissions = useMemo(() => {
     let filtered = submissions;
 
-    // Filtro por número de postagem específico (raro, usado principalmente em exports)
-    if (submissionPostFilter !== "all") {
-      filtered = filtered.filter((s: any) => s.posts?.post_number?.toString() === submissionPostFilter);
-    }
+    // 🆕 CORREÇÃO #3: REMOVIDO filtro client-side de post_number que causava limite incorreto
+    // O filtro correto já é aplicado no backend via submissionService
 
     // Filtros de data (podem ser movidos para backend no futuro)
     if (dateFilterStart) {

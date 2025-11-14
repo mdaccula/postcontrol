@@ -28,7 +28,11 @@ export const NotificationPreferences = () => {
     selected_event_ids: [] as string[],
   });
 
-  const { data: eventsData } = useEventsQuery({ enabled: preferences.event_filter_type === 'selected' });
+  // 🆕 CORREÇÃO #5: Filtrar apenas eventos ativos
+  const { data: eventsData } = useEventsQuery({ 
+    isActive: true,
+    enabled: preferences.event_filter_type === 'selected' 
+  });
   const events = eventsData?.events || [];
 
   useEffect(() => {

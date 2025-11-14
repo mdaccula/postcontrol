@@ -407,6 +407,7 @@ export type Database = {
           required_sales: number | null
           setor: string | null
           target_gender: string[] | null
+          ticketer_email: string | null
           title: string
           total_required_posts: number | null
           updated_at: string
@@ -439,6 +440,7 @@ export type Database = {
           required_sales?: number | null
           setor?: string | null
           target_gender?: string[] | null
+          ticketer_email?: string | null
           title: string
           total_required_posts?: number | null
           updated_at?: string
@@ -471,6 +473,7 @@ export type Database = {
           required_sales?: number | null
           setor?: string | null
           target_gender?: string[] | null
+          ticketer_email?: string | null
           title?: string
           total_required_posts?: number | null
           updated_at?: string
@@ -988,6 +991,7 @@ export type Database = {
           submission_type: string | null
           submitted_at: string
           user_id: string
+          user_ticketer_email: string | null
         }
         Insert: {
           agency_id?: string | null
@@ -1009,6 +1013,7 @@ export type Database = {
           submission_type?: string | null
           submitted_at?: string
           user_id: string
+          user_ticketer_email?: string | null
         }
         Update: {
           agency_id?: string | null
@@ -1030,6 +1035,7 @@ export type Database = {
           submission_type?: string | null
           submitted_at?: string
           user_id?: string
+          user_ticketer_email?: string | null
         }
         Relationships: [
           {

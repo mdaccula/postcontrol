@@ -116,7 +116,10 @@ const Submit = () => {
   const [salesCount, setSalesCount] = useState<number>(0);
   const [postsCount, setPostsCount] = useState<number>(0); // ✅ ITEM 3: Contador de postagens
   const [ticketerEmailRequired, setTicketerEmailRequired] = useState(false);
-  const [userTicketerEmail, setUserTicketerEmail] = useState("");
+  // 🆕 CORREÇÃO #4: Carregar do localStorage ao montar componente
+  const [userTicketerEmail, setUserTicketerEmail] = useState(
+    typeof window !== 'undefined' ? localStorage.getItem('user_ticketer_email') || "" : ""
+  );
 
   useEffect(() => {
     loadEvents();
@@ -170,7 +173,8 @@ const Submit = () => {
       // Verificar se o evento requer e-mail da ticketeira
       const eventData = events.find((e) => e.id === selectedEvent);
       setTicketerEmailRequired(!!eventData?.ticketer_email);
-      setUserTicketerEmail(""); // Limpar o campo ao trocar de evento
+      // 🆕 CORREÇÃO #4: Manter valor do localStorage em vez de limpar
+      setUserTicketerEmail(localStorage.getItem('user_ticketer_email') || "");
     } else {
       setPosts([]);
       setRequirements([]);
@@ -1090,6 +1094,8 @@ const Submit = () => {
       // Adicionar e-mail da ticketeira se fornecido
       if (ticketerEmailRequired && userTicketerEmail.trim()) {
         insertData.user_ticketer_email = userTicketerEmail.trim();
+        // 🆕 CORREÇÃO #4: Salvar no localStorage para próximas submissões
+        localStorage.setItem('user_ticketer_email', userTicketerEmail.trim());
       }
 
       // ✅ ITEM 5: Verificar se já enviou para seleção de perfil

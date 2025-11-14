@@ -40,6 +40,25 @@ export async function getSubmissions(
 
     console.log('🔍 [Backend] Filtros aplicados:', { eventId, status, postType, searchTerm, agencyId, page });
 
+  // 🆕 CORREÇÃO #2: Se houver busca por nome/email/instagram, buscar user_ids primeiro
+  let userIdsFromSearch: string[] | null = null;
+  if (searchTerm && searchTerm.trim()) {
+    const search = `%${searchTerm.trim()}%`;
+    const { data: matchingProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .or(`full_name.ilike.${search},email.ilike.${search},instagram.ilike.${search}`);
+    
+    if (matchingProfiles && matchingProfiles.length > 0) {
+      userIdsFromSearch = matchingProfiles.map(p => p.id);
+      console.log('🔍 [Search] Encontrados', userIdsFromSearch.length, 'perfis correspondentes');
+    } else {
+      // Se não encontrou nenhum perfil, retornar vazio
+      console.log('🔍 [Search] Nenhum perfil encontrado para:', searchTerm);
+      return { data: [], count: 0, error: null };
+    }
+  }
+
   let query = supabase
     .from('submissions')
     .select(
@@ -61,10 +80,9 @@ export async function getSubmissions(
     if (postType) {
       query = query.eq('posts.post_type', postType);
     }
-    // 🆕 SPRINT 2: Busca textual por Instagram (case-insensitive)
-    if (searchTerm && searchTerm.trim()) {
-      const search = searchTerm.trim();
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,instagram.ilike.%${search}%`, { foreignTable: 'profiles' });
+    // 🆕 CORREÇÃO #2: Aplicar filtro de user_ids da busca
+    if (userIdsFromSearch) {
+      query = query.in('user_id', userIdsFromSearch);
     }
     if (userId) {
       query = query.eq('user_id', userId);
