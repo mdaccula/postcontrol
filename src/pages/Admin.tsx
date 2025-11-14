@@ -389,10 +389,8 @@ const Admin = () => {
 
   // ✅ ITEM 5: Resetar filtro de evento quando mudar status ativo/inativo
   useEffect(() => {
-    if (submissionActiveFilter !== "all") {
-      setSubmissionEventFilter("all");
-    }
-  }, [submissionActiveFilter, setSubmissionEventFilter]);
+    setSubmissionEventFilter("all");
+  }, [submissionActiveFilter]);
 
   // Recarregar eventos quando currentAgency estiver disponível
   useEffect(() => {
