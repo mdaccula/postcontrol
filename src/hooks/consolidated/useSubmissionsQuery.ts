@@ -89,8 +89,8 @@ export const useSubmissionsQuery = ({
         console.time('⏱️ [Performance] Query Profiles');
         console.time('⏱️ [Performance] Query Counts');
         
-        // Dividir userIds em chunks de 30 para otimizar requests
-        const userIdChunks = chunkArray(userIds, 30);
+        // Dividir userIds em chunks de 15 para evitar URLs muito longas (400 Bad Request)
+        const userIdChunks = chunkArray(userIds, 15);
         
         const [profilesData, countsResult] = await Promise.all([
           // Buscar perfis em batches
