@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as webpush from "https://esm.sh/web-push@3.5.2?bundle&target=es2022&pin=v12345";
+import * as webpush from "https://esm.sh/web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://post.infoprolab.com.br",
