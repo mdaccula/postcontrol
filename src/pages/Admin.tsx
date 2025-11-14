@@ -197,6 +197,7 @@ const Admin = () => {
       postEventFilter,
       postEventActiveFilter,
       eventSortOrder,
+      submissionActiveFilter, // ✅ ITEM 5
     },
     setSubmissionEventFilter,
     setSubmissionPostFilter,
@@ -213,8 +214,13 @@ const Admin = () => {
     setPostEventFilter,
     setPostEventActiveFilter,
     setEventSortOrder,
+    setSubmissionActiveFilter, // ✅ ITEM 5
     clearFilters, // ✅ ITEM 3 FASE 1: Adicionar clearFilters
   } = useAdminFilters();
+
+  // ✅ ITEM 1: Estados locais para popup de seleção de colunas
+  const [showColumnSelectionDialog, setShowColumnSelectionDialog] = useState(false);
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>([]);
 
   // ✅ Sprint 2B: Usar hooks consolidados ao invés de states locais + chamadas diretas
   const {
@@ -380,6 +386,13 @@ const Admin = () => {
 
   // Estado para prevenir refetch duplicado
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
+
+  // ✅ ITEM 5: Resetar filtro de evento quando mudar status ativo/inativo
+  useEffect(() => {
+    if (submissionActiveFilter !== "all") {
+      setSubmissionEventFilter("all");
+    }
+  }, [submissionActiveFilter, setSubmissionEventFilter]);
 
   // Recarregar eventos quando currentAgency estiver disponível
   useEffect(() => {
@@ -1085,12 +1098,42 @@ const Admin = () => {
     return Array.from(postNumbers).sort((a, b) => a - b);
   };
 
-  // ✅ Extrair função de exportação para Excel
-  const handleExportToExcel = useCallback(async () => {
+  // ✅ ITEM 1: Definir colunas disponíveis para exportação
+  const availableExportColumns = [
+    { key: "tipo", label: "Tipo" },
+    { key: "evento", label: "Evento" },
+    { key: "numero_postagem", label: "Número da Postagem" },
+    { key: "nome", label: "Nome" },
+    { key: "instagram", label: "Instagram" },
+    { key: "email", label: "Email" },
+    { key: "genero", label: "Gênero" },
+    { key: "seguidores", label: "Seguidores" },
+    { key: "status", label: "Status" },
+    { key: "data_envio", label: "Data de Envio" },
+    { key: "total_submissoes_aprovadas", label: "Total de Submissões Aprovadas" },
+    { key: "vendas_aprovadas_evento", label: "Vendas Aprovadas no Evento" }, // ✅ ITEM 1: Nova coluna
+    { key: "motivo_rejeicao", label: "Motivo Rejeição" },
+  ];
+
+  // ✅ ITEM 1: Abrir popup de seleção de colunas
+  const handleExportToExcel = useCallback(() => {
+    // Validação básica
+    if (submissionEventFilter === "all" || !submissionEventFilter) {
+      toast.error("⚠️ Selecione um evento específico para exportar");
+      return;
+    }
+
+    // Selecionar todas as colunas por padrão
+    setSelectedExportColumns(availableExportColumns.map(col => col.key));
+    setShowColumnSelectionDialog(true);
+  }, [submissionEventFilter]);
+
+  // ✅ ITEM 1: Executar exportação após seleção de colunas
+  const executeExport = useCallback(async () => {
     try {
       const XLSX = await import("xlsx");
 
-      // ✅ FASE 2: Validação aprimorada com dados frescos
+      // Validação
       if (submissionEventFilter === "all" || !submissionEventFilter) {
         toast.error("⚠️ Selecione um evento específico para exportar");
         return;
@@ -1215,6 +1258,24 @@ const Admin = () => {
         eventoFiltrado: submissionEventFilter !== "all" ? submissionEventFilter : "todos",
       });
 
+      // ✅ ITEM 1: Buscar vendas aprovadas por usuário NESTE EVENTO ESPECÍFICO
+      const { data: eventSalesData } = await sb
+        .from("submissions")
+        .select("user_id")
+        .in("user_id", userIds)
+        .eq("event_id", submissionEventFilter)
+        .eq("submission_type", "sale")
+        .eq("status", "approved");
+
+      const eventSalesMap: Record<string, number> = {};
+      (eventSalesData || []).forEach((item: any) => {
+        if (item.user_id) {
+          eventSalesMap[item.user_id] = (eventSalesMap[item.user_id] || 0) + 1;
+        }
+      });
+
+      console.log(`✅ Vendas aprovadas no evento carregadas para ${Object.keys(eventSalesMap).length} usuários`);
+
       // Enriquecer submissions com profiles
       const enrichedSubmissions = fullSubmissionsData.map((sub) => ({
         ...sub,
@@ -1294,28 +1355,45 @@ const Admin = () => {
 
       console.log("📊 Posts mapeados:", Object.keys(postsMap).length, "de", submissionIds.length);
 
-      // Preparar dados para exportação usando enrichedSubmissions
-      const exportData = (enrichedSubmissions || []).map((sub: any) => {
-        // 🔧 Buscar post data com validação extra
+      // ✅ ITEM 1: Preparar dados completos (todas as colunas)
+      const fullExportData = (enrichedSubmissions || []).map((sub: any) => {
         const eventTitle = postsMap[sub.id]?.event_title || "Evento não identificado";
         const postNumber = postsMap[sub.id]?.post_number || 0;
 
         return {
-          Tipo: sub.submission_type === "post" ? "Postagem" : "Venda",
-          Evento: eventTitle,
-          "Número da Postagem": postNumber,
-          Nome: sub.profiles?.full_name || "N/A",
-          Instagram: sub.profiles?.instagram
+          tipo: sub.submission_type === "post" ? "Postagem" : "Venda",
+          evento: eventTitle,
+          numero_postagem: postNumber,
+          nome: sub.profiles?.full_name || "N/A",
+          instagram: sub.profiles?.instagram
             ? `https://instagram.com/${sub.profiles.instagram.replace("@", "")}`
             : "N/A",
-          Email: sub.profiles?.email || "N/A",
-          Gênero: sub.profiles?.gender || "N/A",
-          Seguidores: sub.profiles?.followers_range || "N/A",
-          Status: sub.status === "approved" ? "Aprovado" : sub.status === "rejected" ? "Rejeitado" : "Pendente",
-          "Data de Envio": new Date(sub.submitted_at).toLocaleString("pt-BR"),
-          "Total de Submissões Aprovadas": approvedCountsMap[sub.user_id] || 0,
-          "Motivo Rejeição": sub.rejection_reason || "N/A",
+          email: sub.profiles?.email || "N/A",
+          genero: sub.profiles?.gender || "N/A",
+          seguidores: sub.profiles?.followers_range || "N/A",
+          status: sub.status === "approved" ? "Aprovado" : sub.status === "rejected" ? "Rejeitado" : "Pendente",
+          data_envio: new Date(sub.submitted_at).toLocaleString("pt-BR"),
+          total_submissoes_aprovadas: approvedCountsMap[sub.user_id] || 0,
+          vendas_aprovadas_evento: eventSalesMap[sub.user_id] || 0, // ✅ ITEM 1: Nova coluna
+          motivo_rejeicao: sub.rejection_reason || "N/A",
         };
+      });
+
+      // ✅ ITEM 1: Filtrar apenas colunas selecionadas
+      const columnLabelsMap: Record<string, string> = {};
+      availableExportColumns.forEach(col => {
+        columnLabelsMap[col.key] = col.label;
+      });
+
+      const exportData = fullExportData.map((row) => {
+        const filteredRow: Record<string, any> = {};
+        selectedExportColumns.forEach((colKey) => {
+          const label = columnLabelsMap[colKey];
+          if (label && row.hasOwnProperty(colKey)) {
+            filteredRow[label] = row[colKey];
+          }
+        });
+        return filteredRow;
       });
 
       // Criar worksheet e workbook
@@ -1328,11 +1406,12 @@ const Admin = () => {
       XLSX.writeFile(wb, `submissoes_${eventName}_${new Date().toISOString().split("T")[0]}.xlsx`);
 
       toast.success(`${exportData.length} submissão(ões) exportada(s) com sucesso!`);
+      setShowColumnSelectionDialog(false); // ✅ ITEM 1: Fechar dialog após exportar
     } catch (error) {
       console.error("Erro ao exportar:", error);
       toast.error("Erro ao exportar submissões");
     }
-  }, [getFilteredSubmissions, submissionEventFilter, events]);
+  }, [submissionEventFilter, events, selectedExportColumns, availableExportColumns, submissionPostFilter, dateFilterStart, dateFilterEnd, submissionsData]);
 
   if (loading) {
     return (
@@ -1969,6 +2048,7 @@ const Admin = () => {
           <TabsContent value="submissions" className="space-y-6">
             {/* ✅ Sprint 3A: Usar componente AdminFilters refatorado */}
             <AdminFilters
+              submissionActiveFilter={submissionActiveFilter} // ✅ ITEM 5: Novo filtro
               submissionEventFilter={submissionEventFilter}
               submissionPostFilter={submissionPostFilter}
               submissionStatusFilter={submissionStatusFilter}
@@ -1980,6 +2060,7 @@ const Admin = () => {
               cardsGridView={cardsGridView}
               events={events}
               submissions={submissions}
+              onSubmissionActiveFilterChange={setSubmissionActiveFilter} // ✅ ITEM 5: Handler
               onSubmissionEventFilterChange={setSubmissionEventFilter}
               onSubmissionPostFilterChange={setSubmissionPostFilter}
               onSubmissionStatusFilterChange={setSubmissionStatusFilter}
@@ -1991,7 +2072,7 @@ const Admin = () => {
               onCardsGridViewToggle={() => setCardsGridView(!cardsGridView)}
               onExport={handleExportToExcel}
               filteredCount={getPaginatedSubmissions.length}
-              totalCount={submissionsData?.count || 0} // ✅ SPRINT 1: Usar count real do backend
+              totalCount={submissionsData?.count || 0}
               isLoadingSubmissions={loadingSubmissions}
             />
 
@@ -1999,7 +2080,8 @@ const Admin = () => {
             {(submissionStatusFilter !== "all" ||
               postTypeFilter !== "all" ||
               debouncedSearch ||
-              submissionEventFilter !== "all") && (
+              submissionEventFilter !== "all" ||
+              submissionActiveFilter !== "all") && ( // ✅ ITEM 5: Incluir novo filtro
               <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-md mb-4">
                 <span className="text-sm font-medium">🔍 Filtros ativos:</span>
                 <span className="text-sm text-muted-foreground">
@@ -2835,6 +2917,52 @@ const Admin = () => {
           agencyId={currentAgency?.id}
         />
       </Suspense>
+
+      {/* ✅ ITEM 1: Dialog de seleção de colunas para exportação */}
+      <AlertDialog open={showColumnSelectionDialog} onOpenChange={setShowColumnSelectionDialog}>
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Selecione as colunas para exportar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Escolha quais informações deseja incluir no relatório Excel
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {availableExportColumns.map((col) => (
+              <div key={col.key} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id={col.key}
+                  checked={selectedExportColumns.includes(col.key)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedExportColumns([...selectedExportColumns, col.key]);
+                    } else {
+                      setSelectedExportColumns(selectedExportColumns.filter(k => k !== col.key));
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <label
+                  htmlFor={col.key}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {col.label}
+                </label>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeExport}
+              disabled={selectedExportColumns.length === 0}
+            >
+              Exportar ({selectedExportColumns.length} coluna{selectedExportColumns.length !== 1 ? 's' : ''})
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
