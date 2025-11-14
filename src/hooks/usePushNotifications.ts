@@ -97,11 +97,47 @@ export const usePushNotifications = () => {
     }
 
     setLoading(true);
+    const startTime = Date.now();
 
     try {
+      // 📱 ITEM #6: Detecção de plataforma mobile
+      console.group('🔔 [Push] Iniciando subscription');
+      console.log('🕐 Timestamp:', new Date().toISOString());
+      console.log('👤 User ID:', user?.id);
+      
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                    (window.navigator as any).standalone === true;
+
+      console.log('📱 Platform:', { 
+        isMobile, 
+        isIOS, 
+        isAndroid, 
+        isPWA,
+        userAgent: navigator.userAgent 
+      });
+      console.groupEnd();
+
+      // ⚠️ Verificar se é iOS sem PWA instalado
+      if (isIOS && !isPWA) {
+        toast.warning('Notificações no iOS', {
+          description: 'Para receber notificações no iPhone/iPad, você precisa:\n1. Tocar no botão de compartilhar (📤)\n2. Selecionar "Adicionar à Tela Inicial"\n3. Abrir o app pela tela inicial (não pelo Safari)',
+          duration: 10000
+        });
+        setLoading(false);
+        return false;
+      }
+
       // 1. Solicitar permissão
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
+
+      console.group('🔔 [Push] Permissão solicitada');
+      console.log('✅ Resultado:', permissionResult);
+      console.log('🕐 Tempo decorrido:', (Date.now() - startTime) + 'ms');
+      console.groupEnd();
 
       if (permissionResult !== "granted") {
         toast.error("Permissão para notificações negada");
@@ -109,32 +145,43 @@ export const usePushNotifications = () => {
       }
 
       // 2. Obter Service Worker
-      console.log("🔧 Verificando Service Worker...");
+      console.group('🔔 [Push] Service Worker');
       const registration = await navigator.serviceWorker.ready;
-      console.log("✅ Service Worker pronto:", registration);
-      console.log("📍 Scope:", registration.scope);
-      console.log("🔗 Active:", registration.active?.scriptURL);
+      console.log('✅ Registration:', registration);
+      console.log('📍 Scope:', registration.scope);
+      console.log('🔗 Active:', registration.active?.scriptURL);
+      console.log('🔗 State:', registration.active?.state);
+      console.groupEnd();
 
-      // 🔍 DEBUG - Verificar conversão da key (ETAPA 2)
+      // 3. Converter VAPID Key
+      console.group('🔔 [Push] VAPID Key');
       const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      console.log("🔐 Converted Key:", convertedKey);
-      console.log("🔐 Key Length:", convertedKey.byteLength, "bytes (esperado: 65)");
-      console.log("🔐 Primeiros bytes:", Array.from(convertedKey.slice(0, 5)));
+      console.log('🔐 Key Length:', convertedKey.byteLength, 'bytes (esperado: 65)');
+      console.log('🔐 First 10 bytes:', Array.from(convertedKey.slice(0, 10)));
+      console.log('✅ Valid:', convertedKey.byteLength === 65);
+      console.groupEnd();
 
-      // 3. Criar inscrição push
+      // 4. Criar inscrição push
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertedKey,
       });
 
-      // 4. Extrair chaves
+      console.group('🔔 [Push] Subscription criada');
+      console.log('✅ Subscription:', subscription);
+      console.log('📡 Endpoint:', subscription.endpoint.substring(0, 100) + '...');
+      console.groupEnd();
+
+      // 5. Extrair chaves
       const subscriptionJSON = subscription.toJSON() as PushSubscriptionData;
 
       if (!subscriptionJSON.keys) {
         throw new Error("Falha ao obter chaves de inscrição");
       }
 
-      // 5. Salvar no banco
+      console.log('🔑 Keys:', subscriptionJSON.keys);
+
+      // 6. Salvar no banco
       const { error } = await supabase.from("push_subscriptions").upsert(
         {
           user_id: user.id,
@@ -150,11 +197,18 @@ export const usePushNotifications = () => {
 
       if (error) throw error;
 
+      console.log('🕐 [Push] Tempo total:', (Date.now() - startTime) + 'ms');
+
       setIsSubscribed(true);
       toast.success("Notificações push ativadas!");
       return true;
     } catch (error) {
-      console.error("[usePushNotifications] Erro ao inscrever:", error);
+      console.group('❌ [Push] Erro');
+      console.error('Erro completo:', error);
+      console.log('📍 Onde ocorreu:', 'subscribe()');
+      console.log('🕐 Timestamp:', new Date().toISOString());
+      console.groupEnd();
+      
       toast.error("Erro ao ativar notificações push");
       return false;
     } finally {
