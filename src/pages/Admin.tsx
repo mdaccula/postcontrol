@@ -2092,7 +2092,7 @@ const Admin = () => {
               cardsGridView={cardsGridView}
               events={events}
               submissions={submissions}
-              allPosts={submissionsData?.data?.map((s: any) => s.posts).filter(Boolean) || []}
+              allPosts={allPosts}
               onSubmissionActiveFilterChange={setSubmissionActiveFilter} // ✅ ITEM 5: Handler
               onSubmissionEventFilterChange={setSubmissionEventFilter}
               onSubmissionPostFilterChange={setSubmissionPostFilter}
