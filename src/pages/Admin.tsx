@@ -1163,7 +1163,7 @@ const Admin = () => {
           *,
           posts(id, post_number, deadline, event_id, post_type)
         `)
-        .eq('posts.event_id', submissionEventFilter)
+        .eq('event_id', submissionEventFilter)
         .order('created_at', { ascending: false });
 
       if (fetchError) {

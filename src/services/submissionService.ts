@@ -71,7 +71,7 @@ export async function getSubmissions(
 
     // Apply filters
     if (eventId) {
-      query = query.eq('posts.event_id', eventId);
+      query = query.eq('event_id', eventId);
     }
     if (status) {
       query = query.eq('status', status);
