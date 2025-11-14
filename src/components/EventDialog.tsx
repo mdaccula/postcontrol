@@ -53,7 +53,8 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
   const [requirePostScreenshot, setRequirePostScreenshot] = useState(false);
   const [whatsappGroupUrl, setWhatsappGroupUrl] = useState("");
   const [whatsappGroupTitle, setWhatsappGroupTitle] = useState("");
-  const [ticketerEmail, setTicketerEmail] = useState("");
+  const [requireTicketerEmail, setRequireTicketerEmail] = useState(false);
+  const [ticketerName, setTicketerName] = useState("");
   const [loading, setLoading] = useState(false);
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
@@ -111,7 +112,8 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setRequirePostScreenshot(event.require_post_screenshot || false);
         setWhatsappGroupUrl(event.whatsapp_group_url || "");
         setWhatsappGroupTitle(event.whatsapp_group_title || "");
-        setTicketerEmail(event.ticketer_email || "");
+        setRequireTicketerEmail(!!event.ticketer_email);
+        setTicketerName(event.ticketer_email || "");
 
         // Load requirements
         const { data: reqData } = await sb
@@ -148,6 +150,9 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setRequireProfileScreenshot(false);
         setRequirePostScreenshot(false);
         setWhatsappGroupUrl("");
+        setWhatsappGroupTitle("");
+        setRequireTicketerEmail(false);
+        setTicketerName("");
       }
       
       // Load agency_id and templates
@@ -345,6 +350,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             require_post_screenshot: requirePostScreenshot,
             whatsapp_group_url: whatsappGroupUrl || null,
             whatsapp_group_title: whatsappGroupTitle || null,
+            ticketer_email: requireTicketerEmail ? ticketerName.trim() : null,
           })
           .eq('id', event.id);
 
@@ -382,6 +388,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             require_post_screenshot: requirePostScreenshot,
             whatsapp_group_url: whatsappGroupUrl || null,
             whatsapp_group_title: whatsappGroupTitle || null,
+            ticketer_email: requireTicketerEmail ? ticketerName.trim() : null,
             created_by: user.id,
             agency_id: userAgencyId,
           })
@@ -890,20 +897,40 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="ticketerEmail">E-mail da Ticketeira (Opcional)</Label>
-            <Input
-              id="ticketerEmail"
-              type="email"
-              placeholder="ticketeira@exemplo.com"
-              value={ticketerEmail}
-              onChange={(e) => setTicketerEmail(e.target.value)}
+          <div className="flex items-center gap-3 p-4 border rounded-lg">
+            <Checkbox
+              id="require_ticketer_email"
+              checked={requireTicketerEmail}
+              onCheckedChange={(checked) => setRequireTicketerEmail(checked as boolean)}
               disabled={loading}
             />
-            <p className="text-xs text-muted-foreground">
-              📧 Se preenchido, os usuários deverão fornecer um e-mail secundário ao enviar sua submissão
-            </p>
+            <div className="flex-1">
+              <Label htmlFor="require_ticketer_email" className="cursor-pointer font-normal">
+                Solicitar e-mail secundário para ticketeira
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Se marcado, os usuários deverão fornecer um e-mail secundário no formulário
+              </p>
+            </div>
           </div>
+
+          {requireTicketerEmail && (
+            <div className="space-y-2 ml-7">
+              <Label htmlFor="ticketerName">Nome da Ticketeira *</Label>
+              <Input
+                id="ticketerName"
+                type="text"
+                placeholder="Ex: Sympla, Eventbrite, etc."
+                value={ticketerName}
+                onChange={(e) => setTicketerName(e.target.value)}
+                disabled={loading}
+                required={requireTicketerEmail}
+              />
+              <p className="text-xs text-muted-foreground">
+                📝 Este nome aparecerá no formulário para o usuário saber onde enviar o e-mail
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">

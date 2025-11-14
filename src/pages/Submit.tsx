@@ -241,7 +241,7 @@ const Submit = () => {
       const { data, error } = await sb
         .from("events")
         .select(
-          "id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, target_gender",
+          "id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, whatsapp_group_title, ticketer_email, target_gender",
         )
         .eq("is_active", true)
         .eq("agency_id", contextAgencyId)
@@ -1540,6 +1540,33 @@ const Submit = () => {
                   </p>
                 )}
               </div>
+
+              {ticketerEmailRequired && (
+                <div className="space-y-2 p-4 border-2 border-purple-200 rounded-lg bg-purple-50 dark:bg-purple-950 dark:border-purple-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">📧</span>
+                    <div className="flex-1">
+                      <Label htmlFor="userTicketerEmail" className="font-semibold flex items-center gap-1">
+                        E-mail para {events.find(e => e.id === selectedEvent)?.ticketer_email || "Ticketeira"} *
+                        <span className="text-red-500">★</span>
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Informe um e-mail secundário para receber confirmações da ticketeira
+                      </p>
+                    </div>
+                  </div>
+                  <Input
+                    id="userTicketerEmail"
+                    type="email"
+                    placeholder="seu-email-secundario@exemplo.com"
+                    value={userTicketerEmail}
+                    onChange={(e) => setUserTicketerEmail(e.target.value)}
+                    required={ticketerEmailRequired}
+                    disabled={isSubmitting}
+                    className="bg-white dark:bg-gray-900"
+                  />
+                </div>
+              )}
 
               {selectedEventData?.require_instagram_link && (
                 <div className="space-y-2">
