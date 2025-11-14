@@ -268,20 +268,19 @@ const AdminFiltersComponent = ({
         </Select>
       </div>
 
-      {/* Filtros de busca e data (apenas quando evento estiver selecionado) */}
+      {/* 🆕 CORREÇÃO #2: Campo de Busca - SEMPRE VISÍVEL */}
+      <div className="grid grid-cols-1 gap-2">
+        <Input
+          placeholder="Buscar por nome, email ou Instagram..."
+          value={searchTerm}
+          onChange={(e) => onSearchTermChange(e.target.value)}
+          className="w-full"
+        />
+      </div>
+
+      {/* Filtros de Data (apenas quando evento estiver selecionado) */}
       {submissionEventFilter !== 'all' && (
         <>
-          {/* Campo de Busca */}
-          <div className="grid grid-cols-1 gap-2">
-            <Input
-              placeholder="Buscar por nome, email ou Instagram..."
-              value={searchTerm}
-              onChange={(e) => onSearchTermChange(e.target.value)}
-              className="w-full"
-            />
-          </div>
-
-          {/* Filtros de Data */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Data Inicial</label>

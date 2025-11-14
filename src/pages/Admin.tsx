@@ -236,7 +236,9 @@ const Admin = () => {
 
   // Debug: Verificar eventos carregados (incluindo inativos)
   const events = eventsData?.events || [];
+  const allPosts = eventsData?.posts || []; // 🆕 CORREÇÃO #3: Extrair posts do eventsData
   console.log("🔍 [Admin Debug] Total de eventos carregados:", events.length);
+  console.log("🔍 [Admin Debug] Total de posts carregados:", allPosts.length);
   console.log(
     "🔍 [Admin Debug] Eventos:",
     events.map((e) => ({
@@ -1086,12 +1088,28 @@ const Admin = () => {
     }
   };
 
+  // 🆕 CORREÇÃO #3: Buscar posts diretamente dos dados carregados do evento
   const getAvailablePostNumbers = () => {
-    const filtered = submissions.filter(
-      (s: any) => submissionEventFilter === "all" || s.posts?.events?.id === submissionEventFilter,
-    );
-    const postNumbers = new Set(filtered.map((s: any) => s.posts?.post_number).filter(Boolean));
-    return Array.from(postNumbers).sort((a, b) => a - b);
+    if (!submissionEventFilter || submissionEventFilter === 'all') {
+      return [];
+    }
+    
+    // Filtrar posts do evento selecionado
+    const eventPosts = allPosts.filter(p => p.event_id === submissionEventFilter);
+    
+    if (!eventPosts || eventPosts.length === 0) {
+      console.warn(`⚠️ Nenhum post encontrado para o evento ${submissionEventFilter}`);
+      return [];
+    }
+    
+    // Retornar TODOS os post_numbers do evento (ordenados)
+    const postNumbers = eventPosts
+      .map(p => p.post_number)
+      .filter((num): num is number => num !== null && num !== undefined)
+      .sort((a, b) => a - b);
+    
+    console.log(`📋 Posts disponíveis para evento ${submissionEventFilter}:`, postNumbers);
+    return postNumbers;
   };
 
   // ✅ ITEM 1: Definir colunas disponíveis para exportação

@@ -200,9 +200,8 @@ const AdminSubmissionListComponent = ({
                     <span>Enviado em {new Date(submission.submitted_at).toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
-                </div>
                 
-                {/* 🆕 CORREÇÃO #1: Exibir motivo de rejeição */}
+                {/* 🆕 CORREÇÃO #1: Exibir motivo de rejeição DENTRO da div flex-1 */}
                 {submission.status === 'rejected' && submission.rejection_reason && (
                   <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
                     <p className="text-sm font-semibold text-destructive mb-1">
@@ -213,6 +212,7 @@ const AdminSubmissionListComponent = ({
                     </p>
                   </div>
                 )}
+                </div>
               </div>
 
             {/* Imagem da submissão */}
