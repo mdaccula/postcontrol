@@ -64,6 +64,7 @@ export const useAdminFilters = () => {
   const postEventFilter = searchParams.get('postEvent') || 'all';
   const postEventActiveFilter = searchParams.get('postEventActive') || 'active'; // ✅ FASE 3: Padrão 'active'
   const eventSortOrder = searchParams.get('eventSort') || 'oldest'; // ✅ FASE 3: Ordenação padrão para mais antigos
+  const submissionActiveFilter = searchParams.get('submissionActive') || 'all'; // ✅ ITEM 5: Novo filtro primário
 
   /**
    * Atualizador genérico de filtros
@@ -151,6 +152,15 @@ export const useAdminFilters = () => {
     updateFilter({ eventSort: value });
   }, [updateFilter]);
 
+  // ✅ ITEM 5: Setter para filtro de status ativo/inativo em submissões
+  const setSubmissionActiveFilter = useCallback((value: string) => {
+    updateFilter({ 
+      submissionActive: value,
+      event: 'all', // Reset event filter quando muda status
+      page: '1'
+    });
+  }, [updateFilter]);
+
   /**
    * Limpar todos os filtros e voltar ao estado inicial
    */
@@ -176,24 +186,28 @@ export const useAdminFilters = () => {
     eventActiveFilter,
     postEventFilter,
     postEventActiveFilter,
-    eventSortOrder,
-  }), [
-    submissionEventFilter,
-    submissionPostFilter,
-    submissionStatusFilter,
-    postTypeFilter,
-    searchTerm,
-    dateFilterStart,
-    dateFilterEnd,
-    currentPage,
-    itemsPerPage,
-    kanbanView,
-    cardsGridView,
-    eventActiveFilter,
-    postEventFilter,
-    postEventActiveFilter,
-    eventSortOrder,
-  ]);
+      eventSortOrder,
+      submissionActiveFilter, // ✅ ITEM 5
+    }),
+    [
+      submissionEventFilter,
+      submissionPostFilter,
+      submissionStatusFilter,
+      postTypeFilter,
+      searchTerm,
+      dateFilterStart,
+      dateFilterEnd,
+      currentPage,
+      itemsPerPage,
+      kanbanView,
+      cardsGridView,
+      eventActiveFilter,
+      postEventFilter,
+      postEventActiveFilter,
+      eventSortOrder,
+      submissionActiveFilter, // ✅ ITEM 5
+    ]
+  );
 
   return {
     // Estado atual
@@ -215,6 +229,7 @@ export const useAdminFilters = () => {
     setPostEventFilter,
     setPostEventActiveFilter,
     setEventSortOrder,
+    setSubmissionActiveFilter, // ✅ ITEM 5
     
     // Utilities
     updateFilter,

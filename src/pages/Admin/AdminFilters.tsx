@@ -20,6 +20,8 @@ import { Skeleton } from '@/components/ui/skeleton';
  * Props for AdminFilters component
  */
 interface AdminFiltersProps {
+  /** ✅ ITEM 5: Filtro primário de status ativo/inativo */
+  submissionActiveFilter: string;
   /** Current event filter value ('all' or event ID) */
   submissionEventFilter: string;
   /** Current post number filter value ('all' or post number) */
@@ -44,6 +46,8 @@ interface AdminFiltersProps {
   /** All submissions for post number extraction */
   submissions: any[];
   
+  /** ✅ ITEM 5: Callback quando filtro de status muda */
+  onSubmissionActiveFilterChange: (value: string) => void;
   /** Callback when event filter changes */
   onSubmissionEventFilterChange: (value: string) => void;
   /** Callback when post filter changes */
@@ -76,6 +80,7 @@ interface AdminFiltersProps {
 }
 
 const AdminFiltersComponent = ({
+  submissionActiveFilter, // ✅ ITEM 5
   submissionEventFilter,
   submissionPostFilter,
   submissionStatusFilter,
@@ -87,6 +92,7 @@ const AdminFiltersComponent = ({
   cardsGridView,
   events,
   submissions,
+  onSubmissionActiveFilterChange, // ✅ ITEM 5
   onSubmissionEventFilterChange,
   onSubmissionPostFilterChange,
   onSubmissionStatusFilterChange,
@@ -155,6 +161,21 @@ const AdminFiltersComponent = ({
 
       {/* Grid de filtros principais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+        {/* ✅ ITEM 5: Novo filtro primário de status ativo/inativo */}
+        <Select
+          value={submissionActiveFilter}
+          onValueChange={onSubmissionActiveFilterChange}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Status do evento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os eventos</SelectItem>
+            <SelectItem value="active">✅ Eventos Ativos</SelectItem>
+            <SelectItem value="inactive">⏸️ Eventos Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+
         {/* Filtro de Evento */}
         {/* ✅ ITEM 5: Skeleton enquanto carrega */}
         {isLoadingSubmissions ? (
@@ -169,11 +190,19 @@ const AdminFiltersComponent = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Selecione um evento</SelectItem>
-              {events.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.title}
-                </SelectItem>
-              ))}
+              {/* ✅ ITEM 5: Filtrar eventos baseado no status */}
+              {events
+                .filter((event) => {
+                  if (submissionActiveFilter === "all") return true;
+                  if (submissionActiveFilter === "active") return event.is_active === true;
+                  if (submissionActiveFilter === "inactive") return event.is_active === false;
+                  return true;
+                })
+                .map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.title}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         )}
