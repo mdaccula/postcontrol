@@ -53,6 +53,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
   const [requirePostScreenshot, setRequirePostScreenshot] = useState(false);
   const [whatsappGroupUrl, setWhatsappGroupUrl] = useState("");
   const [whatsappGroupTitle, setWhatsappGroupTitle] = useState("");
+  const [ticketerEmail, setTicketerEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
@@ -110,6 +111,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setRequirePostScreenshot(event.require_post_screenshot || false);
         setWhatsappGroupUrl(event.whatsapp_group_url || "");
         setWhatsappGroupTitle(event.whatsapp_group_title || "");
+        setTicketerEmail(event.ticketer_email || "");
 
         // Load requirements
         const { data: reqData } = await sb
@@ -886,6 +888,21 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                 Solicitar link do perfil do Instagram no formulário de envio
               </Label>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ticketerEmail">E-mail da Ticketeira (Opcional)</Label>
+            <Input
+              id="ticketerEmail"
+              type="email"
+              placeholder="ticketeira@exemplo.com"
+              value={ticketerEmail}
+              onChange={(e) => setTicketerEmail(e.target.value)}
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground">
+              📧 Se preenchido, os usuários deverão fornecer um e-mail secundário ao enviar sua submissão
+            </p>
           </div>
 
           <div className="space-y-2">

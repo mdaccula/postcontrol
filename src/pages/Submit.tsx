@@ -51,6 +51,7 @@ interface Event {
   whatsapp_group_url?: string;
   whatsapp_group_title?: string;
   target_gender?: string[];
+  ticketer_email?: string;
 }
 
 interface EventRequirement {
@@ -114,6 +115,8 @@ const Submit = () => {
   const [userSubmissions, setUserSubmissions] = useState<string[]>([]);
   const [salesCount, setSalesCount] = useState<number>(0);
   const [postsCount, setPostsCount] = useState<number>(0); // ✅ ITEM 3: Contador de postagens
+  const [ticketerEmailRequired, setTicketerEmailRequired] = useState(false);
+  const [userTicketerEmail, setUserTicketerEmail] = useState("");
 
   useEffect(() => {
     loadEvents();
@@ -164,6 +167,10 @@ const Submit = () => {
       if (submissionType === "post") {
         loadPostsCount(selectedEvent);
       }
+      // Verificar se o evento requer e-mail da ticketeira
+      const eventData = events.find((e) => e.id === selectedEvent);
+      setTicketerEmailRequired(!!eventData?.ticketer_email);
+      setUserTicketerEmail(""); // Limpar o campo ao trocar de evento
     } else {
       setPosts([]);
       setRequirements([]);
@@ -722,6 +729,28 @@ const Submit = () => {
       return;
     }
 
+    // Validar e-mail da ticketeira se obrigatório
+    if (ticketerEmailRequired && !userTicketerEmail.trim()) {
+      toast({
+        title: "E-mail da ticketeira obrigatório",
+        description: "Por favor, preencha o e-mail solicitado pela ticketeira.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ticketerEmailRequired && userTicketerEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userTicketerEmail.trim())) {
+        toast({
+          title: "E-mail inválido",
+          description: "Por favor, insira um e-mail válido para a ticketeira.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // M4: Validação aprimorada com mensagens específicas
     try {
       submitFormSchema.parse({ name, email, instagram, phone, instagramLink });
@@ -1056,6 +1085,11 @@ const Submit = () => {
       // 🆕 Adicionar faixa de seguidores (se for seleção de perfil)
       if (selectedEventData?.event_purpose === "selecao_perfil" && followersRange) {
         insertData.followers_range = followersRange;
+      }
+
+      // Adicionar e-mail da ticketeira se fornecido
+      if (ticketerEmailRequired && userTicketerEmail.trim()) {
+        insertData.user_ticketer_email = userTicketerEmail.trim();
       }
 
       // ✅ ITEM 5: Verificar se já enviou para seleção de perfil

@@ -1112,6 +1112,7 @@ const Admin = () => {
     { key: "data_envio", label: "Data de Envio" },
     { key: "total_submissoes_aprovadas", label: "Total de Submissões Aprovadas" },
     { key: "vendas_aprovadas_evento", label: "Vendas Aprovadas no Evento" }, // ✅ ITEM 1: Nova coluna
+    { key: "email_ticketeira", label: "E-mail da Ticketeira" },
     { key: "motivo_rejeicao", label: "Motivo Rejeição" },
   ];
 
