@@ -53,16 +53,32 @@ export const CSVImportExport = ({
       .select('user_id, posts!inner(event_id)')
       .in('user_id', userIds);
 
-    const userStats: Record<string, { submissionCount: number; eventIds: Set<string> }> = {};
+    // ✅ ITEM 6: Buscar vendas aprovadas por usuário
+    const { data: approvedSalesData } = await supabase
+      .from('submissions')
+      .select('user_id')
+      .in('user_id', userIds)
+      .eq('submission_type', 'sale')
+      .eq('status', 'approved');
+
+    const userStats: Record<string, { submissionCount: number; eventIds: Set<string>; approvedSales: number }> = {};
     
     (submissionData || []).forEach((sub: any) => {
       if (!userStats[sub.user_id]) {
-        userStats[sub.user_id] = { submissionCount: 0, eventIds: new Set() };
+        userStats[sub.user_id] = { submissionCount: 0, eventIds: new Set(), approvedSales: 0 };
       }
       userStats[sub.user_id].submissionCount += 1;
       if (sub.posts?.event_id) {
         userStats[sub.user_id].eventIds.add(sub.posts.event_id);
       }
+    });
+
+    // ✅ ITEM 6: Contar vendas aprovadas
+    (approvedSalesData || []).forEach((sale: any) => {
+      if (!userStats[sale.user_id]) {
+        userStats[sale.user_id] = { submissionCount: 0, eventIds: new Set(), approvedSales: 0 };
+      }
+      userStats[sale.user_id].approvedSales += 1;
     });
 
     const formattedProfiles = profilesToExport.map((profile) => ({
@@ -75,21 +91,18 @@ export const CSVImportExport = ({
       faixa_seguidores: profile.followers_range || "Não informado",
       total_submissoes: userStats[profile.id]?.submissionCount || 0,
       total_eventos_participados: userStats[profile.id]?.eventIds.size || 0,
+      total_vendas_aprovadas: userStats[profile.id]?.approvedSales || 0, // ✅ ITEM 6: Nova coluna
       created_at: profile.created_at,
     }));
 
-    const csv = Papa.unparse(formattedProfiles);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `usuarios_${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ✅ ITEM 6: Usar XLSX em vez de CSV
+    const XLSX = await import('xlsx');
+    const worksheet = XLSX.utils.json_to_sheet(formattedProfiles);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuários');
+    XLSX.writeFile(workbook, `usuarios_${new Date().toISOString().split("T")[0]}.xlsx`);
 
-    toast.success(`${profilesToExport.length} usuários exportados!`);
+    toast.success(`${profilesToExport.length} usuários exportados em XLSX!`);
   };
 
   const handleExportSubmissions = async () => {

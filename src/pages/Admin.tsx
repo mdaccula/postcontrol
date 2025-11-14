@@ -1845,11 +1845,23 @@ const Admin = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os eventos</SelectItem>
-                      {events.map((event) => (
-                        <SelectItem key={event.id} value={event.id}>
-                          {event.title}
-                        </SelectItem>
-                      ))}
+                      {/* ✅ ITEM 4: Filtrar eventos baseado no postEventActiveFilter */}
+                      {events
+                        .filter((event) => {
+                          if (postEventActiveFilter === "all") return true;
+                          if (postEventActiveFilter === "active") return event.is_active === true;
+                          if (postEventActiveFilter === "inactive") return event.is_active === false;
+                          return true;
+                        })
+                        .map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {/* ✅ ITEM 4: Adicionar badge visual de status */}
+                            <span className="flex items-center gap-2">
+                              <span className={event.is_active ? "text-green-600" : "text-gray-400"}>●</span>
+                              {event.title}
+                            </span>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <Button

@@ -113,6 +113,7 @@ const Submit = () => {
   // ✅ FASE 4: Estado para rastrear posts já enviados
   const [userSubmissions, setUserSubmissions] = useState<string[]>([]);
   const [salesCount, setSalesCount] = useState<number>(0);
+  const [postsCount, setPostsCount] = useState<number>(0); // ✅ ITEM 3: Contador de postagens
 
   useEffect(() => {
     loadEvents();
@@ -159,12 +160,17 @@ const Submit = () => {
       if (submissionType === "sale") {
         loadSalesCount(selectedEvent);
       }
+      // ✅ ITEM 3: Carregar contador de postagens se tipo for post
+      if (submissionType === "post") {
+        loadPostsCount(selectedEvent);
+      }
     } else {
       setPosts([]);
       setRequirements([]);
       setSelectedPost("");
       setUserSubmissions([]);
       setSalesCount(0);
+      setPostsCount(0); // ✅ ITEM 3: Resetar contador
     }
     console.log("🔄 submissionType mudou:", submissionType);
   }, [selectedEvent, submissionType]);
@@ -521,6 +527,28 @@ const Submit = () => {
 
     console.log(`✅ Total de vendas enviadas: ${count || 0}`);
     setSalesCount(count || 0);
+  };
+
+  // ✅ ITEM 3: Função para carregar contador de postagens
+  const loadPostsCount = async (eventId: string) => {
+    if (!user) return;
+
+    console.log("📊 Carregando contador de postagens...");
+
+    const { count, error } = await sb
+      .from("submissions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("event_id", eventId)
+      .eq("submission_type", "post");
+
+    if (error) {
+      console.error("Erro ao carregar contador de postagens:", error);
+      return;
+    }
+
+    console.log(`✅ Total de postagens enviadas: ${count || 0}`);
+    setPostsCount(count || 0);
   };
 
   const loadUserProfile = async () => {
@@ -1313,6 +1341,24 @@ const Submit = () => {
                                   ? "Você pode enviar múltiplas submissões para esta postagem."
                                   : "Após enviar, a próxima postagem será liberada automaticamente."}
                               </p>
+                            </div>
+                          )}
+
+                          {selectedPost && submissionType === "post" && (
+                            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 mt-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-green-700 dark:text-green-300 mb-1">
+                                    📝 Postagens Enviadas
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Você já enviou {postsCount} postage{postsCount !== 1 ? "ns" : "m"} para este evento
+                                  </p>
+                                </div>
+                                <Badge variant="secondary" className="text-2xl px-4 py-2">
+                                  {postsCount}
+                                </Badge>
+                              </div>
                             </div>
                           )}
 
