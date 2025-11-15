@@ -106,20 +106,24 @@ export const useSubmissionsQuery = ({
             return results.flat();
           }),
           
-          // Buscar contagens em batches usando agregação SQL
+          // Buscar todas as submissions e contar no client-side
           Promise.all(
             userIdChunks.map(chunk =>
               sb.from('submissions')
-                .select('user_id, count:id.count()')
+                .select('user_id, id')
                 .in('user_id', chunk)
                 .then(res => res.data || [])
             )
           ).then(results => {
             console.timeEnd('⏱️ [Performance] Query Counts');
+            const allSubmissions = results.flat();
+            
+            // Agregar contagens no client-side
             const counts: Record<string, number> = {};
-            results.flat().forEach((item: any) => {
-              counts[item.user_id] = item.count || 0;
+            allSubmissions.forEach((item: any) => {
+              counts[item.user_id] = (counts[item.user_id] || 0) + 1;
             });
+            
             console.log('📊 [Counts] Total por usuário:', counts);
             return counts;
           })

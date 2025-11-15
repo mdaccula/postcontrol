@@ -8,7 +8,24 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Service Worker ativado');
-  event.waitUntil(clients.claim());
+  
+  const cacheWhitelist = ['supabase-images-cache']; // Manter cache de imagens
+  
+  event.waitUntil(
+    Promise.all([
+      clients.claim(),
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (!cacheWhitelist.includes(cacheName) && cacheName.includes('supabase')) {
+              console.log('[SW] Limpando cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+    ])
+  );
 });
 
 // ========================================

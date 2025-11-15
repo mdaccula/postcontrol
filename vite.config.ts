@@ -72,13 +72,42 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/(posts|submissions|events)/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-dynamic-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60  // Apenas 1 minuto para dados dinâmicos
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              },
+              networkTimeoutSeconds: 5
+            }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-images-cache',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7  // 7 dias para imagens
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'supabase-other-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24
+                maxAgeSeconds: 60 * 5  // 5 minutos para outros endpoints
               },
               cacheableResponse: {
                 statuses: [0, 200]
