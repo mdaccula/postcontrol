@@ -22,6 +22,7 @@ import Install from "./pages/Install";
 import PushDiagnostic from "./pages/PushDiagnostic";
 import NotFound from "./pages/NotFound";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <PWAInstallPrompt />
+          <PWAUpdatePrompt />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
