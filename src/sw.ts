@@ -31,8 +31,10 @@ self.addEventListener('message', (event) => {
 // ========================================
 
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push notification recebida', event);
-
+  console.log('========================================');
+  console.log('[SW] 📥 PUSH RECEBIDO:', new Date().toISOString());
+  console.log('[SW] Event data exists:', !!event.data);
+  
   try {
     let notificationData: any = {
       title: 'Nova Notificação',
@@ -44,11 +46,24 @@ self.addEventListener('push', (event) => {
 
     if (event.data) {
       try {
-        notificationData = event.data.json();
+        const rawData = event.data.text();
+        console.log('[SW] 📄 Raw data:', rawData);
+        
+        notificationData = JSON.parse(rawData);
+        console.log('[SW] ✅ Dados parseados com sucesso:', notificationData);
       } catch (error) {
-        console.error('[SW] Erro ao parsear dados da notificação:', error);
+        console.error('[SW] ❌ Erro ao parsear dados da notificação:', error);
+        console.log('[SW] Usando dados padrão');
       }
+    } else {
+      console.log('[SW] ⚠️ Nenhum dado recebido, usando notificação padrão');
     }
+
+    console.log('[SW] 🔔 Preparando para exibir notificação:', {
+      title: notificationData.title,
+      body: notificationData.body,
+      tag: notificationData.data?.type || 'general'
+    });
 
     const promiseChain = self.registration.showNotification(
       notificationData.title,
@@ -61,21 +76,34 @@ self.addEventListener('push', (event) => {
         requireInteraction: false,
         vibrate: [200, 100, 200],
       } as any
-    );
+    ).then(() => {
+      console.log('[SW] ✅ Notificação exibida com sucesso');
+      console.log('========================================');
+    }).catch((error) => {
+      console.error('[SW] ❌ Erro ao exibir notificação:', error);
+      console.log('========================================');
+    });
 
     event.waitUntil(promiseChain);
   } catch (error) {
-    console.error('[SW] Erro crítico no push listener:', error);
+    console.error('[SW] ❌ ERRO CRÍTICO no push listener:', error);
+    console.error('[SW] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    console.log('========================================');
   }
 });
 
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notificação clicada', event);
+  console.log('========================================');
+  console.log('[SW] 👆 NOTIFICAÇÃO CLICADA:', new Date().toISOString());
+  console.log('[SW] Notification data:', event.notification.data);
+  console.log('[SW] Notification tag:', event.notification.tag);
 
   try {
     event.notification.close();
+    console.log('[SW] ✅ Notificação fechada');
 
     const urlToOpen = event.notification.data?.url || '/dashboard';
+    console.log('[SW] 🔗 URL para abrir:', urlToOpen);
 
     const promiseChain = self.clients
       .matchAll({
@@ -83,31 +111,48 @@ self.addEventListener('notificationclick', (event) => {
         includeUncontrolled: true,
       })
       .then((windowClients) => {
+        console.log('[SW] 🪟 Janelas abertas:', windowClients.length);
+        
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];
+          console.log(`[SW] Verificando janela ${i + 1}:`, client.url);
+          
           if (client.url.includes(urlToOpen) && 'focus' in client) {
+            console.log('[SW] ✅ Janela encontrada, focando...');
             return client.focus();
           }
         }
 
+        console.log('[SW] 🆕 Abrindo nova janela...');
         if (self.clients.openWindow) {
           return self.clients.openWindow(urlToOpen);
         }
       })
+      .then(() => {
+        console.log('[SW] ✅ Navegação concluída com sucesso');
+        console.log('========================================');
+      })
       .catch(error => {
-        console.error('[SW] Erro ao abrir janela:', error);
+        console.error('[SW] ❌ Erro ao abrir/focar janela:', error);
+        console.log('========================================');
       });
 
     event.waitUntil(promiseChain);
   } catch (error) {
-    console.error('[SW] Erro crítico no click listener:', error);
+    console.error('[SW] ❌ ERRO CRÍTICO no click listener:', error);
+    console.error('[SW] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    console.log('========================================');
   }
 });
 
 self.addEventListener('notificationclose', (event) => {
   try {
-    console.log('[SW] Notificação fechada', event);
+    console.log('========================================');
+    console.log('[SW] ❌ NOTIFICAÇÃO FECHADA:', new Date().toISOString());
+    console.log('[SW] Notification tag:', event.notification.tag);
+    console.log('[SW] Notification data:', event.notification.data);
+    console.log('========================================');
   } catch (error) {
-    console.error('[SW] Erro ao fechar notificação:', error);
+    console.error('[SW] ❌ Erro ao processar fechamento:', error);
   }
 });
