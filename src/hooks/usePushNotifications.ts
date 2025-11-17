@@ -132,7 +132,7 @@ export const usePushNotifications = () => {
     return outputArray;
   };
 
-  const subscribe = async () => {
+  const subscribe = async (isAutoRecovery = false) => {
     if (!isSupported || !user) {
       toast.error("Notificações push não são suportadas neste navegador");
       return false;
@@ -142,10 +142,9 @@ export const usePushNotifications = () => {
     const startTime = Date.now();
 
     try {
-      // 📱 ITEM #6: Detecção de plataforma mobile
-      console.group('🔔 [Push] Iniciando subscription');
-      console.log('🕐 Timestamp:', new Date().toISOString());
-      console.log('👤 User ID:', user?.id);
+      pushLog.group(isAutoRecovery ? 'Auto-Recovery Subscription' : 'Manual Subscription');
+      pushLog.info('Timestamp', new Date().toISOString());
+      pushLog.info('User ID', user?.id);
       
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -153,105 +152,118 @@ export const usePushNotifications = () => {
       const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
                     (window.navigator as any).standalone === true;
 
-      console.log('📱 Platform:', { 
-        isMobile, 
-        isIOS, 
-        isAndroid, 
-        isPWA,
-        userAgent: navigator.userAgent 
-      });
-      console.groupEnd();
+      pushLog.info('Plataforma', { isMobile, isIOS, isAndroid, isPWA });
 
-      // ⚠️ Verificar se é iOS sem PWA instalado
       if (isIOS && !isPWA) {
-        toast.warning('Notificações no iOS', {
-          description: 'Para receber notificações no iPhone/iPad, você precisa:\n1. Tocar no botão de compartilhar (📤)\n2. Selecionar "Adicionar à Tela Inicial"\n3. Abrir o app pela tela inicial (não pelo Safari)',
-          duration: 10000
+        toast.error("⚠️ iOS: Instale o app primeiro", {
+          description: "No Safari, toque em 'Compartilhar' → 'Adicionar à Tela Inicial'",
+          duration: 6000,
         });
+        pushLog.error('iOS requer instalação PWA');
+        pushLog.groupEnd();
         setLoading(false);
         return false;
       }
 
-      // 1. Solicitar permissão
-      const permissionResult = await Notification.requestPermission();
-      setPermission(permissionResult);
+      // Solicitar permissão
+      pushLog.info('Solicitando permissão...');
+      const perm = await Notification.requestPermission();
+      pushLog.info('Permissão resultado', perm);
+      setPermission(perm);
 
-      console.group('🔔 [Push] Permissão solicitada');
-      console.log('✅ Resultado:', permissionResult);
-      console.log('🕐 Tempo decorrido:', (Date.now() - startTime) + 'ms');
-      console.groupEnd();
-
-      if (permissionResult !== "granted") {
-        toast.error("Permissão para notificações negada");
+      if (perm !== "granted") {
+        toast.error("Você precisa permitir as notificações");
+        pushLog.error('Permissão negada');
+        pushLog.groupEnd();
+        setLoading(false);
         return false;
       }
 
-      // 2. Obter Service Worker
-      console.group('🔔 [Push] Service Worker');
+      // Registrar Service Worker
+      pushLog.info('Aguardando Service Worker...');
       const registration = await navigator.serviceWorker.ready;
-      console.log('✅ Registration:', registration);
-      console.log('📍 Scope:', registration.scope);
-      console.log('🔗 Active:', registration.active?.scriptURL);
-      console.log('🔗 State:', registration.active?.state);
-      console.groupEnd();
+      pushLog.info('Service Worker pronto', registration.scope);
 
-      // 3. Converter VAPID Key
-      console.group('🔔 [Push] VAPID Key');
-      const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      console.log('🔐 Key Length:', convertedKey.byteLength, 'bytes (esperado: 65)');
-      console.log('🔐 First 10 bytes:', Array.from(convertedKey.slice(0, 10)));
-      console.log('✅ Valid:', convertedKey.byteLength === 65);
-      console.groupEnd();
-
-      // 4. Criar inscrição push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedKey,
-      });
-
-      console.group('🔔 [Push] Subscription criada');
-      console.log('✅ Subscription:', subscription);
-      console.log('📡 Endpoint:', subscription.endpoint.substring(0, 100) + '...');
-      console.groupEnd();
-
-      // 5. Extrair chaves
-      const subscriptionJSON = subscription.toJSON() as PushSubscriptionData;
-
-      if (!subscriptionJSON.keys) {
-        throw new Error("Falha ao obter chaves de inscrição");
+      if (!VAPID_PUBLIC_KEY) {
+        throw new Error("VAPID_PUBLIC_KEY não configurada");
       }
 
-      console.log('🔑 Keys:', subscriptionJSON.keys);
+      pushLog.info('Convertendo VAPID key...');
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
 
-      // 6. Salvar no banco
+      // Verificar subscription existente
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (subscription) {
+        pushLog.info('Subscription existente encontrada, unsubscribing...');
+        await subscription.unsubscribe();
+      }
+
+      // Criar nova subscription
+      pushLog.info('Criando nova subscription...');
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+
+      pushLog.info('Subscription criada', {
+        endpoint: subscription.endpoint.substring(0, 50) + '...',
+        expirationTime: subscription.expirationTime
+      });
+
+      // Salvar no banco
+      const subscriptionData: PushSubscriptionData = {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey("p256dh")!))),
+          auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey("auth")!))),
+        },
+      };
+
+      pushLog.info('Salvando no banco...');
       const { error } = await supabase.from("push_subscriptions").upsert(
         {
           user_id: user.id,
-          endpoint: subscriptionJSON.endpoint,
-          p256dh: subscriptionJSON.keys.p256dh,
-          auth: subscriptionJSON.keys.auth,
+          endpoint: subscriptionData.endpoint,
+          p256dh: subscriptionData.keys.p256dh,
+          auth: subscriptionData.keys.auth,
           user_agent: navigator.userAgent,
+          last_used_at: new Date().toISOString(),
         },
         {
-          onConflict: "user_id,endpoint",
-        },
+          onConflict: "endpoint",
+        }
       );
 
       if (error) throw error;
 
-      console.log('🕐 [Push] Tempo total:', (Date.now() - startTime) + 'ms');
+      const duration = Date.now() - startTime;
+      pushLog.info('✅ Subscription completa', `${duration}ms`);
+      pushLog.groupEnd();
 
       setIsSubscribed(true);
-      toast.success("Notificações push ativadas!");
-      return true;
-    } catch (error) {
-      console.group('❌ [Push] Erro');
-      console.error('Erro completo:', error);
-      console.log('📍 Onde ocorreu:', 'subscribe()');
-      console.log('🕐 Timestamp:', new Date().toISOString());
-      console.groupEnd();
+      autoRecoveryAttempts.current = 0; // Reset contador
       
-      toast.error("Erro ao ativar notificações push");
+      if (!isAutoRecovery) {
+        toast.success("✅ Notificações ativadas!", {
+          description: `Configurado em ${duration}ms`,
+        });
+      } else {
+        toast.success("🔄 Subscription recuperada automaticamente");
+      }
+
+      return true;
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      pushLog.error('Erro na subscription', error);
+      pushLog.info('Tempo até erro', `${duration}ms`);
+      pushLog.groupEnd();
+
+      if (!isAutoRecovery) {
+        toast.error("Erro ao ativar notificações", {
+          description: error?.message || "Tente novamente",
+        });
+      }
       return false;
     } finally {
       setLoading(false);
