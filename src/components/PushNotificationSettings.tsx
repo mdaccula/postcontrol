@@ -1,12 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, BellOff, AlertCircle } from 'lucide-react';
+import { Bell, BellOff, AlertCircle, Activity } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export const PushNotificationSettings = () => {
+  const navigate = useNavigate();
   const {
     isSupported,
     isSubscribed,
@@ -180,6 +183,16 @@ export const PushNotificationSettings = () => {
             </li>
           </ul>
         </div>
+        
+        {/* 🔴 FASE 2.1: Link para diagnóstico */}
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/push-diagnostic')}
+          className="w-full mt-4"
+        >
+          <Activity className="mr-2 h-4 w-4" />
+          Ver Diagnóstico Completo
+        </Button>
       </CardContent>
     </Card>
   );

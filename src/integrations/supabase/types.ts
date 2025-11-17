@@ -593,6 +593,48 @@ export type Database = {
           },
         ]
       }
+      notification_logs: {
+        Row: {
+          body: string
+          clicked: boolean | null
+          clicked_at: string | null
+          created_at: string | null
+          data: Json | null
+          delivered: boolean | null
+          id: string
+          sent_at: string
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          clicked?: boolean | null
+          clicked_at?: string | null
+          created_at?: string | null
+          data?: Json | null
+          delivered?: boolean | null
+          id?: string
+          sent_at?: string
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          clicked?: boolean | null
+          clicked_at?: string | null
+          created_at?: string | null
+          data?: Json | null
+          delivered?: boolean | null
+          id?: string
+          sent_at?: string
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string

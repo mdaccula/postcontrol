@@ -1,14 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
-// 🔍 DEBUG - Verificar se key está carregada (ETAPA 1)
-console.log("🔑 VAPID_PUBLIC_KEY:", VAPID_PUBLIC_KEY);
-console.log("🔑 Tamanho:", VAPID_PUBLIC_KEY?.length || 0, "caracteres");
-console.log("🔑 Tipo:", typeof VAPID_PUBLIC_KEY);
+// 🔍 FASE 5: Logger centralizado
+const pushLog = {
+  group: (title: string) => console.group(`🔔 [Push] ${title}`),
+  info: (msg: string, data?: any) => console.log(`✅ ${msg}`, data || ''),
+  warn: (msg: string, data?: any) => console.warn(`⚠️ ${msg}`, data || ''),
+  error: (msg: string, error?: any) => console.error(`❌ ${msg}`, error || ''),
+  groupEnd: () => console.groupEnd()
+};
 
 interface PushSubscriptionData {
   endpoint: string;
@@ -24,30 +28,45 @@ export const usePushNotifications = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [loading, setLoading] = useState(false);
+  const autoRecoveryAttempts = useRef(0);
+  const MAX_AUTO_RECOVERY_ATTEMPTS = 3;
 
   // Verificar suporte e permissão
   useEffect(() => {
     const checkSupport = () => {
+      pushLog.group('Verificando Suporte');
       const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+
+      pushLog.info('Suporte PWA', {
+        serviceWorker: "serviceWorker" in navigator,
+        pushManager: "PushManager" in window,
+        notification: "Notification" in window,
+        result: supported
+      });
 
       setIsSupported(supported);
 
       if (supported) {
         setPermission(Notification.permission);
+        pushLog.info('Permissão atual', Notification.permission);
       }
+      pushLog.groupEnd();
     };
 
     checkSupport();
   }, []);
 
-  // Verificar se usuário já está inscrito
+  // 🔴 FASE 1.1: Auto Re-subscription
   useEffect(() => {
     const checkSubscription = async () => {
       if (!isSupported || !user) return;
 
       try {
+        pushLog.group('Verificando Subscription');
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
+
+        pushLog.info('PushManager.getSubscription()', subscription ? 'Subscription encontrada' : 'Nenhuma subscription');
 
         if (subscription) {
           // Buscar todas as inscrições do usuário e filtrar manualmente
@@ -60,12 +79,35 @@ export const usePushNotifications = () => {
           const existingSubscription = subscriptions?.find((sub) => sub.endpoint === subscription.endpoint);
 
           setIsSubscribed(!!existingSubscription);
+          pushLog.info('Status no banco', existingSubscription ? 'Registrada' : 'Não registrada');
+
+          // 🔴 AUTO-RECOVERY: Se não está no banco mas permissão é granted
+          if (!existingSubscription && Notification.permission === 'granted' && autoRecoveryAttempts.current < MAX_AUTO_RECOVERY_ATTEMPTS) {
+            pushLog.warn('Auto-recovery iniciado', `Tentativa ${autoRecoveryAttempts.current + 1}/${MAX_AUTO_RECOVERY_ATTEMPTS}`);
+            autoRecoveryAttempts.current++;
+            
+            setTimeout(() => {
+              subscribe(true);
+            }, 1000);
+          }
         } else {
           setIsSubscribed(false);
+          
+          // 🔴 AUTO-RECOVERY: Se permissão é granted mas subscription está null
+          if (Notification.permission === 'granted' && autoRecoveryAttempts.current < MAX_AUTO_RECOVERY_ATTEMPTS) {
+            pushLog.warn('Subscription perdida detectada', 'Iniciando auto-recovery');
+            autoRecoveryAttempts.current++;
+            
+            setTimeout(() => {
+              subscribe(true);
+            }, 1000);
+          }
         }
+        pushLog.groupEnd();
       } catch (error) {
-        console.error("[usePushNotifications] Erro ao verificar inscrição:", error);
+        pushLog.error('Erro ao verificar subscription', error);
         setIsSubscribed(false);
+        pushLog.groupEnd();
       }
     };
 
