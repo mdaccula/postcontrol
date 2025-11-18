@@ -123,13 +123,29 @@ export const PWADiagnosticDashboard = () => {
     
     // 3. VAPID Key
     const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    const vapidValid = vapidKey && vapidKey.length >= 87;
+    const vapidConfigured = !!vapidKey;
+    const vapidKeyLength = vapidKey?.length || 0;
+    const vapidValid = vapidKeyLength > 80; // Chaves válidas têm ~87 chars
+    
+    console.log('🔑 VAPID Check:', {
+      configured: vapidConfigured,
+      keyLength: vapidKeyLength,
+      isValid: vapidValid,
+      preview: vapidKey?.substring(0, 20)
+    });
+    
     updateCheck('vapid', {
-      status: vapidValid ? 'success' : 'error',
+      status: vapidValid ? 'success' : (vapidConfigured ? 'warning' : 'error'),
       message: vapidValid 
-        ? `VAPID configurada (${vapidKey.length} chars)`
-        : 'VAPID não configurada',
-      details: vapidKey ? `${vapidKey.substring(0, 30)}...` : 'Variável não encontrada'
+        ? 'VAPID Key válida' 
+        : vapidConfigured 
+          ? 'VAPID Key configurada mas parece inválida' 
+          : 'VAPID Key não encontrada',
+      details: vapidValid 
+        ? `Key (${vapidKeyLength} chars): ${vapidKey.substring(0, 20)}...` 
+        : vapidConfigured 
+          ? `Key muito curta (${vapidKeyLength} chars, esperado ~87)`
+          : 'Chave não configurada no .env'
     });
     
     // 4. Permission
