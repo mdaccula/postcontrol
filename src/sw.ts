@@ -30,10 +30,14 @@ self.addEventListener('message', (event) => {
 // PUSH NOTIFICATIONS
 // ========================================
 
+// 🔍 FASE 5: PUSH EVENT COM LOGS DETALHADOS
 self.addEventListener('push', (event) => {
-  console.log('========================================');
-  console.log('[SW] 📥 PUSH RECEBIDO:', new Date().toISOString());
-  console.log('[SW] Event data exists:', !!event.data);
+  const startTime = performance.now();
+  
+  console.group('🔔 [SW PUSH] Push Recebido');
+  console.log('⏰ Timestamp:', new Date().toISOString());
+  console.log('📦 Event data exists:', !!event.data);
+  console.log('🔢 Payload size:', event.data ? event.data.text().length : 0, 'bytes');
   
   try {
     let notificationData: any = {
@@ -47,63 +51,80 @@ self.addEventListener('push', (event) => {
     if (event.data) {
       try {
         const rawData = event.data.text();
-        console.log('[SW] 📄 Raw data:', rawData);
+        console.log('📄 Raw payload:', rawData.substring(0, 100) + '...');
         
         notificationData = JSON.parse(rawData);
-        console.log('[SW] ✅ Dados parseados com sucesso:', notificationData);
+        console.log('✅ Parsed notification data:', {
+          title: notificationData.title,
+          body: notificationData.body?.substring(0, 50),
+          type: notificationData.data?.type,
+          hasIcon: !!notificationData.icon
+        });
       } catch (error) {
-        console.error('[SW] ❌ Erro ao parsear dados da notificação:', error);
-        console.log('[SW] Usando dados padrão');
+        console.error('❌ Parse error:', error);
+        console.log('⚠️ Fallback: Usando dados padrão');
       }
     } else {
-      console.log('[SW] ⚠️ Nenhum dado recebido, usando notificação padrão');
+      console.log('⚠️ Nenhum payload recebido, usando notificação padrão');
     }
 
-    console.log('[SW] 🔔 Preparando para exibir notificação:', {
-      title: notificationData.title,
+    const notificationOptions = {
       body: notificationData.body,
-      tag: notificationData.data?.type || 'general'
+      icon: notificationData.icon || '/pwa-192x192.png',
+      badge: notificationData.badge || '/pwa-192x192.png',
+      data: notificationData.data,
+      tag: notificationData.data?.type || 'general',
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+    };
+
+    console.log('🔔 Notification options preparadas:', {
+      tag: notificationOptions.tag,
+      requireInteraction: notificationOptions.requireInteraction,
+      dataKeys: Object.keys(notificationOptions.data || {})
     });
 
     const promiseChain = self.registration.showNotification(
       notificationData.title,
-      {
-        body: notificationData.body,
-        icon: notificationData.icon || '/pwa-192x192.png',
-        badge: notificationData.badge || '/pwa-192x192.png',
-        data: notificationData.data,
-        tag: notificationData.data?.type || 'general',
-        requireInteraction: false,
-        vibrate: [200, 100, 200],
-      } as any
+      notificationOptions as any
     ).then(() => {
-      console.log('[SW] ✅ Notificação exibida com sucesso');
-      console.log('========================================');
+      const duration = performance.now() - startTime;
+      console.log('✅ Notificação exibida com sucesso');
+      console.log(`⏱️ Tempo de processamento: ${duration.toFixed(2)}ms`);
+      console.groupEnd();
     }).catch((error) => {
-      console.error('[SW] ❌ Erro ao exibir notificação:', error);
-      console.log('========================================');
+      const duration = performance.now() - startTime;
+      console.error('❌ Erro ao exibir notificação:', error);
+      console.error('Stack:', error instanceof Error ? error.stack : 'N/A');
+      console.log(`⏱️ Tempo até erro: ${duration.toFixed(2)}ms`);
+      console.groupEnd();
     });
 
     event.waitUntil(promiseChain);
   } catch (error) {
-    console.error('[SW] ❌ ERRO CRÍTICO no push listener:', error);
-    console.error('[SW] Stack trace:', error instanceof Error ? error.stack : 'N/A');
-    console.log('========================================');
+    const duration = performance.now() - startTime;
+    console.error('❌ ERRO CRÍTICO no push listener:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    console.log(`⏱️ Tempo até erro crítico: ${duration.toFixed(2)}ms`);
+    console.groupEnd();
   }
 });
 
+// 🔍 FASE 5: NOTIFICATION CLICK COM LOGS DETALHADOS
 self.addEventListener('notificationclick', (event) => {
-  console.log('========================================');
-  console.log('[SW] 👆 NOTIFICAÇÃO CLICADA:', new Date().toISOString());
-  console.log('[SW] Notification data:', event.notification.data);
-  console.log('[SW] Notification tag:', event.notification.tag);
+  console.group('👆 [SW CLICK] Notificação Clicada');
+  console.log('⏰ Timestamp:', new Date().toISOString());
+  console.log('🏷️ Tag:', event.notification.tag);
+  console.log('📋 Title:', event.notification.title);
+  console.log('📦 Data:', event.notification.data);
 
   try {
     event.notification.close();
-    console.log('[SW] ✅ Notificação fechada');
+    console.log('✅ Notificação fechada');
 
     const urlToOpen = event.notification.data?.url || '/dashboard';
-    console.log('[SW] 🔗 URL para abrir:', urlToOpen);
+    const fullUrl = new URL(urlToOpen, self.location.origin).href;
+    console.log('🔗 URL de destino:', fullUrl);
 
     const promiseChain = self.clients
       .matchAll({
@@ -111,7 +132,7 @@ self.addEventListener('notificationclick', (event) => {
         includeUncontrolled: true,
       })
       .then((windowClients) => {
-        console.log('[SW] 🪟 Janelas abertas:', windowClients.length);
+        console.log('🪟 Total de janelas abertas:', windowClients.length);
         
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];

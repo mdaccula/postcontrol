@@ -20,6 +20,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PushNotificationTest } from '@/components/PushNotificationTest';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface DiagnosticCheck {
   id: string;
@@ -57,6 +66,7 @@ export const PWADiagnosticDashboard = () => {
   } | null>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [notificationHistory, setNotificationHistory] = useState<NotificationHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const updateCheck = (id: string, updates: Partial<DiagnosticCheck>) => {
     setChecks(prev => prev.map(check => 
@@ -206,27 +216,43 @@ export const PWADiagnosticDashboard = () => {
 
   useEffect(() => {
     runDiagnostics();
-    
-    // Mock notification history (em produção, isso viria do banco)
-    setNotificationHistory([
-      {
-        id: '1',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        title: 'Bem-vindo!',
-        body: 'Suas notificações push estão ativas',
-        type: 'welcome',
-        clicked: true
-      },
-      {
-        id: '2',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        title: 'Novo evento criado',
-        body: 'O evento "Lançamento Produto X" foi criado',
-        type: 'event_created',
-        clicked: false
-      }
-    ]);
+    loadNotificationHistory();
   }, [user]);
+
+  const loadNotificationHistory = async () => {
+    if (!user) return;
+    
+    setLoadingHistory(true);
+    try {
+      const { data: logs, error } = await supabase
+        .from('notification_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sent_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      if (logs) {
+        setNotificationHistory(
+          logs.map(log => ({
+            id: log.id,
+            timestamp: log.sent_at,
+            title: log.title,
+            body: log.body,
+            type: log.type || 'general',
+            clicked: log.clicked || false,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('[PWADiagnostic] Erro ao carregar histórico:', error);
+      // Fallback para mock se houver erro
+      setNotificationHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -343,11 +369,12 @@ export const PWADiagnosticDashboard = () => {
       </div>
 
       <Tabs defaultValue="checks" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="checks">Verificações</TabsTrigger>
+          <TabsTrigger value="test">Teste</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
+          <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
         </TabsList>
 
         <TabsContent value="checks" className="space-y-4">
@@ -383,6 +410,38 @@ export const PWADiagnosticDashboard = () => {
                   )}
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="test" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Testar Notificações</CardTitle>
+              <CardDescription>
+                Envie uma notificação de teste para verificar o funcionamento
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Bell className="h-4 w-4" />
+                <AlertDescription>
+                  Esta notificação será enviada apenas para você e aparecerá nos logs do sistema.
+                  Verifique se a notificação chega e confira os detalhes na aba "Histórico".
+                </AlertDescription>
+              </Alert>
+              
+              <PushNotificationTest />
+              
+              <div className="pt-4 border-t">
+                <h4 className="font-semibold mb-2">O que verificar:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-6">
+                  <li>A notificação deve aparecer em até 5 segundos</li>
+                  <li>Ao clicar, deve abrir a página de diagnóstico</li>
+                  <li>Os logs devem aparecer no console do navegador</li>
+                  <li>O histórico deve ser atualizado na aba "Histórico"</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -510,21 +569,136 @@ export const PWADiagnosticDashboard = () => {
                 <h4 className="font-semibold text-sm">Eventos monitorados:</h4>
                 <div className="grid gap-2">
                   <Badge variant="outline" className="justify-start">
-                    📥 Push Recebido - Dados e timestamp
+                    🔔 [SW PUSH] Push Recebido - Dados e timestamp
                   </Badge>
                   <Badge variant="outline" className="justify-start">
-                    🔔 Notificação Exibida - Título, corpo e configurações
+                    👆 [SW CLICK] Notificação Clicada - Navegação
                   </Badge>
                   <Badge variant="outline" className="justify-start">
-                    👆 Notificação Clicada - URL de destino e janelas abertas
+                    ❌ [SW CLOSE] Notificação Fechada - Dismissed
                   </Badge>
                   <Badge variant="outline" className="justify-start">
-                    ❌ Notificação Fechada - Informações da notificação
-                  </Badge>
-                  <Badge variant="outline" className="justify-start">
-                    ⚠️ Erros - Stack traces completos
+                    ✅ [Push] Subscription/Permission - Estados
                   </Badge>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="troubleshooting" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Problemas Comuns e Soluções</CardTitle>
+              <CardDescription>
+                Guia rápido para resolver problemas de notificações push
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[250px]">Sintoma</TableHead>
+                    <TableHead className="w-[200px]">Causa Provável</TableHead>
+                    <TableHead>Solução</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        Notificações não chegam
+                      </div>
+                    </TableCell>
+                    <TableCell>Subscription não ativa</TableCell>
+                    <TableCell className="text-sm">
+                      Vá para Configurações → Notificações e clique em "Ativar Notificações"
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-500" />
+                        Erro "Permission denied"
+                      </div>
+                    </TableCell>
+                    <TableCell>Permissão bloqueada</TableCell>
+                    <TableCell className="text-sm">
+                      Clique no cadeado na barra de endereços → Notificações → Permitir
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        "Subscription null"
+                      </div>
+                    </TableCell>
+                    <TableCell>Service Worker desregistrado</TableCell>
+                    <TableCell className="text-sm">
+                      Reinstale o PWA ou limpe o cache e recarregue a página (Ctrl+Shift+R)
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-500" />
+                        Erro "410 Gone"
+                      </div>
+                    </TableCell>
+                    <TableCell>Endpoint expirado</TableCell>
+                    <TableCell className="text-sm">
+                      Sistema fará re-subscribing automático. Aguarde 5 segundos ou clique novamente em "Ativar"
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        iOS: Notificações não funcionam
+                      </div>
+                    </TableCell>
+                    <TableCell>PWA não instalado</TableCell>
+                    <TableCell className="text-sm">
+                      No Safari: toque em Compartilhar → "Adicionar à Tela de Início". Notificações só funcionam no app instalado.
+                    </TableCell>
+                  </TableRow>
+                  
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-500" />
+                        Notificação chega mas não abre o app
+                      </div>
+                    </TableCell>
+                    <TableCell>URL inválida no payload</TableCell>
+                    <TableCell className="text-sm">
+                      Verifique os logs do console para ver o erro. Pode ser problema de permissão de popup.
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+              
+              <div className="mt-6 p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Ainda com problemas?
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Execute os seguintes passos de diagnóstico:
+                </p>
+                <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
+                  <li>Vá para a aba "Verificações" e clique em "Atualizar"</li>
+                  <li>Verifique se todos os itens estão com status "OK"</li>
+                  <li>Vá para a aba "Teste" e envie uma notificação de teste</li>
+                  <li>Abra o Console (F12) e procure por erros em vermelho</li>
+                  <li>Se o problema persistir, limpe o cache e reinstale o PWA</li>
+                </ol>
               </div>
             </CardContent>
           </Card>

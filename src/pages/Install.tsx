@@ -1,15 +1,60 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Smartphone, Check, Chrome, Apple } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Download, Smartphone, Check, Chrome, Apple, Wifi, Bell, Zap, HardDrive, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 const Install = () => {
   const { isInstallable, isInstalled, installPWA } = usePWAInstall();
   const navigate = useNavigate();
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
+  
+  const [prerequisites, setPrerequisites] = useState({
+    https: window.location.protocol === 'https:',
+    serviceWorker: false,
+    manifest: false,
+    browser: true,
+  });
+
+  useEffect(() => {
+    checkPrerequisites();
+  }, []);
+
+  const checkPrerequisites = async () => {
+    // Check Service Worker
+    const swSupported = 'serviceWorker' in navigator;
+    let swActive = false;
+    if (swSupported) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        swActive = !!registration?.active;
+      } catch (e) {
+        swActive = false;
+      }
+    }
+
+    // Check Manifest
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    const hasManifest = !!manifestLink;
+
+    // Check Browser
+    const isChrome = /Chrome/.test(navigator.userAgent);
+    const isEdge = /Edg/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    const supportedBrowser = isChrome || isEdge || isSafari;
+
+    setPrerequisites({
+      https: window.location.protocol === 'https:',
+      serviceWorker: swActive,
+      manifest: hasManifest,
+      browser: supportedBrowser,
+    });
+  };
 
   const handleInstall = async () => {
     const success = await installPWA();
@@ -68,35 +113,161 @@ const Install = () => {
               </Button>
             )}
 
-            <div className="grid md:grid-cols-3 gap-4 text-left">
-              <div className="flex gap-3">
-                <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Acesso Offline</p>
-                  <p className="text-sm text-muted-foreground">
-                    Continue trabalhando sem internet
-                  </p>
+            {/* Benefícios Visuais */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-primary" />
                 </div>
+                <h4 className="font-semibold text-sm">3x Mais Rápido</h4>
+                <p className="text-xs text-muted-foreground">
+                  Carregamento instantâneo
+                </p>
               </div>
-              <div className="flex gap-3">
-                <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Mais Rápido</p>
-                  <p className="text-sm text-muted-foreground">
-                    Carregamento instantâneo
-                  </p>
+              
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wifi className="h-5 w-5 text-primary" />
                 </div>
+                <h4 className="font-semibold text-sm">Funciona Offline</h4>
+                <p className="text-xs text-muted-foreground">
+                  Trabalhe sem internet
+                </p>
               </div>
-              <div className="flex gap-3">
-                <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Sem Downloads</p>
-                  <p className="text-sm text-muted-foreground">
-                    Não ocupa espaço na loja
-                  </p>
+              
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Bell className="h-5 w-5 text-primary" />
                 </div>
+                <h4 className="font-semibold text-sm">Notificações Push</h4>
+                <p className="text-xs text-muted-foreground">
+                  Receba atualizações
+                </p>
+              </div>
+              
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <HardDrive className="h-5 w-5 text-primary" />
+                </div>
+                <h4 className="font-semibold text-sm">Salva Dados</h4>
+                <p className="text-xs text-muted-foreground">
+                  Cache inteligente
+                </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Status e Pré-requisitos */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Status da Instalação</CardTitle>
+            <CardDescription>Verifique os requisitos para instalar o PWA</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {prerequisites.https ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  <span className="font-medium">HTTPS Habilitado</span>
+                </div>
+                <Badge variant={prerequisites.https ? "default" : "destructive"}>
+                  {prerequisites.https ? "OK" : "Falha"}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {prerequisites.browser ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  <span className="font-medium">Navegador Compatível</span>
+                </div>
+                <Badge variant={prerequisites.browser ? "default" : "destructive"}>
+                  {prerequisites.browser ? "OK" : "Incompatível"}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {prerequisites.serviceWorker ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  <span className="font-medium">Service Worker Ativo</span>
+                </div>
+                <Badge variant={prerequisites.serviceWorker ? "default" : "destructive"}>
+                  {prerequisites.serviceWorker ? "Ativo" : "Inativo"}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {prerequisites.manifest ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  <span className="font-medium">Manifest Configurado</span>
+                </div>
+                <Badge variant={prerequisites.manifest ? "default" : "destructive"}>
+                  {prerequisites.manifest ? "OK" : "Ausente"}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Troubleshooting */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Solução de Problemas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>Botão de instalar não aparece</AccordionTrigger>
+                <AccordionContent className="space-y-2 text-sm text-muted-foreground">
+                  <p><strong>Possíveis causas:</strong></p>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>App já está instalado</li>
+                    <li>Navegador não suporta PWA</li>
+                    <li>Site não está em HTTPS</li>
+                    <li>Manifest.json com erro</li>
+                  </ul>
+                  <p className="mt-3"><strong>Solução:</strong></p>
+                  <p>Verifique o status acima. Se todos estiverem OK, tente limpar o cache do navegador.</p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-2">
+                <AccordionTrigger>Instalei mas não vejo o ícone</AccordionTrigger>
+                <AccordionContent className="space-y-2 text-sm text-muted-foreground">
+                  <p><strong>No Android:</strong> Verifique a gaveta de apps ou tela inicial</p>
+                  <p><strong>No iOS:</strong> Procure na tela inicial onde você adicionou</p>
+                  <p><strong>No Desktop:</strong> Abra chrome://apps ou procure nos aplicativos instalados</p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-3">
+                <AccordionTrigger>App não funciona offline</AccordionTrigger>
+                <AccordionContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>Certifique-se de que o Service Worker está ativo (verifique o status acima).</p>
+                  <p>Navegue pelo app online primeiro para fazer cache das páginas.</p>
+                  <p>Se o problema persistir, reinstale o aplicativo.</p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </Card>
 
