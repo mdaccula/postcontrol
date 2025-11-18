@@ -56,6 +56,12 @@ function normalizeBase64Url(input: string): string {
   return input.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// 🧩 Função auxiliar para logs detalhados e padronizados
+function logPushStep(step: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  console.log(`[PUSH-DEBUG] ${timestamp} | ${step}`, data ?? "");
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -110,29 +116,28 @@ async function sendWebPush(
       vapidKeys,
     });
 
-    // ⚙️ Normalizar chaves Base64 → Base64URL antes de criar subscriber
-    logStep("🔑 Chaves originais (Base64)", {
-      p256dh_length: subscription.p256dh.length,
-      p256dh_preview: subscription.p256dh.substring(0, 20) + "...",
-      auth_length: subscription.auth.length,
-      auth_preview: subscription.auth.substring(0, 20) + "...",
-      has_plus: subscription.p256dh.includes("+") || subscription.auth.includes("+"),
-      has_slash: subscription.p256dh.includes("/") || subscription.auth.includes("/"),
-      has_equals: subscription.p256dh.includes("=") || subscription.auth.includes("="),
+    // 🧩 Log detalhado das chaves antes da normalização
+    logPushStep("🔑 Chaves originais", {
+      p256dh: subscription.p256dh.substring(0, 20) + "...",
+      auth: subscription.auth.substring(0, 10) + "...",
+      containsPlus: subscription.p256dh.includes("+") || subscription.auth.includes("+"),
+      containsSlash: subscription.p256dh.includes("/") || subscription.auth.includes("/"),
+      containsEqual: subscription.p256dh.includes("=") || subscription.auth.includes("="),
     });
 
+    // ⚙️ Normalizar chaves Base64 → Base64URL antes de criar subscriber
     const normalizedKeys = {
       p256dh: normalizeBase64Url(subscription.p256dh),
       auth: normalizeBase64Url(subscription.auth),
     };
 
-    logStep("🔑 Chaves normalizadas (Base64URL)", {
-      p256dh_length: normalizedKeys.p256dh.length,
-      p256dh_preview: normalizedKeys.p256dh.substring(0, 20) + "...",
-      auth_length: normalizedKeys.auth.length,
-      auth_preview: normalizedKeys.auth.substring(0, 20) + "...",
-      changed_p256dh: normalizedKeys.p256dh !== subscription.p256dh,
-      changed_auth: normalizedKeys.auth !== subscription.auth,
+    // 🧩 Log detalhado das chaves após normalização
+    logPushStep("✅ Chaves normalizadas", {
+      p256dh: normalizedKeys.p256dh.substring(0, 20) + "...",
+      auth: normalizedKeys.auth.substring(0, 10) + "...",
+      changed:
+        normalizedKeys.p256dh !== subscription.p256dh ||
+        normalizedKeys.auth !== subscription.auth,
     });
 
     // Criar um subscriber a partir da subscription com chaves corrigidas
