@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PushNotificationTest } from '@/components/PushNotificationTest';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import {
   Table,
   TableBody,
@@ -52,6 +53,7 @@ interface NotificationHistory {
 
 export const PWADiagnosticDashboard = () => {
   const { user } = useAuthStore();
+  const { forceResubscribe, loading: pushLoading } = usePushNotifications();
   const [checks, setChecks] = useState<DiagnosticCheck[]>([
     { id: 'browser', name: 'Suporte do Navegador', status: 'pending', message: '' },
     { id: 'sw', name: 'Service Worker', status: 'pending', message: '' },
@@ -395,6 +397,30 @@ export const PWADiagnosticDashboard = () => {
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Atualizar
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            onClick={async () => {
+              const success = await forceResubscribe();
+              if (success) {
+                setTimeout(() => runDiagnostics(), 1000);
+              }
+            }}
+            disabled={pushLoading || isRunning}
+            variant="outline"
+            size="lg"
+          >
+            {pushLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Resincronizando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Resincronizar Subscription
               </>
             )}
           </Button>

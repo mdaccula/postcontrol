@@ -208,6 +208,10 @@ export const usePushNotifications = () => {
         throw new Error("VAPID_PUBLIC_KEY não configurada");
       }
 
+      // 🔎 Log fingerprint VAPID frontend
+      const vapidFingerprint = VAPID_PUBLIC_KEY.substring(0, 20) + "..." + VAPID_PUBLIC_KEY.substring(VAPID_PUBLIC_KEY.length - 10);
+      pushLog.info('🔎 VAPID frontend fingerprint', vapidFingerprint);
+
       pushLog.info('Convertendo VAPID key...');
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
 
@@ -377,6 +381,61 @@ export const usePushNotifications = () => {
     }
   };
 
+  // 🔄 Função de resincronização forçada
+  const forceResubscribe = async () => {
+    if (!isSupported || !user) {
+      toast.error("Resincronização não disponível");
+      return false;
+    }
+
+    setLoading(true);
+    pushLog.group('🔄 Force Resubscribe');
+
+    try {
+      // 1. Unsubscribe do PushManager
+      pushLog.info('Removendo subscription do navegador...');
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      
+      if (subscription) {
+        await subscription.unsubscribe();
+        pushLog.info('Subscription removida do navegador');
+      }
+
+      // 2. Remover do banco de dados
+      pushLog.info('Removendo subscriptions do banco...');
+      const { error: deleteError } = await supabase
+        .from("push_subscriptions")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (deleteError) {
+        pushLog.error('Erro ao remover do banco', deleteError);
+      } else {
+        pushLog.info('Subscriptions removidas do banco');
+      }
+
+      // 3. Criar nova subscription
+      pushLog.info('Criando nova subscription...');
+      const success = await subscribe(false);
+
+      if (success) {
+        toast.success("✅ Subscription resincronizada com sucesso!");
+        setIsSubscribed(true);
+      }
+
+      pushLog.groupEnd();
+      return success;
+    } catch (error: any) {
+      pushLog.error('Erro na resincronização', error);
+      toast.error("Erro ao resincronizar: " + error.message);
+      pushLog.groupEnd();
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     isSupported,
     isSubscribed,
@@ -384,5 +443,6 @@ export const usePushNotifications = () => {
     loading,
     subscribe,
     unsubscribe,
+    forceResubscribe,
   };
 };

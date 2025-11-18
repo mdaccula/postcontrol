@@ -101,6 +101,10 @@ async function sendWebPush(
     throw new Error("VAPID_SUBJECT deve começar com mailto:");
   }
 
+  // 🔎 Log fingerprint VAPID backend
+  const vapidFingerprint = vapidPublicKey.substring(0, 20) + "..." + vapidPublicKey.substring(vapidPublicKey.length - 10);
+  logStep("🔎 VAPID backend fingerprint", vapidFingerprint);
+
   logStep("Preparando envio Web Push", { endpoint: subscription.endpoint });
 
   try {
@@ -143,6 +147,17 @@ async function sendWebPush(
     return true;
   } catch (error: any) {
     logStep("❌ Erro ao enviar push", error);
+
+    // 🔍 Capturar corpo completo do erro FCM
+    if (error?.response) {
+      try {
+        const errorBody = await error.response.text();
+        logStep("📋 FCM response body", errorBody);
+        logStep("📋 FCM response status", `${error.response.status} ${error.response.statusText}`);
+      } catch (e) {
+        logStep("⚠️ Não foi possível ler corpo do erro FCM");
+      }
+    }
 
     // Detectar subscription expirada (código 410 Gone)
     if (error instanceof webpush.PushMessageError && error.isGone()) {
