@@ -164,7 +164,7 @@ export const AddManualSubmissionDialog = ({
       const insertData: any = {
         post_id: selectedPost,
         user_id: selectedUser,
-        submission_type: submissionType,
+        submission_type: submissionType === "post" ? "divulgacao" : submissionType,
         submitted_at: submittedDate,
         status: 'pending'
       };

@@ -1063,7 +1063,7 @@ const Submit = () => {
 
       const insertData: any = {
         user_id: user.id,
-        submission_type: submissionType,
+        submission_type: submissionType === "post" ? "divulgacao" : submissionType,
       };
 
       // Upload da imagem principal (se houver)
