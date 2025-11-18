@@ -1,5 +1,55 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as webpush from "jsr:@negrel/webpush@0.3.0";
+
+// Helper para decodificar base64url
+function base64UrlDecode(base64url: string): Uint8Array {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(base64 + padding);
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
+
+// Helper para codificar base64url
+function base64UrlEncode(bytes: Uint8Array): string {
+  const binary = String.fromCharCode(...bytes);
+  const base64 = btoa(binary);
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+// Converte chaves VAPID de string para JWK format
+async function vapidKeysToJWK(publicKeyString: string, privateKeyString: string) {
+  // Decodificar a chave pública (formato: 0x04 + X (32 bytes) + Y (32 bytes))
+  const publicKeyBytes = base64UrlDecode(publicKeyString);
+  
+  // Extrair coordenadas X e Y (pulando o byte 0x04 no início)
+  const x = publicKeyBytes.slice(1, 33);
+  const y = publicKeyBytes.slice(33, 65);
+  
+  // Decodificar a chave privada
+  const privateKeyBytes = base64UrlDecode(privateKeyString);
+  
+  // Criar JWK para chave pública
+  const publicKeyJWK: JsonWebKey = {
+    kty: "EC",
+    crv: "P-256",
+    x: base64UrlEncode(x),
+    y: base64UrlEncode(y),
+    ext: true,
+  };
+  
+  // Criar JWK para chave privada
+  const privateKeyJWK: JsonWebKey = {
+    kty: "EC",
+    crv: "P-256",
+    x: base64UrlEncode(x),
+    y: base64UrlEncode(y),
+    d: base64UrlEncode(privateKeyBytes),
+    ext: true,
+  };
+  
+  return { publicKey: publicKeyJWK, privateKey: privateKeyJWK };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,40 +92,49 @@ async function sendWebPush(
 
   logStep("Preparando envio Web Push", { endpoint: subscription.endpoint });
 
-  const message = JSON.stringify({
-    title: payload.title,
-    body: payload.body,
-    icon: "/pwa-192x192.png",
-    badge: "/pwa-192x192.png",
-    data: payload.data || {},
-  });
-
   try {
-    await sendNotification(
-      {
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: subscription.p256dh,
-          auth: subscription.auth,
-        },
+    // Converter chaves string para formato JWK
+    const jwkKeys = await vapidKeysToJWK(vapidPublicKey, vapidPrivateKey);
+    
+    // Importar as chaves VAPID
+    const vapidKeys = await webpush.importVapidKeys(jwkKeys);
+
+    // Criar o Application Server
+    const appServer = await webpush.ApplicationServer.new({
+      contactInformation: vapidSubject,
+      vapidKeys,
+    });
+
+    // Criar um subscriber a partir da subscription
+    const subscriber = appServer.subscribe({
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: subscription.p256dh,
+        auth: subscription.auth,
       },
-      message,
-      {
-        vapid: {
-          subject: vapidSubject,
-          publicKey: vapidPublicKey,
-          privateKey: vapidPrivateKey,
-        },
-        ttl: 86400, // 24 horas
-      },
-    );
+    });
+
+    // Preparar a mensagem
+    const message = JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      icon: "/pwa-192x192.png",
+      badge: "/pwa-192x192.png",
+      data: payload.data || {},
+    });
+
+    // Enviar a mensagem
+    await subscriber.pushTextMessage(message, {
+      ttl: 86400, // 24 horas
+    });
 
     logStep("✅ Push enviado com sucesso");
     return true;
   } catch (error: any) {
     logStep("❌ Erro ao enviar push", error);
 
-    if (error.message?.includes("410") || error.statusCode === 410) {
+    // Detectar subscription expirada (código 410 Gone)
+    if (error instanceof webpush.PushMessageError && error.isGone()) {
       throw new Error("SUBSCRIPTION_EXPIRED");
     }
 
