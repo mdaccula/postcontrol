@@ -249,6 +249,11 @@ export const usePushNotifications = () => {
       pushLog.info('✅ Subscription completa', `${duration}ms`);
       pushLog.groupEnd();
 
+      // Feedback visual para o usuário
+      if (!isAutoRecovery) {
+        toast.success("🔔 Notificações ativadas com sucesso!");
+      }
+
       setIsSubscribed(true);
       autoRecoveryAttempts.current = 0; // Reset contador
       
@@ -349,7 +354,7 @@ export const usePushNotifications = () => {
       }
 
       setIsSubscribed(false);
-      toast.success("Notificações push desativadas");
+      toast.info("🔕 Notificações desativadas");
       return true;
     } catch (error) {
       console.error("[usePushNotifications] Erro ao desinscrever:", error);

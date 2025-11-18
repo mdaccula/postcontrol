@@ -24,70 +24,6 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PUSH-NOTIFICATION] ${step}`, details || "");
 };
 
-// Função auxiliar para conversão base64url
-function base64UrlToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-  
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-// Criar JWT para VAPID
-async function createVapidAuthHeader(
-  audience: string,
-  subject: string,
-  publicKey: string,
-  privateKey: string
-): Promise<string> {
-  const header = {
-    typ: "JWT",
-    alg: "ES256"
-  };
-
-  const jwtPayload = {
-    aud: audience,
-    exp: Math.floor(Date.now() / 1000) + 12 * 60 * 60, // 12 horas
-    sub: subject
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const payloadB64 = btoa(JSON.stringify(jwtPayload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  
-  const unsignedToken = `${headerB64}.${payloadB64}`;
-  
-  // Importar chave privada
-  const privateKeyBytes = base64UrlToUint8Array(privateKey);
-  const arrayBuffer = new Uint8Array(privateKeyBytes).buffer as ArrayBuffer;
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    arrayBuffer,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-
-  // Assinar
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    cryptoKey,
-    encoder.encode(unsignedToken)
-  );
-
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-  return `${unsignedToken}.${signatureB64}`;
-}
-
 async function sendWebPush(
   subscription: PushSubscription,
   payload: { title: string; body: string; data?: Record<string, any> },
@@ -101,12 +37,12 @@ async function sendWebPush(
   }
 
   if (!vapidSubject.startsWith('mailto:')) {
-    throw new Error('VAPID_SUBJECT deve começar com mailto: (ex: mailto:seu@email.com)');
+    throw new Error('VAPID_SUBJECT deve começar com mailto: (ex: mailto:suporte@dominio.com)');
   }
 
   logStep("Preparando envio Web Push", { endpoint: subscription.endpoint });
 
-  // Preparar payload
+  // Preparar payload da notificação
   const message = JSON.stringify({
     title: payload.title,
     body: payload.body,
@@ -116,45 +52,40 @@ async function sendWebPush(
   });
 
   try {
-    // Extrair audience do endpoint
-    const url = new URL(subscription.endpoint);
-    const audience = `${url.protocol}//${url.host}`;
+    // Import dinâmico para evitar crash na inicialização
+    const wpModule = await import("https://esm.sh/web-push@3.6.7");
+    const webpush = wpModule.default ?? wpModule;
 
-    // Criar token VAPID
-    const vapidToken = await createVapidAuthHeader(
-      audience,
+    // Configurar VAPID
+    webpush.setVapidDetails(
       vapidSubject,
       vapidPublicKey,
       vapidPrivateKey
     );
 
-    // Enviar notificação via HTTP POST
-    const response = await fetch(subscription.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
-        "Authorization": `vapid t=${vapidToken}, k=${vapidPublicKey}`,
-        "TTL": "86400",
+    // Enviar usando biblioteca (faz encriptação aes128gcm + VAPID automaticamente)
+    await webpush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: subscription.p256dh,
+          auth: subscription.auth,
+        },
       },
-      body: message,
-    });
-
-    if (response.status === 410) {
-      throw new Error("SUBSCRIPTION_EXPIRED");
-    }
-
-    if (!response.ok) {
-      throw new Error(`Push failed: ${response.status} ${response.statusText}`);
-    }
+      message,
+      {
+        TTL: 86400, // 24 horas
+      }
+    );
 
     logStep("✅ Push enviado com sucesso");
     return true;
   } catch (error: any) {
     logStep("❌ Erro ao enviar push", error);
 
-    if (error.message === "SUBSCRIPTION_EXPIRED") {
-      throw error;
+    // Detectar subscription expirada (código 410 Gone)
+    if (error.statusCode === 410 || error.message?.includes('410')) {
+      throw new Error("SUBSCRIPTION_EXPIRED");
     }
 
     throw error;
