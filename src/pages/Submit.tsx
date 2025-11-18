@@ -551,7 +551,7 @@ const Submit = () => {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("event_id", eventId)
-      .eq("submission_type", "post");
+      .eq("submission_type", "divulgacao");
 
     if (error) {
       console.error("Erro ao carregar contador de postagens:", error);

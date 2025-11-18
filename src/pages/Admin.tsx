@@ -1271,7 +1271,7 @@ const Admin = () => {
         .select("user_id, post_id, posts!inner(event_id)")
         .in("user_id", userIds)
         .eq("status", "approved")
-        .eq("submission_type", "post");
+        .eq("submission_type", "divulgacao");
 
       // Filtrar por evento específico se não for "all"
       if (submissionEventFilter !== "all") {
@@ -1395,7 +1395,7 @@ const Admin = () => {
         const postNumber = postsMap[sub.id]?.post_number || 0;
 
         return {
-          tipo: sub.submission_type === "post" ? "Postagem" : "Venda",
+          tipo: sub.submission_type === "divulgacao" ? "Divulgação" : "Venda",
           evento: eventTitle,
           numero_postagem: postNumber,
           nome: sub.profiles?.full_name || "N/A",
@@ -2283,15 +2283,15 @@ const Admin = () => {
 
                                                if (!confirma) return;
 
-                                               try {
-                                                 const { error } = await sb
-                                                   .from("submissions")
-                                                   .update({ 
-                                                     event_id: newEventId,
-                                                     post_id: null,
-                                                     submission_type: "post"
-                                                   })
-                                                   .eq("id", submission.id);
+                                                try {
+                                                  const { error } = await sb
+                                                    .from("submissions")
+                                                    .update({ 
+                                                      event_id: newEventId,
+                                                      post_id: null,
+                                                      submission_type: "divulgacao"
+                                                    })
+                                                    .eq("id", submission.id);
 
                                                  if (error) throw error;
 
@@ -2382,7 +2382,7 @@ const Admin = () => {
                                                 // Atualizar post_id e submission_type automaticamente
                                                 const updates: any = { 
                                                   post_id: newPostId,
-                                                  submission_type: "post"
+                                                  submission_type: "divulgacao"
                                                 };
 
                                                 const { error } = await sb
