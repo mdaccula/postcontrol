@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -59,6 +60,7 @@ export const PWADiagnosticDashboard = () => {
   ]);
   
   const [isRunning, setIsRunning] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [swStatus, setSwStatus] = useState<{
     state: string;
     scope: string;
@@ -254,6 +256,60 @@ export const PWADiagnosticDashboard = () => {
     }
   };
 
+  const sendTestNotification = async () => {
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSendingTest(true);
+    
+    try {
+      console.log('🧪 [TESTE] Enviando notificação teste...');
+      
+      // Chamar Edge Function
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          userId: user.id,
+          title: '🧪 Notificação de Teste',
+          body: 'Se você viu isso, o sistema está funcionando! 🎉',
+          data: {
+            type: 'test',
+            timestamp: new Date().toISOString(),
+            url: '/push-diagnostic'
+          },
+          notificationType: 'test'
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('✅ [TESTE] Resposta:', data);
+      
+      toast({
+        title: '✅ Notificação enviada!',
+        description: `${data.sent || 0} dispositivo(s) notificado(s)`,
+      });
+      
+      // Recarregar histórico após 2 segundos
+      setTimeout(() => loadNotificationHistory(), 2000);
+      
+    } catch (error: any) {
+      console.error('❌ [TESTE] Erro:', error);
+      toast({
+        title: 'Erro ao enviar notificação',
+        description: error.message || 'Verifique os logs',
+        variant: 'destructive'
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -295,23 +351,37 @@ export const PWADiagnosticDashboard = () => {
             Status completo do sistema de notificações push
           </p>
         </div>
-        <Button 
-          onClick={runDiagnostics} 
-          disabled={isRunning}
-          size="lg"
-        >
-          {isRunning ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Verificando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Atualizar
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={runDiagnostics} 
+            disabled={isRunning}
+            size="lg"
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Atualizar
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            onClick={sendTestNotification} 
+            disabled={sendingTest || !user}
+            variant="outline"
+            size="lg"
+            className="gap-2"
+          >
+            {sendingTest && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Bell className="h-4 w-4" />
+            {sendingTest ? 'Enviando...' : 'Enviar Teste Real'}
+          </Button>
+        </div>
       </div>
 
       {/* Status Summary */}
