@@ -1,10 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as webpush from "https://esm.sh/web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -25,6 +24,70 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PUSH-NOTIFICATION] ${step}`, details || "");
 };
 
+// Função auxiliar para conversão base64url
+function base64UrlToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Criar JWT para VAPID
+async function createVapidAuthHeader(
+  audience: string,
+  subject: string,
+  publicKey: string,
+  privateKey: string
+): Promise<string> {
+  const header = {
+    typ: "JWT",
+    alg: "ES256"
+  };
+
+  const jwtPayload = {
+    aud: audience,
+    exp: Math.floor(Date.now() / 1000) + 12 * 60 * 60, // 12 horas
+    sub: subject
+  };
+
+  const encoder = new TextEncoder();
+  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const payloadB64 = btoa(JSON.stringify(jwtPayload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+  
+  // Importar chave privada
+  const privateKeyBytes = base64UrlToUint8Array(privateKey);
+  const arrayBuffer = new Uint8Array(privateKeyBytes).buffer as ArrayBuffer;
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    arrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  // Assinar
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    cryptoKey,
+    encoder.encode(unsignedToken)
+  );
+
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  return `${unsignedToken}.${signatureB64}`;
+}
+
 async function sendWebPush(
   subscription: PushSubscription,
   payload: { title: string; body: string; data?: Record<string, any> },
@@ -43,9 +106,6 @@ async function sendWebPush(
 
   logStep("Preparando envio Web Push", { endpoint: subscription.endpoint });
 
-  // Configurar VAPID details
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
-
   // Preparar payload
   const message = JSON.stringify({
     title: payload.title,
@@ -55,25 +115,46 @@ async function sendWebPush(
     data: payload.data || {},
   });
 
-  // Montar objeto de subscription no formato esperado pelo web-push
-  const pushSubscription = {
-    endpoint: subscription.endpoint,
-    keys: {
-      p256dh: subscription.p256dh,
-      auth: subscription.auth,
-    },
-  };
-
   try {
-    await webpush.sendNotification(pushSubscription, message);
+    // Extrair audience do endpoint
+    const url = new URL(subscription.endpoint);
+    const audience = `${url.protocol}//${url.host}`;
+
+    // Criar token VAPID
+    const vapidToken = await createVapidAuthHeader(
+      audience,
+      vapidSubject,
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    // Enviar notificação via HTTP POST
+    const response = await fetch(subscription.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Encoding": "aes128gcm",
+        "Authorization": `vapid t=${vapidToken}, k=${vapidPublicKey}`,
+        "TTL": "86400",
+      },
+      body: message,
+    });
+
+    if (response.status === 410) {
+      throw new Error("SUBSCRIPTION_EXPIRED");
+    }
+
+    if (!response.ok) {
+      throw new Error(`Push failed: ${response.status} ${response.statusText}`);
+    }
+
     logStep("✅ Push enviado com sucesso");
     return true;
   } catch (error: any) {
     logStep("❌ Erro ao enviar push", error);
 
-    // Se erro 410 (Gone), significa que o endpoint expirou
-    if (error.statusCode === 410) {
-      throw new Error("SUBSCRIPTION_EXPIRED");
+    if (error.message === "SUBSCRIPTION_EXPIRED") {
+      throw error;
     }
 
     throw error;
@@ -155,13 +236,13 @@ serve(async (req) => {
     // Filtrar apenas subscriptions usadas nos últimos 30 dias
     const now = new Date();
     const validSubscriptions = subscriptions.filter(sub => {
-      if (!sub.last_used_at) return true; // Manter se não tem data registrada
+      if (!sub.last_used_at) return true;
       
       const lastUsed = new Date(sub.last_used_at);
       const diffMs = now.getTime() - lastUsed.getTime();
       const diffDays = diffMs / (1000 * 60 * 60 * 24);
       
-      return diffDays < 30; // Apenas últimos 30 dias
+      return diffDays < 30;
     });
 
     logStep(`📊 Filtro de uso recente`, { 
