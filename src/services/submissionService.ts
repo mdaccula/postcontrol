@@ -132,133 +132,83 @@ export async function getSubmissions(
 }
 
 /**
- * 🆕 SPRINT 2: Busca contadores agregados de submissões por evento
- * @param agencyId - ID da agência para filtrar (opcional)
- * @returns Record com event_id como chave e contagem como valor
+ * 🆕 SPRINT 2: Obter contadores de submissões por evento
+ * Usa RPC otimizada no banco de dados para agregação direta
  */
 export async function getSubmissionCountsByEvent(
   agencyId?: string
 ): Promise<Record<string, number>> {
   try {
-    console.log('📊 [DEBUG-EVENT-COUNTER] ========== INICIANDO ==========');
-    console.log('📊 [DEBUG-EVENT-COUNTER] Agency ID:', agencyId);
-
-    // ✅ CORREÇÃO: Usar event_id diretamente da tabela submissions
-    let query = supabase
-      .from('submissions')
-      .select('id, event_id, agency_id');
-
-    if (agencyId) {
-      query = query.eq('agency_id', agencyId);
+    if (!agencyId) {
+      console.warn('⚠️ [COUNTS-RPC] Agency ID não fornecido');
+      return {};
     }
 
-    const { data, error } = await query;
+    const startTime = performance.now();
 
-    console.log('📊 [DEBUG-EVENT-COUNTER] Total de submissões retornadas:', data?.length);
-    console.log('📊 [DEBUG-EVENT-COUNTER] Primeiras 5 submissões:', data?.slice(0, 5));
+    // ✅ Chamar RPC do banco de dados
+    const { data, error } = await supabase
+      .rpc('get_submission_counts_by_event', { p_agency_id: agencyId });
+
+    const endTime = performance.now();
+    console.log(`⏱️ [COUNTS-RPC] get_submission_counts_by_event: ${(endTime - startTime).toFixed(2)} ms`);
 
     if (error) {
-      console.error('❌ [DEBUG-EVENT-COUNTER] Erro ao buscar contadores por evento:', error);
-      throw error;
+      console.error('❌ [COUNTS-RPC] Erro ao buscar contadores por evento:', error);
+      return {};
     }
 
-    // 🔍 DEBUG: Buscar evento Sasha & John Digweed especificamente
-    const sashaEventId = '3b6dbdcd-cc78-448d-9035-0cb3d2371576';
-    const sashaSubmissions = data?.filter((s: any) => s.event_id === sashaEventId);
-    console.log('📊 [DEBUG-EVENT-COUNTER] ========== EVENTO SASHA ==========');
-    console.log('📊 [DEBUG-EVENT-COUNTER] Event ID Sasha:', sashaEventId);
-    console.log('📊 [DEBUG-EVENT-COUNTER] Submissões encontradas para Sasha:', sashaSubmissions?.length);
-    console.log('📊 [DEBUG-EVENT-COUNTER] Detalhes das submissões Sasha:', sashaSubmissions);
-
-    // Agregar contagens por evento
+    // ✅ Mapear para Record<string, number>
     const counts: Record<string, number> = {};
-    data?.forEach((submission: any) => {
-      const eventId = submission.event_id;
-      if (eventId) {
-        counts[eventId] = (counts[eventId] || 0) + 1;
-      } else {
-        console.warn('⚠️ [DEBUG-EVENT-COUNTER] Submissão sem event_id:', submission);
-      }
+    data?.forEach((row: { event_id: string; submission_count: number }) => {
+      counts[row.event_id] = row.submission_count;
     });
 
-    console.log('✅ [DEBUG-EVENT-COUNTER] ========== RESULTADO FINAL ==========');
-    console.log('✅ [DEBUG-EVENT-COUNTER] Total de eventos com submissões:', Object.keys(counts).length);
-    console.log('✅ [DEBUG-EVENT-COUNTER] Contador para evento Sasha:', counts[sashaEventId]);
-    console.log('✅ [DEBUG-EVENT-COUNTER] Todos os contadores:', counts);
-
+    console.log('✅ [COUNTS-RPC] Eventos com submissões:', Object.keys(counts).length);
     return counts;
   } catch (error) {
-    console.error('❌ [DEBUG-EVENT-COUNTER] Erro na função:', error);
+    console.error('❌ [COUNTS-RPC] Erro na função getSubmissionCountsByEvent:', error);
     return {};
   }
 }
 
 /**
- * 🆕 SPRINT 2: Busca contadores agregados de submissões por post
- * @param agencyId - ID da agência para filtrar (opcional)
- * @returns Record com post_id como chave e contagem como valor
+ * 🆕 SPRINT 2: Obter contadores de submissões por post
+ * Usa RPC otimizada no banco de dados para agregação direta
  */
 export async function getSubmissionCountsByPost(
   agencyId?: string
 ): Promise<Record<string, number>> {
   try {
-    console.log('📊 [DEBUG-POST-COUNTER] ========== INICIANDO ==========');
-    console.log('📊 [DEBUG-POST-COUNTER] Agency ID:', agencyId);
-
-    // ✅ CORREÇÃO: Query direta sem JOINs - apenas os dados necessários
-    let query = supabase
-      .from('submissions')
-      .select('id, post_id, agency_id');
-
-    if (agencyId) {
-      query = query.eq('agency_id', agencyId);
+    if (!agencyId) {
+      console.warn('⚠️ [COUNTS-RPC] Agency ID não fornecido');
+      return {};
     }
 
-    const { data, error } = await query;
+    const startTime = performance.now();
 
-    console.log('📊 [DEBUG-POST-COUNTER] Total de submissões retornadas:', data?.length);
-    console.log('📊 [DEBUG-POST-COUNTER] Primeiras 5 submissões:', data?.slice(0, 5));
+    // ✅ Chamar RPC do banco de dados
+    const { data, error } = await supabase
+      .rpc('get_submission_counts_by_post', { p_agency_id: agencyId });
+
+    const endTime = performance.now();
+    console.log(`⏱️ [COUNTS-RPC] get_submission_counts_by_post: ${(endTime - startTime).toFixed(2)} ms`);
 
     if (error) {
-      console.error('❌ [DEBUG-POST-COUNTER] Erro ao buscar contadores por post:', error);
-      throw error;
+      console.error('❌ [COUNTS-RPC] Erro ao buscar contadores por post:', error);
+      return {};
     }
 
-    // 🔍 DEBUG: Posts do evento Sasha & John Digweed
-    const sashaPost1 = '8ec034e6-1a36-4cd6-beaf-05df2b7c611c';
-    const sashaPost2 = '52130432-54a0-47cf-ba76-2a69d719f4d3';
-    
-    const post1Subs = data?.filter((s: any) => s.post_id === sashaPost1);
-    const post2Subs = data?.filter((s: any) => s.post_id === sashaPost2);
-    
-    console.log('📊 [DEBUG-POST-COUNTER] ========== POSTS SASHA ==========');
-    console.log('📊 [DEBUG-POST-COUNTER] Post #1 ID:', sashaPost1);
-    console.log('📊 [DEBUG-POST-COUNTER] Submissões Post #1:', post1Subs?.length);
-    console.log('📊 [DEBUG-POST-COUNTER] Detalhes Post #1:', post1Subs);
-    console.log('📊 [DEBUG-POST-COUNTER] Post #2 ID:', sashaPost2);
-    console.log('📊 [DEBUG-POST-COUNTER] Submissões Post #2:', post2Subs?.length);
-    console.log('📊 [DEBUG-POST-COUNTER] Detalhes Post #2:', post2Subs);
-
-    // Agregar contagens localmente (muito mais rápido que no DB)
+    // ✅ Mapear para Record<string, number>
     const counts: Record<string, number> = {};
-    data?.forEach((submission: any) => {
-      const postId = submission.post_id;
-      if (postId) {
-        counts[postId] = (counts[postId] || 0) + 1;
-      } else {
-        console.warn('⚠️ [DEBUG-POST-COUNTER] Submissão sem post_id:', submission);
-      }
+    data?.forEach((row: { post_id: string; submission_count: number }) => {
+      counts[row.post_id] = row.submission_count;
     });
 
-    console.log('✅ [DEBUG-POST-COUNTER] ========== RESULTADO FINAL ==========');
-    console.log('✅ [DEBUG-POST-COUNTER] Total de posts com submissões:', Object.keys(counts).length);
-    console.log('✅ [DEBUG-POST-COUNTER] Contador Post #1 Sasha:', counts[sashaPost1]);
-    console.log('✅ [DEBUG-POST-COUNTER] Contador Post #2 Sasha:', counts[sashaPost2]);
-    console.log('✅ [DEBUG-POST-COUNTER] Todos os contadores:', counts);
-
+    console.log('✅ [COUNTS-RPC] Posts com submissões:', Object.keys(counts).length);
     return counts;
   } catch (error) {
-    console.error('❌ [DEBUG-POST-COUNTER] Erro na função:', error);
+    console.error('❌ [COUNTS-RPC] Erro na função getSubmissionCountsByPost:', error);
     return {};
   }
 }

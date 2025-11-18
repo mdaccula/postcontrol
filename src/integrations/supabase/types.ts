@@ -1492,6 +1492,20 @@ export type Database = {
         }[]
       }
       get_current_user_agency_id: { Args: never; Returns: string }
+      get_submission_counts_by_event: {
+        Args: { p_agency_id: string }
+        Returns: {
+          event_id: string
+          submission_count: number
+        }[]
+      }
+      get_submission_counts_by_post: {
+        Args: { p_agency_id: string }
+        Returns: {
+          post_id: string
+          submission_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
