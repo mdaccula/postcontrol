@@ -109,7 +109,7 @@ export const CSVImportExport = ({
     let query = supabase
       .from("submissions")
       .select(`id, submitted_at, status, user_id, posts!inner(post_number, event_id, events!inner(title)), profiles!inner(full_name, email, instagram, gender, followers_range)`)
-      .eq("submission_type", "post")
+      .eq("submission_type", "divulgacao")
       .order("submitted_at", { ascending: false });
 
     if (genderFilter !== "all") query = query.eq('profiles.gender', genderFilter);

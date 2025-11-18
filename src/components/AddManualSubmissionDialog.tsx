@@ -169,7 +169,7 @@ export const AddManualSubmissionDialog = ({
         status: 'pending'
       };
 
-      if (submissionType === "post") {
+      if (submissionType === "divulgacao") {
         insertData.screenshot_path = fileName;
       } else {
         insertData.sales_proof_url = fileName;
