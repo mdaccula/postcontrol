@@ -86,9 +86,13 @@ export const usePushNotifications = () => {
             pushLog.warn('Auto-recovery iniciado', `Tentativa ${autoRecoveryAttempts.current + 1}/${MAX_AUTO_RECOVERY_ATTEMPTS}`);
             autoRecoveryAttempts.current++;
             
-            setTimeout(() => {
-              subscribe(true);
-            }, 1000);
+            setTimeout(async () => {
+              const registration = await navigator.serviceWorker.ready;
+              const currentSub = await registration.pushManager.getSubscription();
+              if (!currentSub && autoRecoveryAttempts.current < MAX_AUTO_RECOVERY_ATTEMPTS) {
+                subscribe(true);
+              }
+            }, 5000); // aguarda 5 segundos antes de tentar novamente
           }
         } else {
           setIsSubscribed(false);
@@ -98,9 +102,13 @@ export const usePushNotifications = () => {
             pushLog.warn('Subscription perdida detectada', 'Iniciando auto-recovery');
             autoRecoveryAttempts.current++;
             
-            setTimeout(() => {
-              subscribe(true);
-            }, 1000);
+            setTimeout(async () => {
+              const registration = await navigator.serviceWorker.ready;
+              const currentSub = await registration.pushManager.getSubscription();
+              if (!currentSub && autoRecoveryAttempts.current < MAX_AUTO_RECOVERY_ATTEMPTS) {
+                subscribe(true);
+              }
+            }, 5000); // aguarda 5 segundos antes de tentar novamente
           }
         }
         pushLog.groupEnd();
@@ -248,6 +256,8 @@ export const usePushNotifications = () => {
         toast.success("✅ Notificações ativadas!", {
           description: `Configurado em ${duration}ms`,
         });
+        // Limpar subscriptions antigas em background
+        cleanupOldSubscriptions();
       } else {
         toast.success("🔄 Subscription recuperada automaticamente");
       }
@@ -267,6 +277,56 @@ export const usePushNotifications = () => {
       return false;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cleanupOldSubscriptions = async () => {
+    if (!user) return;
+    
+    try {
+      pushLog.group('Limpando subscriptions antigas');
+      
+      // Buscar todas as subscriptions do usuário
+      const { data: subs } = await supabase
+        .from("push_subscriptions")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (!subs || subs.length === 0) {
+        pushLog.info('Nenhuma subscription para limpar');
+        pushLog.groupEnd();
+        return;
+      }
+
+      // Obter subscription atual do navegador
+      const registration = await navigator.serviceWorker.ready;
+      const currentSub = await registration.pushManager.getSubscription();
+
+      if (!currentSub) {
+        pushLog.warn('Nenhuma subscription ativa no navegador');
+        pushLog.groupEnd();
+        return;
+      }
+
+      // Identificar subscriptions inválidas (diferentes da atual)
+      const invalidSubs = subs.filter(sub => sub.endpoint !== currentSub.endpoint);
+      
+      if (invalidSubs.length > 0) {
+        pushLog.info(`Removendo ${invalidSubs.length} subscription(s) inválida(s)`);
+        
+        await supabase
+          .from("push_subscriptions")
+          .delete()
+          .in("id", invalidSubs.map(s => s.id));
+        
+        pushLog.info(`✅ ${invalidSubs.length} subscription(s) removida(s)`);
+      } else {
+        pushLog.info('✅ Todas as subscriptions estão válidas');
+      }
+      
+      pushLog.groupEnd();
+    } catch (error) {
+      pushLog.error('Erro ao limpar subscriptions', error);
     }
   };
 

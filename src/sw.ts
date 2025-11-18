@@ -35,6 +35,7 @@ self.addEventListener('push', (event) => {
   const startTime = performance.now();
   
   console.group('🔔 [SW PUSH] Push Recebido');
+  console.log('🔔 Push recebido em', new Date().toISOString(), 'dados:', event.data?.text());
   console.log('⏰ Timestamp:', new Date().toISOString());
   console.log('📦 Event data exists:', !!event.data);
   console.log('🔢 Payload size:', event.data ? event.data.text().length : 0, 'bytes');
@@ -61,8 +62,9 @@ self.addEventListener('push', (event) => {
           hasIcon: !!notificationData.icon
         });
       } catch (error) {
-        console.error('❌ Parse error:', error);
-        console.log('⚠️ Fallback: Usando dados padrão');
+        console.error('❌ Parse error crítico:', error);
+        console.groupEnd();
+        return; // ❌ Não exibir notificação com dados corrompidos
       }
     } else {
       console.log('⚠️ Nenhum payload recebido, usando notificação padrão');

@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as webpush from "https://esm.sh/web-push@3.6.7";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://post.infoprolab.com.br",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -34,6 +34,10 @@ async function sendWebPush(
 
   if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
     throw new Error("Chaves VAPID não configuradas");
+  }
+
+  if (!vapidSubject.startsWith('mailto:')) {
+    throw new Error('VAPID_SUBJECT deve começar com mailto: (ex: mailto:seu@email.com)');
   }
 
   logStep("Preparando envio Web Push", { endpoint: subscription.endpoint });
@@ -144,11 +148,37 @@ serve(async (req) => {
       });
     }
 
-    logStep(`📨 Enviando para ${subscriptions.length} dispositivo(s)`);
+    // Filtrar apenas subscriptions usadas nos últimos 30 dias
+    const now = new Date();
+    const validSubscriptions = subscriptions.filter(sub => {
+      if (!sub.last_used_at) return true; // Manter se não tem data registrada
+      
+      const lastUsed = new Date(sub.last_used_at);
+      const diffMs = now.getTime() - lastUsed.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      
+      return diffDays < 30; // Apenas últimos 30 dias
+    });
 
-    // Enviar para todas as inscrições
+    logStep(`📊 Filtro de uso recente`, { 
+      total: subscriptions.length, 
+      válidas: validSubscriptions.length,
+      ignoradas: subscriptions.length - validSubscriptions.length 
+    });
+
+    if (validSubscriptions.length === 0) {
+      logStep("⚠️ Nenhuma subscription válida (todas antigas)");
+      return new Response(JSON.stringify({ message: "Nenhuma subscription válida", sent: 0 }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    logStep(`📨 Enviando para ${validSubscriptions.length} dispositivo(s)`);
+
+    // Enviar para todas as inscrições válidas
     const results = await Promise.allSettled(
-      subscriptions.map((sub) =>
+      validSubscriptions.map((sub) =>
         sendWebPush(
           {
             endpoint: sub.endpoint,
@@ -176,7 +206,7 @@ serve(async (req) => {
 
     if (invalidIndexes.length > 0) {
       logStep(`🗑️ Removendo ${invalidIndexes.length} inscrição(ões) inválida(s)`);
-      const invalidEndpoints = invalidIndexes.map((i) => subscriptions[i].endpoint);
+      const invalidEndpoints = invalidIndexes.map((i) => validSubscriptions[i].endpoint);
       await supabase.from("push_subscriptions").delete().in("endpoint", invalidEndpoints);
     }
 

@@ -36,3 +36,12 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </HelmetProvider>
 );
+
+// Fallback manual para registro do SW
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .then(registration => console.log('✅ SW registrado manualmente:', registration.scope))
+      .catch(error => console.error('❌ Falha no registro manual do SW:', error));
+  });
+}
