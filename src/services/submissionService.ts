@@ -79,9 +79,9 @@ export async function getSubmissions(
     if (status) {
       query = query.eq('status', status);
     }
-    // 🆕 SPRINT 2: Filtro por tipo de post (considerar AMBOS submission_type E posts.post_type)
+    // 🆕 SPRINT 2: Filtro por tipo de post
     if (postType && postType !== 'all') {
-      query = query.or(`submission_type.eq.${postType},posts.post_type.eq.${postType}`);
+      query = query.eq('submission_type', postType);
     }
     // 🆕 Filtro por status ativo do evento
     if (isActive !== undefined) {
