@@ -66,7 +66,7 @@ export async function getSubmissions(
     .select(
       `
       *,
-      posts!inner(id, post_number, deadline, event_id, post_type),
+      posts(id, post_number, deadline, event_id, post_type),
       events!inner(id, title, is_active)
     `,
       { count: 'exact' }
@@ -79,9 +79,9 @@ export async function getSubmissions(
     if (status) {
       query = query.eq('status', status);
     }
-    // 🆕 SPRINT 2: Filtro por tipo de post (usar submission_type da tabela submissions)
+    // 🆕 SPRINT 2: Filtro por tipo de post (considerar AMBOS submission_type E posts.post_type)
     if (postType && postType !== 'all') {
-      query = query.eq('submission_type', postType);
+      query = query.or(`submission_type.eq.${postType},posts.post_type.eq.${postType}`);
     }
     // 🆕 Filtro por status ativo do evento
     if (isActive !== undefined) {

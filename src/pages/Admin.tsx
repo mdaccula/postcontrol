@@ -2335,10 +2335,10 @@ const Admin = () => {
                                               if (newPostId === "none") return;
 
                                               // 🆕 FASE 4: Tratar seleção de venda especial
-                                              if (newPostId === "__SALE__") {
-                                                const confirma = window.confirm(
-                                                  `Deseja alterar para "Comprovante de Venda"?\n\nEsta ação não pode ser desfeita.`,
-                                                );
+                                               if (newPostId === "__SALE__") {
+                                                 const confirma = window.confirm(
+                                                   `Deseja alterar para "Vendas"?\n\nEsta ação não pode ser desfeita.`,
+                                                 );
 
                                                 if (!confirma) return;
 
@@ -2356,10 +2356,10 @@ const Admin = () => {
                                                      })
                                                      .eq("id", submission.id);
 
-                                                   if (error) throw error;
+                                                    if (error) throw error;
 
-                                                   toast.success(`✅ Post alterado para: Comprovante de Venda`);
-                                                   refetchSubmissions();
+                                                    toast.success(`✅ Post alterado para: Vendas`);
+                                                    refetchSubmissions();
                                                  } catch (err: any) {
                                                    console.error("Erro ao atualizar post:", err);
                                                    toast.error(`❌ Erro: ${err.message}`);
@@ -2371,12 +2371,12 @@ const Admin = () => {
                                               const postAtual = posts.find((p) => p.id === submission.post_id);
                                               const postNovo = posts.find((p) => p.id === newPostId);
 
-                                              const nomeAtual = postAtual
-                                                ? formatPostName(postAtual.post_type, postAtual.post_number)
-                                                : "Comprovante de Venda";
-                                              const nomeNovo = postNovo
-                                                ? formatPostName(postNovo.post_type, postNovo.post_number)
-                                                : "Comprovante de Venda";
+                                               const nomeAtual = postAtual
+                                                 ? formatPostName(postAtual.post_type, postAtual.post_number)
+                                                 : "Vendas";
+                                               const nomeNovo = postNovo
+                                                 ? formatPostName(postNovo.post_type, postNovo.post_number)
+                                                 : "Vendas";
 
                                               const confirma = window.confirm(
                                                 `Deseja alterar o post de "${nomeAtual}" para "${nomeNovo}"?\n\nEsta ação não pode ser desfeita.`,
