@@ -17,6 +17,20 @@ function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
     .replace(/=+$/, ''); // Remove padding
 }
 
+// 🔑 Helper para extrair a chave VAPID de uma subscription
+function extractVapidKeyFromSubscription(subscription: PushSubscription): string | null {
+  try {
+    const options = subscription.options;
+    if (options && options.applicationServerKey) {
+      return arrayBufferToBase64Url(options.applicationServerKey);
+    }
+    return null;
+  } catch (error) {
+    console.error('❌ Erro ao extrair VAPID key:', error);
+    return null;
+  }
+}
+
 // 🔍 FASE 5: Logger centralizado
 const pushLog = {
   group: (title: string) => console.group(`🔔 [Push] ${title}`),
@@ -81,6 +95,37 @@ export const usePushNotifications = () => {
         pushLog.info('PushManager.getSubscription()', subscription ? 'Subscription encontrada' : 'Nenhuma subscription');
 
         if (subscription) {
+          // 🔑 Verificar se a chave VAPID mudou
+          const currentVapidKey = extractVapidKeyFromSubscription(subscription);
+          
+          if (currentVapidKey && currentVapidKey !== VAPID_PUBLIC_KEY) {
+            pushLog.warn('🔄 VAPID Key mudou! Forçando re-subscribe...', {
+              antiga: currentVapidKey.substring(0, 20) + '...',
+              nova: VAPID_PUBLIC_KEY.substring(0, 20) + '...'
+            });
+            
+            // Remover subscription antiga
+            await subscription.unsubscribe();
+            
+            // Limpar do banco
+            await supabase
+              .from("push_subscriptions")
+              .delete()
+              .eq("user_id", user.id)
+              .eq("endpoint", subscription.endpoint);
+            
+            setIsSubscribed(false);
+            pushLog.info('Subscription antiga removida. Usuário precisa fazer re-subscribe.');
+            pushLog.groupEnd();
+            
+            // Tentar fazer re-subscribe automático se a permissão já foi concedida
+            if (Notification.permission === 'granted') {
+              pushLog.info('Tentando re-subscribe automático...');
+              setTimeout(() => subscribe(true), 1000);
+            }
+            return;
+          }
+
           // Buscar todas as inscrições do usuário e filtrar manualmente
           const { data: subscriptions } = await supabase
             .from("push_subscriptions")
