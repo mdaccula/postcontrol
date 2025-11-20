@@ -108,7 +108,7 @@ export const CSVImportExport = ({
   const handleExportSubmissions = async () => {
     let query = supabase
       .from("submissions")
-      .select(`id, submitted_at, status, user_id, posts!inner(post_number, event_id, events!inner(title)), profiles!inner(full_name, email, instagram, gender, followers_range)`)
+      .select(`id, submitted_at, status, user_id, posts!inner(post_number, event_id, events!inner(title)), profiles!inner(full_name, email, instagram, phone, gender, followers_range)`)
       .eq("submission_type", "divulgacao")
       .order("submitted_at", { ascending: false });
 
@@ -126,6 +126,7 @@ export const CSVImportExport = ({
       usuario: sub.profiles.full_name,
       email: sub.profiles.email,
       instagram: sub.profiles.instagram,
+      telefone: sub.profiles.phone || "Não informado",
       sexo: sub.profiles.gender || "Não informado",
       seguidores: sub.profiles.followers_range || "Não informado",
       evento: sub.posts.events.title,
