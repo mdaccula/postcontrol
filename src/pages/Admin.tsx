@@ -1125,6 +1125,7 @@ const Admin = () => {
     { key: "nome", label: "Nome" },
     { key: "instagram", label: "Instagram" },
     { key: "email", label: "Email" },
+    { key: "telefone", label: "Telefone" },
     { key: "genero", label: "Gênero" },
     { key: "seguidores", label: "Seguidores" },
     { key: "status", label: "Status" },
@@ -1406,12 +1407,14 @@ const Admin = () => {
             ? `https://instagram.com/${sub.profiles.instagram.replace("@", "")}`
             : "N/A",
           email: sub.profiles?.email || "N/A",
+          telefone: sub.profiles?.phone || "N/A",
           genero: sub.profiles?.gender || "N/A",
           seguidores: sub.profiles?.followers_range || "N/A",
           status: sub.status === "approved" ? "Aprovado" : sub.status === "rejected" ? "Rejeitado" : "Pendente",
           data_envio: new Date(sub.submitted_at).toLocaleString("pt-BR"),
           total_submissoes_aprovadas: approvedCountsMap[sub.user_id] || 0,
           vendas_aprovadas_evento: eventSalesMap[sub.user_id] || 0, // ✅ ITEM 1: Nova coluna
+          email_ticketeira: sub.user_ticketer_email || "N/A",
           motivo_rejeicao: sub.rejection_reason || "N/A",
         };
       });
