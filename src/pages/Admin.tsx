@@ -28,7 +28,8 @@ import { useQueryClient } from "@tanstack/react-query";
 // 🆕 SPRINT 2 + CACHE: Importar hook de contadores com cache
 import { 
   useSubmissionCountsByEvent, 
-  useSubmissionCountsByPost 
+  useSubmissionCountsByPost,
+  useApprovedSalesCount
 } from "@/hooks/useSubmissionCounters";
 import {
   Calendar,
@@ -268,12 +269,19 @@ const Admin = () => {
     !!user && (isAgencyAdmin || isMasterAdmin)
   );
 
+  const {
+    data: approvedSalesCount = 0,
+    isLoading: loadingSalesCount
+  } = useApprovedSalesCount(currentAgency?.id, !!currentAgency?.id);
+
   const loadingCounters = loadingEventCounters || loadingPostCounters;
 
   console.log("📊 [Admin] Contadores carregados do cache:", { 
     submissionsByEvent, 
     submissionsByPost,
-    loadingCounters 
+    approvedSalesCount,
+    loadingCounters,
+    loadingSalesCount
   });
 
   const {
@@ -890,7 +898,7 @@ const Admin = () => {
         posts: posts.length,
         submissions: submissionsData?.count || 0, // ✅ SPRINT 1: Usar count real do backend
         users: usersCount,
-        sales: submissions.filter((s) => s.submission_type === "sale" && s.status === "approved").length,
+        sales: approvedSalesCount,
       };
     }
 
@@ -900,11 +908,9 @@ const Admin = () => {
       posts: posts.filter((p) => p.agency_id === agencyId).length,
       submissions: submissionsData?.count || 0, // 🆕 CORREÇÃO 2: Usar count real do backend (já filtrado por agencyId)
       users: usersCount,
-      sales: submissions.filter(
-        (s) => s.agency_id === agencyId && s.submission_type === "sale" && s.status === "approved",
-      ).length,
+      sales: approvedSalesCount,
     };
-  }, [events, posts, submissions, usersCount, currentAgency, submissionsData?.count]);
+  }, [events, posts, submissions, usersCount, currentAgency, submissionsData?.count, approvedSalesCount]);
 
   // ✅ Item 9: Filtrar eventos por ativo/inativo
   // ✅ Item 7: Ordenar eventos por data
@@ -1760,7 +1766,9 @@ const Admin = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vendas Totais</p>
-                <p className="text-2xl font-bold">{agencyFilteredStats.sales}</p>
+                <p className="text-2xl font-bold">
+                  {loadingSalesCount ? "..." : agencyFilteredStats.sales}
+                </p>
               </div>
             </div>
           </Card>

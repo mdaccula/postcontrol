@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { getSubmissionCountsByEvent, getSubmissionCountsByPost } from '@/services/submissionService';
+import { getSubmissionCountsByEvent, getSubmissionCountsByPost, getApprovedSalesCount } from '@/services/submissionService';
 
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutos em ms
 
@@ -38,6 +38,23 @@ export const useSubmissionCountsByPost = (agencyId?: string, enabled: boolean = 
     gcTime: 5 * 60 * 1000, // ✅ Manter por 5 minutos
     refetchOnWindowFocus: true, // ✅ Refetch ao voltar à aba
     refetchOnMount: true, // ✅ Sempre buscar ao montar componente
+    enabled: enabled && !!agencyId,
+  });
+};
+
+/**
+ * Hook para buscar contagem total de vendas aprovadas
+ * @param agencyId - ID da agência (opcional)
+ * @param enabled - Se a query deve ser executada
+ */
+export const useApprovedSalesCount = (agencyId?: string, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['approved-sales-count', agencyId],
+    queryFn: () => getApprovedSalesCount(agencyId),
+    staleTime: 60 * 1000, // Cache de 60 segundos
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     enabled: enabled && !!agencyId,
   });
 };

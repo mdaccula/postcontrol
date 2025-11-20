@@ -214,6 +214,34 @@ export async function getSubmissionCountsByPost(
 }
 
 /**
+ * Obter contagem total de vendas aprovadas por agência
+ */
+export async function getApprovedSalesCount(
+  agencyId?: string
+): Promise<number> {
+  try {
+    if (!agencyId) {
+      console.warn('⚠️ [SALES-COUNT] Agency ID não fornecido');
+      return 0;
+    }
+
+    const { data, error } = await supabase
+      .rpc('get_approved_sales_count', { p_agency_id: agencyId });
+
+    if (error) {
+      console.error('❌ [SALES-COUNT] Erro ao buscar contagem de vendas:', error);
+      return 0;
+    }
+
+    console.log('✅ [SALES-COUNT] Vendas aprovadas:', data);
+    return data || 0;
+  } catch (error) {
+    console.error('❌ [SALES-COUNT] Erro inesperado:', error);
+    return 0;
+  }
+}
+
+/**
  * Fetches a single submission by ID with relations
  * @param id - Submission ID
  * @returns Submission with relations

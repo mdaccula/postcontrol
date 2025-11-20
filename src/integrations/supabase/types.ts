@@ -1539,6 +1539,10 @@ export type Database = {
           slug: string
         }[]
       }
+      get_approved_sales_count: {
+        Args: { p_agency_id: string }
+        Returns: number
+      }
       get_current_user_agency_id: { Args: never; Returns: string }
       get_submission_counts_by_event: {
         Args: { p_agency_id: string }
