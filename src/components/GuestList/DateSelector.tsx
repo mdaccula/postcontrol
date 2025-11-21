@@ -106,11 +106,11 @@ export const DateSelector = ({
                     <div className="flex-1 space-y-2">
                       {date.image_url && (
                         <div className="rounded-lg overflow-hidden">
-                          <img 
-                            src={date.image_url} 
-                            alt={date.name || "Evento"} 
-                            className="w-full h-32 object-contain bg-muted/20"
-                          />
+              <img 
+                src={date.image_url} 
+                alt={date.name || "Evento"} 
+                className="w-full h-40 md:h-48 object-contain bg-muted/20"
+              />
                         </div>
                       )}
                       
@@ -140,9 +140,9 @@ export const DateSelector = ({
                         
                         <div className="flex items-center justify-between pt-1">
                           <span className="text-xs text-muted-foreground">Valor:</span>
-                          <span className="text-lg font-bold text-primary">
-                            {getDatePrice(date)}
-                          </span>
+              <span className="text-base font-semibold text-primary">
+                {getDatePrice(date)}
+              </span>
                         </div>
                       </div>
                     </div>
