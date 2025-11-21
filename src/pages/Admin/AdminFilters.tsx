@@ -130,22 +130,24 @@ const AdminFiltersComponent = ({
   };
 
   /**
-   * ✅ CASCATA: Obter números de postagens disponíveis respeitando filtros anteriores
+   * ✅ CASCATA: Obter números de postagens disponíveis do evento selecionado
+   * Usa allPosts para mostrar TODOS os posts do evento, não apenas da página atual
    */
   const getAvailablePostNumbers = () => {
-    const filteredSubs = getFilteredSubmissions();
-    const postsWithSubmissions = new Set(filteredSubs.map(s => s.post_id).filter(Boolean));
-
-    // Se allPosts foi fornecido, usar ele
-    const postsToUse = allPosts || filteredSubs.map((s: any) => s.posts).filter(Boolean);
-
-    // Filtrar apenas posts que têm submissões nos filtros atuais
-    const filtered = postsToUse.filter((p: any) => 
-      postsWithSubmissions.has(p?.id) && 
-      (submissionEventFilter === 'all' || p?.event_id === submissionEventFilter)
+    // Se nenhum evento selecionado, não mostrar posts
+    if (submissionEventFilter === 'all') return [];
+    
+    // Usar allPosts filtrado pelo evento, NÃO pelas submissões da página atual
+    if (!allPosts || allPosts.length === 0) return [];
+    
+    const postsForEvent = allPosts.filter((p: any) => 
+      p?.event_id === submissionEventFilter
     );
     
-    const postNumbers = new Set(filtered.map((p: any) => p?.post_number).filter(Boolean));
+    const postNumbers = new Set(
+      postsForEvent.map((p: any) => p?.post_number).filter(Boolean)
+    );
+    
     return Array.from(postNumbers).sort((a, b) => a - b);
   };
 
@@ -216,8 +218,8 @@ const AdminFiltersComponent = ({
         </div>
       </div>
 
-      {/* Grid de filtros principais */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2">
+      {/* Grid de filtros principais - 2 colunas em todas as telas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {/* ✅ ITEM 5: Novo filtro primário de status ativo/inativo */}
         <Select value={submissionActiveFilter} onValueChange={onSubmissionActiveFilterChange}>
           <SelectTrigger className="w-full">
@@ -230,20 +232,19 @@ const AdminFiltersComponent = ({
           </SelectContent>
         </Select>
 
-        {/* Filtro de Evento */}
-        {/* ✅ CASCATA: Skeleton enquanto carrega */}
-        {isLoadingSubmissions ? <Skeleton className="h-10 w-full" /> : <Select value={submissionEventFilter} onValueChange={onSubmissionEventFilterChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filtrar por evento" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os eventos</SelectItem>
-              {/* ✅ CASCATA: Usar função que respeita filtro ativo/inativo */}
-              {getAvailableEvents().map(event => <SelectItem key={event.id} value={event.id}>
-                    {event.title}
-                  </SelectItem>)}
-            </SelectContent>
-          </Select>}
+        {/* Filtro de Evento - sempre visível */}
+        <Select value={submissionEventFilter} onValueChange={onSubmissionEventFilterChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Filtrar por evento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os eventos</SelectItem>
+            {/* ✅ CASCATA: Usar função que respeita filtro ativo/inativo */}
+            {getAvailableEvents().map(event => <SelectItem key={event.id} value={event.id}>
+                  {event.title}
+                </SelectItem>)}
+          </SelectContent>
+        </Select>
 
         {/* Filtro de Número da Postagem */}
         <Select value={submissionPostFilter} onValueChange={onSubmissionPostFilterChange} disabled={submissionEventFilter === 'all'}>
@@ -252,12 +253,12 @@ const AdminFiltersComponent = ({
           </SelectTrigger>
           <SelectContent>
             {getAvailablePostNumbers().length === 0 ? <SelectItem value="none" disabled>
-                Nenhum post com submissões
+                Nenhum post disponível
               </SelectItem> : <>
                 <SelectItem value="all">Todos os números</SelectItem>
                 {getAvailablePostNumbers().map(num => {
-              const submission = submissions.find(s => (s.posts as any)?.post_number === num && (submissionEventFilter === 'all' || (s.posts as any)?.event_id === submissionEventFilter));
-              const postType = (submission?.posts as any)?.post_type || null;
+              const post = allPosts?.find((p: any) => p?.post_number === num && p?.event_id === submissionEventFilter);
+              const postType = post?.post_type || null;
               return <SelectItem key={num} value={num.toString()}>
                       {formatPostName(postType, num)}
                     </SelectItem>;
@@ -279,10 +280,8 @@ const AdminFiltersComponent = ({
               </SelectItem>)}
           </SelectContent>
         </Select>
-      </div>
 
-      {/* Filtro de Tipo de Postagem */}
-      <div className="grid grid-cols-1 gap-2">
+        {/* Filtro de Tipo de Postagem */}
         <Select value={postTypeFilter} onValueChange={onPostTypeFilterChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Tipo de Postagem" />
