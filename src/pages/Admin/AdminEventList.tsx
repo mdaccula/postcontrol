@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Users, Trophy, Plus, Pencil, Trash2, Copy, Send } from 'lucide-react';
+import { Calendar, Users, Trophy, Plus, Pencil, Trash2, Copy, Send, ClipboardCheck } from 'lucide-react';
 import { formatPostName } from '@/lib/postNameFormatter';
 
 /**
@@ -105,6 +105,11 @@ const AdminEventListComponent = ({
             const eventPosts = posts.filter(p => p.event_id === event.id);
             const submissionsCount = submissionsByEvent[event.id] || 0;
             
+            // ✅ Verificar se evento é de análise manual (sem metas definidas)
+            const isManualReview = (!event.required_posts || event.required_posts === 0) && 
+                                   (!event.required_sales || event.required_sales === 0) &&
+                                   (!event.numero_de_vagas || event.numero_de_vagas === 0);
+            
             return (
               <Card key={event.id} className="p-6">
                 {/* Header do evento */}
@@ -115,6 +120,12 @@ const AdminEventListComponent = ({
                       <Badge variant={event.is_active ? 'default' : 'secondary'}>
                         {event.is_active ? 'Ativo' : 'Inativo'}
                       </Badge>
+                      {isManualReview && (
+                        <Badge variant="outline" className="border-purple-500 text-purple-700 dark:text-purple-400">
+                          <ClipboardCheck className="w-3 h-3 mr-1" />
+                          Análise Manual
+                        </Badge>
+                      )}
                     </div>
                     {event.description && (
                       <p className="text-sm text-muted-foreground">{event.description}</p>
@@ -176,6 +187,21 @@ const AdminEventListComponent = ({
                     </div>
                   </div>
                 </div>
+                
+                {/* ✅ Aviso de análise manual */}
+                {isManualReview && (
+                  <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <ClipboardCheck className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-purple-700 dark:text-purple-300">
+                        <p className="font-semibold">Evento de Análise Manual</p>
+                        <p className="text-purple-600 dark:text-purple-400 mt-1">
+                          Este evento não possui metas automáticas configuradas. Analise as submissões manualmente na aba "Submissões".
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Botão de criar post */}
                 <div className="mb-4">
