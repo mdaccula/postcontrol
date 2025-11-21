@@ -88,6 +88,12 @@ const SuggestionDialog = lazy(() =>
 const PushNotificationAnalytics = lazy(() =>
   import("@/components/PushNotificationAnalytics").then((m) => ({ default: m.PushNotificationAnalytics })),
 );
+const TopPromotersRanking = lazy(() =>
+  import("@/components/TopPromotersRanking").then((m) => ({ default: m.TopPromotersRanking })),
+);
+const GoalNotificationSettings = lazy(() =>
+  import("@/components/GoalNotificationSettings").then((m) => ({ default: m.GoalNotificationSettings })),
+);
 
 // FASE 2: Componentes memoizados para performance
 const MemoizedDashboardStats = lazy(() =>
@@ -1944,6 +1950,23 @@ const Admin = () => {
                 </div>
               )}
             </Card>
+
+            {/* Top Promoters Ranking por Evento */}
+            {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active).length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">🏆 Rankings por Evento</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {filteredEvents
+                    .filter(e => e.is_active)
+                    .slice(0, 4)
+                    .map((event) => (
+                      <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
+                        <TopPromotersRanking eventId={event.id} limit={5} />
+                      </Suspense>
+                    ))}
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="posts" className="space-y-6">
@@ -2732,6 +2755,13 @@ const Admin = () => {
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               {isMasterAdmin ? <MemoizedAdminSettings isMasterAdmin={true} /> : <AgencyAdminSettings />}
             </Suspense>
+            
+            {/* Goal Notification Settings */}
+            {currentAgency && (
+              <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                <GoalNotificationSettings agencyId={currentAgency.id} />
+              </Suspense>
+            )}
           </TabsContent>
         </Tabs>
       </div>

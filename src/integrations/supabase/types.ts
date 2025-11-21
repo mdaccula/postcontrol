@@ -115,6 +115,44 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_goal_notifications_config: {
+        Row: {
+          agency_id: string
+          created_at: string | null
+          custom_message: string | null
+          id: string
+          send_email_notification: boolean | null
+          send_push_notification: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string | null
+          custom_message?: string | null
+          id?: string
+          send_email_notification?: boolean | null
+          send_push_notification?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string | null
+          custom_message?: string | null
+          id?: string
+          send_email_notification?: boolean | null
+          send_push_notification?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_goal_notifications_config_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: true
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agency_guests: {
         Row: {
           accepted_at: string | null
@@ -1406,6 +1444,72 @@ export type Database = {
           },
         ]
       }
+      user_event_goals: {
+        Row: {
+          agency_id: string
+          created_at: string | null
+          current_posts: number | null
+          current_sales: number | null
+          event_id: string
+          goal_achieved: boolean | null
+          goal_achieved_at: string | null
+          id: string
+          notified: boolean | null
+          notified_at: string | null
+          required_posts: number | null
+          required_sales: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string | null
+          current_posts?: number | null
+          current_sales?: number | null
+          event_id: string
+          goal_achieved?: boolean | null
+          goal_achieved_at?: string | null
+          id?: string
+          notified?: boolean | null
+          notified_at?: string | null
+          required_posts?: number | null
+          required_sales?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string | null
+          current_posts?: number | null
+          current_sales?: number | null
+          event_id?: string
+          goal_achieved?: boolean | null
+          goal_achieved_at?: string | null
+          id?: string
+          notified?: boolean | null
+          notified_at?: string | null
+          required_posts?: number | null
+          required_sales?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_event_goals_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_event_goals_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1498,6 +1602,16 @@ export type Database = {
       }
     }
     Functions: {
+      check_and_update_user_goal: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: {
+          current_posts: number
+          current_sales: number
+          goal_just_achieved: boolean
+          required_posts: number
+          required_sales: number
+        }[]
+      }
       check_rate_limit: {
         Args: {
           p_action_type: string
@@ -1556,6 +1670,21 @@ export type Database = {
         Returns: {
           post_id: string
           submission_count: number
+        }[]
+      }
+      get_top_promoters_ranking: {
+        Args: { p_event_id: string; p_limit?: number }
+        Returns: {
+          avatar_url: string
+          completion_percentage: number
+          current_posts: number
+          current_sales: number
+          full_name: string
+          goal_achieved: boolean
+          rank: number
+          required_posts: number
+          required_sales: number
+          user_id: string
         }[]
       }
       has_role: {

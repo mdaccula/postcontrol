@@ -48,6 +48,7 @@ import { Trash2 } from "lucide-react";
 import { useIsGuest } from "@/hooks/useIsGuest";
 import { PushNotificationSettings } from "@/components/PushNotificationSettings";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
+import { GoalProgressBadge } from "@/components/GoalProgressBadge";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide"));
@@ -681,20 +682,31 @@ const Dashboard = () => {
               <div className="space-y-6">
                 {filteredEventStats.length > 0 ? (
                   filteredEventStats.map((stat) => (
-                    <div key={stat.eventId} className="space-y-3 p-4 rounded-lg bg-muted/30">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-lg">{stat.eventTitle}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {stat.submitted} de {stat.isApproximate ? "~" : ""}
-                            {stat.totalRequired} posts aprovados
-                          </p>
+                    <div key={stat.eventId} className="space-y-3">
+                      <div className="space-y-3 p-4 rounded-lg bg-muted/30">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <h3 className="font-semibold text-lg">{stat.eventTitle}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {stat.submitted} de {stat.isApproximate ? "~" : ""}
+                              {stat.totalRequired} posts aprovados
+                            </p>
+                          </div>
+                          <Badge variant={stat.percentage >= 100 ? "default" : "secondary"} className="text-lg px-4 py-2">
+                            {stat.percentage.toFixed(0)}%
+                          </Badge>
                         </div>
-                        <Badge variant={stat.percentage >= 100 ? "default" : "secondary"} className="text-lg px-4 py-2">
-                          {stat.percentage.toFixed(0)}%
-                        </Badge>
+                        <Progress value={stat.percentage} className="h-3" />
                       </div>
-                      <Progress value={stat.percentage} className="h-3" />
+                      
+                      {/* Goal Progress Badge */}
+                      {user && (
+                        <GoalProgressBadge 
+                          eventId={stat.eventId} 
+                          userId={user.id}
+                          variant="detailed"
+                        />
+                      )}
                     </div>
                   ))
                 ) : (
