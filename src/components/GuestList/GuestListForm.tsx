@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams } from "react-router-dom";
 import * as z from "zod";
@@ -15,7 +15,7 @@ import { AntiSpamField } from "./AntiSpamField";
 const formSchema = z.object({
   fullName: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   email: z.string().email("Email inválido").max(255),
-  gender: z.enum(["feminino", "masculino", "outro"], {
+  gender: z.enum(["feminino", "masculino"], {
     required_error: "Selecione seu sexo",
   }),
 });
@@ -51,12 +51,10 @@ export const GuestListForm = ({
     register,
     handleSubmit,
     formState: { errors },
-    watch,
+    control,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
   });
-
-  const selectedGender = watch("gender");
 
   const handleFormStart = () => {
     if (!hasStarted) {
@@ -171,36 +169,34 @@ export const GuestListForm = ({
       {/* Sexo */}
       <div className="space-y-3">
         <Label>Sexo *</Label>
-        <RadioGroup
-          onValueChange={(value) => {
-            register("gender").onChange({ target: { value } });
-            handleFormStart();
-            onGenderChange?.(value);
-          }}
-          disabled={isSubmitting}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="feminino" id="feminino" />
-            <Label htmlFor="feminino" className="font-normal cursor-pointer">
-              💃 Feminino
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="masculino" id="masculino" />
-            <Label htmlFor="masculino" className="font-normal cursor-pointer">
-              🕺 Masculino
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="outro" id="outro" />
-            <Label htmlFor="outro" className="font-normal cursor-pointer">
-              🌈 Outro
-            </Label>
-          </div>
-        </RadioGroup>
-        <p className="text-xs text-muted-foreground">
-          * Pessoas LGBTQIA+ serão consideradas na lista masculina para fins de precificação
-        </p>
+        <Controller
+          name="gender"
+          control={control}
+          render={({ field }) => (
+            <RadioGroup
+              onValueChange={(value) => {
+                field.onChange(value);
+                handleFormStart();
+                onGenderChange?.(value);
+              }}
+              value={field.value}
+              disabled={isSubmitting}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="feminino" id="feminino" />
+                <Label htmlFor="feminino" className="font-normal cursor-pointer">
+                  💃 Feminino
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="masculino" id="masculino" />
+                <Label htmlFor="masculino" className="font-normal cursor-pointer">
+                  🕺 Masculino
+                </Label>
+              </div>
+            </RadioGroup>
+          )}
+        />
         {errors.gender && (
           <p className="text-sm text-destructive">{errors.gender.message}</p>
         )}
@@ -243,7 +239,7 @@ export const GuestListForm = ({
       <Button
         type="submit"
         className="w-full h-12 text-lg font-semibold"
-        disabled={isSubmitting || !selectedGender || !dateId}
+        disabled={isSubmitting || !dateId}
       >
         {isSubmitting ? (
           <>
