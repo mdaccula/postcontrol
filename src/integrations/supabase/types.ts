@@ -746,6 +746,7 @@ export type Database = {
           male_price: number
           max_capacity: number | null
           name: string | null
+          price_type: string | null
           start_time: string | null
         }
         Insert: {
@@ -761,6 +762,7 @@ export type Database = {
           male_price: number
           max_capacity?: number | null
           name?: string | null
+          price_type?: string | null
           start_time?: string | null
         }
         Update: {
@@ -776,6 +778,7 @@ export type Database = {
           male_price?: number
           max_capacity?: number | null
           name?: string | null
+          price_type?: string | null
           start_time?: string | null
         }
         Relationships: [

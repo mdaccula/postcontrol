@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.auto-deactivate-events]
 verify_jwt = false
 
+[functions.auto-deactivate-guest-list-dates]
+verify_jwt = false
+
 [functions.validate-guest-registration]
 verify_jwt = false
 

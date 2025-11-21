@@ -78,6 +78,7 @@ interface GuestListDate {
   start_time?: string | null;
   end_time?: string | null;
   auto_deactivate_after_start?: boolean;
+  price_type?: string;
   created_at?: string;
 }
 
@@ -976,6 +977,7 @@ function DateDialogForm({
     start_time: date?.start_time?.slice(0, 5) || "",
     end_time: date?.end_time?.slice(0, 5) || "",
     auto_deactivate_after_start: date?.auto_deactivate_after_start ?? false,
+    price_type: date?.price_type || "entry_only",
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -1051,6 +1053,7 @@ function DateDialogForm({
       start_time: formData.start_time ? `${formData.start_time}:00` : null,
       end_time: formData.end_time ? `${formData.end_time}:00` : null,
       auto_deactivate_after_start: formData.auto_deactivate_after_start,
+      price_type: formData.price_type,
     });
   };
 
@@ -1158,6 +1161,27 @@ function DateDialogForm({
             required
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="price_type">Tipo de Valor *</Label>
+        <Select
+          value={formData.price_type}
+          onValueChange={(value) => setFormData({ ...formData, price_type: value })}
+        >
+          <SelectTrigger id="price_type">
+            <SelectValue placeholder="Selecione o tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="entry_only">Valor Seco (Apenas Entrada)</SelectItem>
+            <SelectItem value="consumable_only">Consumível (Entrada Grátis)</SelectItem>
+            <SelectItem value="entry_plus_half">Entrada + Consome Metade</SelectItem>
+            <SelectItem value="entry_plus_full">Entrada + Consome Valor Integral</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Como o valor será cobrado/utilizado no evento
+        </p>
       </div>
 
       <div className="space-y-2">

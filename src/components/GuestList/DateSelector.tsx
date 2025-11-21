@@ -16,6 +16,7 @@ interface GuestListDate {
   image_url?: string | null;
   start_time?: string | null;
   end_time?: string | null;
+  price_type?: string;
 }
 
 interface DateSelectorProps {
@@ -46,13 +47,29 @@ export const DateSelector = ({
     }
   };
 
-  const getDatePrice = (date: GuestListDate) => {
-    if (userGender === 'feminino') {
-      return formatPrice(date.female_price);
-    } else if (userGender === 'masculino') {
-      return formatPrice(date.male_price);
+  const getPriceTypeLabel = (priceType?: string) => {
+    switch (priceType) {
+      case 'entry_only':
+        return 'Entrada';
+      case 'consumable_only':
+        return 'Consumível';
+      case 'entry_plus_half':
+        return 'Entrada + Consome Metade';
+      case 'entry_plus_full':
+        return 'Entrada + Consome Integral';
+      default:
+        return 'Entrada';
     }
-    return `${formatPrice(date.female_price)} (F) / ${formatPrice(date.male_price)} (M)`;
+  };
+
+  const getDatePrice = (date: GuestListDate) => {
+    const price = userGender === 'feminino' ? date.female_price : userGender === 'masculino' ? date.male_price : null;
+    const priceLabel = getPriceTypeLabel(date.price_type);
+    
+    if (price !== null) {
+      return `${formatPrice(price)} (${priceLabel})`;
+    }
+    return `${formatPrice(date.female_price)} (F) / ${formatPrice(date.male_price)} (M) - ${priceLabel}`;
   };
 
   return (
@@ -92,7 +109,7 @@ export const DateSelector = ({
                           <img 
                             src={date.image_url} 
                             alt={date.name || "Evento"} 
-                            className="w-full h-32 object-cover"
+                            className="w-full h-32 object-contain bg-muted/20"
                           />
                         </div>
                       )}

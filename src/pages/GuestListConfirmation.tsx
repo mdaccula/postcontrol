@@ -48,6 +48,7 @@ interface DateData {
   female_price: number;
   male_price: number;
   image_url: string | null;
+  price_type?: string;
 }
 
 export default function GuestListConfirmation() {
@@ -147,7 +148,7 @@ export default function GuestListConfirmation() {
       // Buscar dados da data específica
       const { data: dateInfo, error: dateError } = await supabase
         .from("guest_list_dates")
-        .select("id, name, event_date, start_time, end_time, female_price, male_price, image_url")
+        .select("id, name, event_date, start_time, end_time, female_price, male_price, image_url, price_type")
         .eq("id", regData.date_id)
         .maybeSingle();
 
@@ -188,6 +189,21 @@ export default function GuestListConfirmation() {
   const formatTime = (timeString: string | null) => {
     if (!timeString) return '';
     return timeString.slice(0, 5); // HH:mm
+  };
+
+  const getPriceTypeDescription = (priceType?: string) => {
+    switch (priceType) {
+      case 'entry_only':
+        return 'Valor de entrada';
+      case 'consumable_only':
+        return 'Valor consumível (entrada grátis)';
+      case 'entry_plus_half':
+        return 'Entrada + consome metade do valor';
+      case 'entry_plus_full':
+        return 'Entrada + consome valor integral';
+      default:
+        return 'Valor de entrada';
+    }
   };
 
   const handleWhatsAppShare = async () => {
@@ -267,17 +283,6 @@ Garanta sua vaga também: ${shareUrl}`;
           </div>
         )}
 
-        {/* Imagem da Data */}
-        {dateData?.image_url && (
-          <div className="w-full rounded-lg overflow-hidden animate-fade-in" style={{ animationDelay: "0.15s" }}>
-            <img
-              src={dateData.image_url}
-              alt={dateData.name || event.name}
-              className="w-full h-48 object-cover"
-            />
-          </div>
-        )}
-
         {/* Success Icon */}
         <div className="flex justify-center animate-scale-in" style={{ animationDelay: "0.2s" }}>
           <div className="rounded-full bg-primary/10 p-4">
@@ -330,7 +335,7 @@ Garanta sua vaga também: ${shareUrl}`;
                       <img 
                         src={date.image_url} 
                         alt={date.name || 'Data do evento'} 
-                        className="w-full h-24 object-cover"
+                        className="w-full h-24 object-contain bg-muted/20"
                       />
                     </div>
                   )}
@@ -358,6 +363,9 @@ Garanta sua vaga também: ${shareUrl}`;
                         R$ {registration.gender === 'feminino' 
                           ? date.female_price.toFixed(2).replace('.', ',')
                           : date.male_price.toFixed(2).replace('.', ',')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {getPriceTypeDescription(date.price_type)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         ({registration.gender === 'feminino' ? 'Lista Feminina' : 'Lista Masculina'})
