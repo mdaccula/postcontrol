@@ -105,11 +105,11 @@ export const DateSelector = ({
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   {selectedDate.start_time && selectedDate.end_time ? (
-                    <span>{selectedDate.start_time} às {selectedDate.end_time}</span>
+                    <span>{selectedDate.start_time.slice(0, 5)} às {selectedDate.end_time.slice(0, 5)}</span>
                   ) : selectedDate.start_time ? (
-                    <span>Início: {selectedDate.start_time}</span>
+                    <span>Início: {selectedDate.start_time.slice(0, 5)}</span>
                   ) : (
-                    <span>Término: {selectedDate.end_time}</span>
+                    <span>Término: {selectedDate.end_time.slice(0, 5)}</span>
                   )}
                 </div>
               )}

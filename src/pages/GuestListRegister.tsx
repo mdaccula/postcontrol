@@ -31,6 +31,11 @@ interface GuestListDate {
   male_price: number;
   max_capacity: number | null;
   is_active: boolean;
+  name?: string;
+  image_url?: string;
+  start_time?: string;
+  end_time?: string;
+  auto_deactivate_after_start?: boolean;
 }
 
 export default function GuestListRegister() {
@@ -97,8 +102,23 @@ export default function GuestListRegister() {
         return;
       }
 
-      setDates(datesData);
-      setSelectedDateId(datesData[0].id); // Selecionar primeira data automaticamente
+      // Filtrar datas que devem ser desativadas após início
+      const activeDates = datesData.filter(date => {
+        if (!date.auto_deactivate_after_start) return true;
+        
+        const eventDateTime = new Date(`${date.event_date}T${date.start_time || '00:00'}:00`);
+        const now = new Date();
+        
+        return eventDateTime > now;
+      });
+
+      if (activeDates.length === 0) {
+        setError('Não há datas disponíveis para este evento.');
+        return;
+      }
+
+      setDates(activeDates);
+      setSelectedDateId(activeDates[0].id); // Selecionar primeira data automaticamente
 
     } catch (err: any) {
       console.error('Erro ao carregar evento:', err);

@@ -77,6 +77,8 @@ interface GuestListDate {
   image_url?: string | null;
   start_time?: string | null;
   end_time?: string | null;
+  auto_deactivate_after_start?: boolean;
+  created_at?: string;
 }
 
 interface GuestListRegistration {
@@ -967,8 +969,9 @@ function DateDialogForm({
     max_capacity: date?.max_capacity || null,
     is_active: date?.is_active ?? true,
     image_url: date?.image_url || "",
-    start_time: date?.start_time || "",
-    end_time: date?.end_time || "",
+    start_time: date?.start_time?.slice(0, 5) || "",
+    end_time: date?.end_time?.slice(0, 5) || "",
+    auto_deactivate_after_start: date?.auto_deactivate_after_start ?? false,
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -994,6 +997,11 @@ function DateDialogForm({
   };
 
   const uploadImage = async () => {
+    // Se não há novo arquivo E já existe imagem prévia, manter a existente
+    if (!imageFile && date?.image_url) {
+      return date.image_url;
+    }
+    
     if (!imageFile) return formData.image_url;
 
     setUploading(true);
@@ -1036,8 +1044,9 @@ function DateDialogForm({
       ...formData,
       image_url: imageUrl || null,
       name: formData.name || null,
-      start_time: formData.start_time || null,
-      end_time: formData.end_time || null,
+      start_time: formData.start_time ? `${formData.start_time}:00` : null,
+      end_time: formData.end_time ? `${formData.end_time}:00` : null,
+      auto_deactivate_after_start: formData.auto_deactivate_after_start,
     });
   };
 
@@ -1163,13 +1172,33 @@ function DateDialogForm({
         />
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="is_active"
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-        />
-        <Label htmlFor="is_active">Data Ativa</Label>
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="is_active"
+            checked={formData.is_active}
+            onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+          />
+          <Label htmlFor="is_active">Data Ativa</Label>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="auto_deactivate"
+              checked={formData.auto_deactivate_after_start}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, auto_deactivate_after_start: checked })
+              }
+            />
+            <Label htmlFor="auto_deactivate">
+              Desativar automaticamente após início
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground ml-9">
+            A data será desativada automaticamente quando o evento iniciar
+          </p>
+        </div>
       </div>
 
       <DialogFooter>

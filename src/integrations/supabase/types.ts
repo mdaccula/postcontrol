@@ -734,6 +734,7 @@ export type Database = {
       }
       guest_list_dates: {
         Row: {
+          auto_deactivate_after_start: boolean | null
           created_at: string | null
           end_time: string | null
           event_date: string
@@ -748,6 +749,7 @@ export type Database = {
           start_time: string | null
         }
         Insert: {
+          auto_deactivate_after_start?: boolean | null
           created_at?: string | null
           end_time?: string | null
           event_date: string
@@ -762,6 +764,7 @@ export type Database = {
           start_time?: string | null
         }
         Update: {
+          auto_deactivate_after_start?: boolean | null
           created_at?: string | null
           end_time?: string | null
           event_date?: string
