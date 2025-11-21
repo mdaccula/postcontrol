@@ -112,17 +112,45 @@ const AdminFiltersComponent = ({
 }: AdminFiltersProps) => {
   /**
    * Obter números de postagens disponíveis baseado no evento selecionado
-   * Usa allPosts (todos os posts carregados) ao invés de submissions (apenas página atual)
+   * ✅ R2: Filtro em cascata - apenas posts que tenham submissões
    */
   const getAvailablePostNumbers = () => {
-    // Se allPosts foi fornecido, usar ele ao invés de submissions
+    // Buscar apenas posts que tenham pelo menos 1 submissão
+    const postsWithSubmissions = new Set(
+      submissions
+        .filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter)
+        .map(s => s.post_id)
+        .filter(Boolean)
+    );
+    
+    // Se allPosts foi fornecido, usar ele
     const postsToUse = allPosts || submissions.map((s: any) => s.posts).filter(Boolean);
     
+    // Filtrar apenas posts que têm submissões
     const filtered = postsToUse.filter(
-      (p: any) => submissionEventFilter === 'all' || p?.event_id === submissionEventFilter
+      (p: any) => postsWithSubmissions.has(p?.id) && 
+                  (submissionEventFilter === 'all' || p?.event_id === submissionEventFilter)
     );
+    
     const postNumbers = new Set(filtered.map((p: any) => p?.post_number).filter(Boolean));
     return Array.from(postNumbers).sort((a, b) => a - b);
+  };
+
+  /**
+   * ✅ R2: Obter status disponíveis baseado no evento selecionado
+   */
+  const getAvailableStatuses = () => {
+    const statusesInEvent = new Set(
+      submissions
+        .filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter)
+        .map(s => s.status)
+    );
+    
+    return [
+      { value: 'pending', label: 'Aguardando aprovação', available: statusesInEvent.has('pending') },
+      { value: 'approved', label: 'Aprovados', available: statusesInEvent.has('approved') },
+      { value: 'rejected', label: 'Reprovados', available: statusesInEvent.has('rejected') },
+    ];
   };
 
   return (
@@ -224,19 +252,27 @@ const AdminFiltersComponent = ({
             <SelectValue placeholder="Número da postagem" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os números</SelectItem>
-            {getAvailablePostNumbers().map((num) => {
-              const submission = submissions.find(
-                s => (s.posts as any)?.post_number === num &&
-                (submissionEventFilter === 'all' || (s.posts as any)?.event_id === submissionEventFilter)
-              );
-              const postType = (submission?.posts as any)?.post_type || null;
-              return (
-                <SelectItem key={num} value={num.toString()}>
-                  {formatPostName(postType, num)}
-                </SelectItem>
-              );
-            })}
+            {getAvailablePostNumbers().length === 0 ? (
+              <SelectItem value="none" disabled>
+                Nenhum post com submissões
+              </SelectItem>
+            ) : (
+              <>
+                <SelectItem value="all">Todos os números</SelectItem>
+                {getAvailablePostNumbers().map((num) => {
+                  const submission = submissions.find(
+                    s => (s.posts as any)?.post_number === num &&
+                    (submissionEventFilter === 'all' || (s.posts as any)?.event_id === submissionEventFilter)
+                  );
+                  const postType = (submission?.posts as any)?.post_type || null;
+                  return (
+                    <SelectItem key={num} value={num.toString()}>
+                      {formatPostName(postType, num)}
+                    </SelectItem>
+                  );
+                })}
+              </>
+            )}
           </SelectContent>
         </Select>
 
@@ -250,9 +286,16 @@ const AdminFiltersComponent = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="pending">Aguardando aprovação</SelectItem>
-            <SelectItem value="approved">Aprovados</SelectItem>
-            <SelectItem value="rejected">Reprovados</SelectItem>
+            {getAvailableStatuses().map(status => (
+              <SelectItem 
+                key={status.value} 
+                value={status.value}
+                disabled={!status.available && submissionEventFilter !== 'all'}
+              >
+                {status.label}
+                {!status.available && submissionEventFilter !== 'all' && ' (sem resultados)'}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
