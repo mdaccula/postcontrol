@@ -54,19 +54,16 @@ Deno.serve(async (req) => {
     const dateIdsToDeactivate: string[] = [];
 
     for (const date of datesToDeactivate) {
-      // Montar datetime completo
-      let dateTime: Date;
-      
-      if (date.start_time) {
-        // Se tem horário de início, usar ele
-        const [hours, minutes] = date.start_time.split(':');
-        dateTime = new Date(date.event_date);
-        dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      } else {
-        // Se não tem horário, usar meia-noite do dia do evento
-        dateTime = new Date(date.event_date);
-        dateTime.setHours(0, 0, 0, 0);
+      // Ignorar datas sem horário definido
+      if (!date.start_time) {
+        console.log(`[AUTO-DEACTIVATE-DATES] Data sem horário, pulando: ${date.name || date.event_date}`);
+        continue;
       }
+
+      // Montar datetime completo
+      const [hours, minutes] = date.start_time.split(':');
+      const dateTime = new Date(date.event_date);
+      dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
       // Se o evento já começou, marcar para desativar
       if (dateTime < now) {

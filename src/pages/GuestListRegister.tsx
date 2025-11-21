@@ -106,7 +106,10 @@ export default function GuestListRegister() {
       const activeDates = datesData.filter(date => {
         if (!date.auto_deactivate_after_start) return true;
         
-        const eventDateTime = new Date(`${date.event_date}T${date.start_time || '00:00'}:00`);
+        // Só filtrar por horário se start_time estiver definido
+        if (!date.start_time) return true;
+        
+        const eventDateTime = new Date(`${date.event_date}T${date.start_time}:00`);
         const now = new Date();
         
         return eventDateTime > now;

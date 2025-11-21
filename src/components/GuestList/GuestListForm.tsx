@@ -224,8 +224,7 @@ export const GuestListForm = ({
           {whatsappLink && (
             <Button
               type="button"
-              variant="outline"
-              className="w-full"
+              className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold w-full"
               onClick={() => window.open(whatsappLink, '_blank')}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
@@ -254,7 +253,7 @@ export const GuestListForm = ({
       {/* Botão Submit */}
       <Button
         type="submit"
-        className="w-full h-12 text-lg font-semibold"
+        className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
         disabled={isSubmitting || dateIds.length === 0}
       >
         {isSubmitting ? (

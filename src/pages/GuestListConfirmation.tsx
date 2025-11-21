@@ -275,11 +275,11 @@ Garanta sua vaga também: ${shareUrl}`;
         {/* Logo da Agência */}
         {agency?.logo_url && (
           <div className="flex justify-center mb-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <img
-              src={agency.logo_url}
-              alt={agency.name}
-              className="h-20 w-auto object-contain"
-            />
+          <img
+            src={agency.logo_url}
+            alt={agency.name}
+            className="h-24 w-auto object-contain"
+          />
           </div>
         )}
 
@@ -374,19 +374,6 @@ Garanta sua vaga também: ${shareUrl}`;
                   </div>
                 </div>
               ))}
-              
-              {allDates.length > 1 && (
-                <div className="bg-primary/10 rounded-lg p-3 mt-2">
-                  <p className="text-sm font-semibold text-primary">
-                    Total: R$ {allDates.reduce((sum, date) => {
-                      const price = registration.gender === 'feminino' 
-                        ? date.female_price 
-                        : date.male_price;
-                      return sum + price;
-                    }, 0).toFixed(2).replace('.', ',')}
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </div>
