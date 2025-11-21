@@ -1980,7 +1980,7 @@ const Admin = () => {
                     .filter(e => e.is_active && e.numero_de_vagas)
                     .map((event) => (
                       <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
-                        <EventSlotsCounter eventId={event.id} variant="detailed" />
+                        <EventSlotsCounter eventId={event.id} eventTitle={event.title} variant="detailed" />
                       </Suspense>
                     ))}
                 </div>
