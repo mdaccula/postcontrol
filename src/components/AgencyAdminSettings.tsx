@@ -53,24 +53,37 @@ export const AgencyAdminSettings = () => {
 
   const loadData = async () => {
     setLoading(true);
+    console.log('[LOAD] Carregando dados da agência...');
+    
     const { data: { user } } = await sb.auth.getUser();
     
     if (!user) {
+      console.error('[LOAD] ❌ Usuário não encontrado');
       toast.error("Usuário não encontrado");
       return;
     }
 
+    console.log('[LOAD] User ID:', user.id);
     setUserId(user.id);
     setEmail(user.email || "");
 
     // Load profile data
-    const { data: profileData } = await sb
+    const { data: profileData, error: profileError } = await sb
       .from('profiles')
       .select('full_name, instagram, phone, agency_id')
       .eq('id', user.id)
       .maybeSingle();
 
+    if (profileError) {
+      console.error('[LOAD] Erro ao buscar perfil:', profileError);
+    }
+
     if (profileData) {
+      console.log('[LOAD] Perfil carregado:', {
+        full_name: profileData.full_name,
+        agency_id: profileData.agency_id
+      });
+      
       setFullName(profileData.full_name || "");
       setInstagram(profileData.instagram || "");
       setPhone(profileData.phone || "");
@@ -78,13 +91,27 @@ export const AgencyAdminSettings = () => {
 
       // Load agency data
       if (profileData.agency_id) {
-        const { data: agencyData } = await sb
+        console.log('[LOAD] Carregando dados da agência:', profileData.agency_id);
+        
+        const { data: agencyData, error: agencyError } = await sb
           .from('agencies')
           .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url')
           .eq('id', profileData.agency_id)
           .maybeSingle();
 
+        if (agencyError) {
+          console.error('[LOAD] Erro ao buscar agência:', agencyError);
+        }
+
         if (agencyData) {
+          console.log('[LOAD] ✅ Agência carregada:', {
+            name: agencyData.name,
+            instagram_url: agencyData.instagram_url,
+            website_url: agencyData.website_url,
+            whatsapp_group_url: agencyData.whatsapp_group_url,
+            tickets_group_url: agencyData.tickets_group_url
+          });
+          
           setAgencyName(agencyData.name);
           setPlanType(agencyData.subscription_plan || "basic");
           setPlanExpiry(agencyData.plan_expiry_date);
@@ -96,10 +123,17 @@ export const AgencyAdminSettings = () => {
           setWebsiteUrl(agencyData.website_url || "");
           setWhatsappGroupUrl(agencyData.whatsapp_group_url || "");
           setTicketsGroupUrl(agencyData.tickets_group_url || "");
+        } else {
+          console.warn('[LOAD] ⚠️ Dados da agência não encontrados');
         }
+      } else {
+        console.warn('[LOAD] ⚠️ Usuário não possui agency_id associado');
       }
+    } else {
+      console.warn('[LOAD] ⚠️ Perfil não encontrado');
     }
 
+    console.log('[LOAD] ✅ Carregamento concluído');
     setLoading(false);
   };
 
@@ -233,47 +267,82 @@ export const AgencyAdminSettings = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!userId) return;
+    if (!userId) {
+      toast.error("Usuário não identificado");
+      return;
+    }
     
     setSaving(true);
     try {
+      console.log('[SAVE] Iniciando salvamento de dados...');
+      console.log('[SAVE] User ID:', userId);
+      console.log('[SAVE] Agency ID:', agencyId);
+      
       // Limpar telefone antes de salvar
       const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+      
+      // Preparar dados para salvar
+      const profileData = {
+        full_name: fullName,
+        instagram: instagram,
+        phone: cleanPhone,
+      };
+      
+      console.log('[SAVE] Salvando dados pessoais:', profileData);
       
       // Update profile
       const { error: profileError } = await sb
         .from('profiles')
-        .update({
-          full_name: fullName,
-          instagram: instagram,
-          phone: cleanPhone,
-        })
+        .update(profileData)
         .eq('id', userId);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('[SAVE] Erro ao salvar perfil:', profileError);
+        throw profileError;
+      }
+      
+      console.log('[SAVE] ✅ Dados pessoais salvos com sucesso');
 
       // Update agency data if changed
       if (agencyId) {
+        const agencyData = { 
+          name: agencyName,
+          instagram_url: instagramUrl || null,
+          website_url: websiteUrl || null,
+          whatsapp_group_url: whatsappGroupUrl || null,
+          tickets_group_url: ticketsGroupUrl || null,
+        };
+        
+        console.log('[SAVE] Salvando dados da agência:', agencyData);
+        
         const { error: agencyError } = await sb
           .from('agencies')
-          .update({ 
-            name: agencyName,
-            instagram_url: instagramUrl || null,
-            website_url: websiteUrl || null,
-            whatsapp_group_url: whatsappGroupUrl || null,
-            tickets_group_url: ticketsGroupUrl || null,
-          })
+          .update(agencyData)
           .eq('id', agencyId);
 
-        if (agencyError) throw agencyError;
+        if (agencyError) {
+          console.error('[SAVE] Erro ao salvar agência:', agencyError);
+          throw agencyError;
+        }
+        
+        console.log('[SAVE] ✅ Dados da agência salvos com sucesso');
+      } else {
+        console.warn('[SAVE] ⚠️ AgencyId não encontrado - dados da agência não foram salvos');
       }
 
       toast.success("Dados salvos com sucesso!");
+      
+      // Recarregar dados do banco para confirmar salvamento
+      console.log('[SAVE] Recarregando dados do banco...');
+      await loadData();
+      console.log('[SAVE] ✅ Dados recarregados com sucesso');
+      
     } catch (error: any) {
-      console.error('Error saving profile:', error);
-      toast.error("Erro ao salvar dados");
+      console.error('[SAVE] ❌ Erro ao salvar dados:', error);
+      toast.error(error.message || "Erro ao salvar dados");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleChangePassword = async () => {
