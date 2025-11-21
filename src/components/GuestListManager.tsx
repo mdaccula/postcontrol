@@ -41,6 +41,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import * as XLSX from "xlsx";
+import { GuestListAnalytics } from "./GuestListAnalytics";
 
 interface GuestListEvent {
   id: string;
@@ -290,27 +291,37 @@ export default function GuestListManager() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Gerenciar Listas VIP
-          </CardTitle>
-          <CardDescription>
-            Crie eventos de lista VIP, gerencie datas e visualize inscritos
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="events" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="events">Eventos</TabsTrigger>
-              <TabsTrigger value="dates" disabled={!selectedEvent}>
-                Datas e Valores
-              </TabsTrigger>
-              <TabsTrigger value="registrations" disabled={!selectedEvent}>
-                Inscritos
-              </TabsTrigger>
-            </TabsList>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Listas VIP</h2>
+          <p className="text-muted-foreground">
+            Gerencie eventos, datas, inscrições e visualize analytics
+          </p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="manage" className="w-full">
+        <TabsList>
+          <TabsTrigger value="manage">Gerenciar</TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="manage" className="space-y-4">
+          <Card>
+            <CardContent className="pt-6">
+              <Tabs defaultValue="events" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="events">Eventos</TabsTrigger>
+                  <TabsTrigger value="dates" disabled={!selectedEvent}>
+                    Datas e Valores
+                  </TabsTrigger>
+                  <TabsTrigger value="registrations" disabled={!selectedEvent}>
+                    Inscritos
+                  </TabsTrigger>
+                </TabsList>
 
             {/* TAB: Eventos */}
             <TabsContent value="events" className="space-y-4">
@@ -638,8 +649,14 @@ export default function GuestListManager() {
               )}
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <GuestListAnalytics />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
