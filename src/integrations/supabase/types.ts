@@ -1487,6 +1487,7 @@ export type Database = {
       }
       user_event_goals: {
         Row: {
+          achieved_requirement_id: string | null
           agency_id: string
           created_at: string | null
           current_posts: number | null
@@ -1503,6 +1504,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          achieved_requirement_id?: string | null
           agency_id: string
           created_at?: string | null
           current_posts?: number | null
@@ -1519,6 +1521,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          achieved_requirement_id?: string | null
           agency_id?: string
           created_at?: string | null
           current_posts?: number | null
@@ -1535,6 +1538,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_event_goals_achieved_requirement_id_fkey"
+            columns: ["achieved_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "event_requirements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_event_goals_agency_id_fkey"
             columns: ["agency_id"]
@@ -1646,6 +1656,7 @@ export type Database = {
       check_and_update_user_goal: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: {
+          achieved_requirement_id: string
           current_posts: number
           current_sales: number
           goal_just_achieved: boolean

@@ -1,6 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+interface EventRequirement {
+  id: string;
+  required_posts: number;
+  required_sales: number;
+  description: string | null;
+  display_order: number;
+}
+
 interface GoalProgress {
   currentPosts: number;
   currentSales: number;
@@ -11,6 +19,8 @@ interface GoalProgress {
   completionPercentage: number;
   postsRemaining: number;
   salesRemaining: number;
+  achievedRequirementId: string | null;
+  allRequirements: EventRequirement[];
 }
 
 export const useUserGoalProgress = (eventId: string | null, userId: string | null) => {
@@ -18,6 +28,17 @@ export const useUserGoalProgress = (eventId: string | null, userId: string | nul
     queryKey: ['user-goal-progress', eventId, userId],
     queryFn: async (): Promise<GoalProgress | null> => {
       if (!eventId || !userId) return null;
+
+      // Buscar todas as regras do evento
+      const { data: requirements, error: reqError } = await supabase
+        .from('event_requirements')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('display_order');
+
+      if (reqError) {
+        console.error('Erro ao buscar regras:', reqError);
+      }
 
       const { data, error } = await supabase
         .from('user_event_goals')
@@ -44,13 +65,13 @@ export const useUserGoalProgress = (eventId: string | null, userId: string | nul
             .single();
           
           if (newData) {
-            return mapToGoalProgress(newData);
+            return mapToGoalProgress(newData, requirements || []);
           }
         }
         return null;
       }
 
-      return mapToGoalProgress(data);
+      return mapToGoalProgress(data, requirements || []);
     },
     enabled: !!eventId && !!userId,
     staleTime: 30000, // 30 segundos
@@ -58,7 +79,7 @@ export const useUserGoalProgress = (eventId: string | null, userId: string | nul
   });
 };
 
-function mapToGoalProgress(data: any): GoalProgress {
+function mapToGoalProgress(data: any, requirements: EventRequirement[]): GoalProgress {
   const total = data.required_posts + data.required_sales;
   const current = data.current_posts + data.current_sales;
   const completionPercentage = total > 0 ? Math.round((current / total) * 100) : 0;
@@ -73,5 +94,7 @@ function mapToGoalProgress(data: any): GoalProgress {
     completionPercentage,
     postsRemaining: Math.max(0, data.required_posts - data.current_posts),
     salesRemaining: Math.max(0, data.required_sales - data.current_sales),
+    achievedRequirementId: data.achieved_requirement_id,
+    allRequirements: requirements,
   };
 }
