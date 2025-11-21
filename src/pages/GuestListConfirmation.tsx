@@ -52,10 +52,13 @@ export default function GuestListConfirmation() {
 
   const loadConfirmationData = async () => {
     if (!id || !slug) {
+      console.log('[CONFIRMATION] Link inválido - ID ou Slug ausente');
       toast.error("Link inválido");
       navigate("/");
       return;
     }
+
+    console.log('[CONFIRMATION] Carregando dados de confirmação:', { id, slug });
 
     try {
       // Buscar dados da inscrição
@@ -63,14 +66,23 @@ export default function GuestListConfirmation() {
         .from("guest_list_registrations")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
-      if (regError || !regData) {
+      if (regError) {
+        console.error('[CONFIRMATION] Erro ao buscar registro:', regError);
+        toast.error("Erro ao buscar inscrição");
+        navigate("/");
+        return;
+      }
+
+      if (!regData) {
+        console.log('[CONFIRMATION] Inscrição não encontrada para ID:', id);
         toast.error("Inscrição não encontrada");
         navigate("/");
         return;
       }
 
+      console.log('[CONFIRMATION] Registro encontrado:', regData);
       setRegistration(regData);
 
       // Buscar dados do evento
@@ -79,14 +91,23 @@ export default function GuestListConfirmation() {
         .select("*")
         .eq("slug", slug)
         .eq("id", regData.event_id)
-        .single();
+        .maybeSingle();
 
-      if (eventError || !eventData) {
+      if (eventError) {
+        console.error('[CONFIRMATION] Erro ao buscar evento:', eventError);
+        toast.error("Erro ao buscar evento");
+        navigate("/");
+        return;
+      }
+
+      if (!eventData) {
+        console.log('[CONFIRMATION] Evento não encontrado para slug:', slug);
         toast.error("Evento não encontrado");
         navigate("/");
         return;
       }
 
+      console.log('[CONFIRMATION] Evento encontrado:', eventData);
       setEvent(eventData);
 
       // Buscar dados da agência
@@ -94,15 +115,21 @@ export default function GuestListConfirmation() {
         .from("agencies")
         .select("id, name, logo_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url")
         .eq("id", eventData.agency_id)
-        .single();
+        .maybeSingle();
 
-      if (!agencyError && agencyData) {
+      if (agencyError) {
+        console.error('[CONFIRMATION] Erro ao buscar agência:', agencyError);
+      }
+
+      if (agencyData) {
+        console.log('[CONFIRMATION] Agência encontrada:', agencyData);
         setAgency(agencyData);
       }
 
+      console.log('[CONFIRMATION] ✅ Dados carregados com sucesso');
       // Track analytics - share_click será trackado quando clicar no botão
     } catch (error) {
-      console.error("Error loading confirmation:", error);
+      console.error("[CONFIRMATION] ❌ Erro ao carregar confirmação:", error);
       toast.error("Erro ao carregar confirmação");
       navigate("/");
     } finally {
