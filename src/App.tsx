@@ -21,6 +21,7 @@ import { GuestDashboard } from "./pages/GuestDashboard";
 import Install from "./pages/Install";
 import PushDiagnostic from "./pages/PushDiagnostic";
 import NotFound from "./pages/NotFound";
+import GuestListRegister from "./pages/GuestListRegister";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
@@ -47,6 +48,9 @@ const App = () => {
             <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/install" element={<Install />} />
             <Route path="/push-diagnostic" element={<PushDiagnostic />} />
+            
+            {/* Guest List Public Routes */}
+            <Route path="/lista/:slug" element={<GuestListRegister />} />
             
             {/* Protected Routes - Require Authentication */}
             <Route path="/submit" element={
