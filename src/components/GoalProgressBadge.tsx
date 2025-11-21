@@ -62,6 +62,15 @@ export const GoalProgressBadge = ({
               <p className="text-sm text-muted-foreground">
                 Parabéns! Você garantiu sua vaga no evento 🎉
               </p>
+              
+              {/* Mostrar qual regra foi atingida */}
+              {progress.achievedRequirementId && progress.allRequirements.length > 1 && (
+                <div className="mt-3 p-2 bg-green-500/10 rounded-md">
+                  <p className="text-xs text-green-700 dark:text-green-300">
+                    ✅ Meta atingida: {progress.requiredPosts} posts + {progress.requiredSales} vendas
+                  </p>
+                </div>
+              )}
             </motion.div>
           ) : (
             <>
@@ -106,6 +115,44 @@ export const GoalProgressBadge = ({
                   )}
                 </div>
               </div>
+
+              {/* Mostrar todas as regras alternativas se existirem */}
+              {progress.allRequirements.length > 1 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Opções de meta:
+                  </p>
+                  {progress.allRequirements.map((req, index) => {
+                    const reqTotal = req.required_posts + req.required_sales;
+                    const reqCurrent = Math.min(progress.currentPosts, req.required_posts) + 
+                                      Math.min(progress.currentSales, req.required_sales);
+                    const reqPercentage = reqTotal > 0 ? Math.round((reqCurrent / reqTotal) * 100) : 0;
+                    const isAchieved = progress.currentPosts >= req.required_posts && 
+                                      progress.currentSales >= req.required_sales;
+
+                    return (
+                      <div 
+                        key={req.id} 
+                        className={`p-2 rounded-md text-xs ${
+                          isAchieved 
+                            ? 'bg-green-500/10 border border-green-500/20' 
+                            : 'bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={isAchieved ? 'text-green-700 dark:text-green-300 font-medium' : 'text-muted-foreground'}>
+                            {isAchieved && '✅ '}{req.required_posts} posts + {req.required_sales} vendas
+                          </span>
+                          <span className="font-bold">{reqPercentage}%</span>
+                        </div>
+                        {req.description && (
+                          <p className="text-muted-foreground italic">{req.description}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
         </div>

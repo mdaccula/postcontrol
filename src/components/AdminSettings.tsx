@@ -8,6 +8,7 @@ import { Phone, Save, Globe } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MigrationUserGoalsButton } from "./MigrationUserGoalsButton";
 
 interface AdminSettingsProps {
   isMasterAdmin?: boolean;
@@ -162,13 +163,14 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
   };
 
   return (
-    <Card className="p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">⚙️ Configurações</h2>
-        <p className="text-muted-foreground text-sm">
-          {isMasterAdmin ? "Configure as informações globais da plataforma" : "Configure o WhatsApp para suporte"}
-        </p>
-      </div>
+    <>
+      <Card className="p-6 space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">⚙️ Configurações</h2>
+          <p className="text-muted-foreground text-sm">
+            {isMasterAdmin ? "Configure as informações globais da plataforma" : "Configure o WhatsApp para suporte"}
+          </p>
+        </div>
 
       <div className="space-y-6">
         {/* URL Base - Only for Master Admin */}
@@ -262,6 +264,13 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
           {loading ? "Salvando..." : "Salvar Configurações"}
         </Button>
       </div>
-    </Card>
+      </Card>
+
+      {isMasterAdmin && (
+        <div className="mt-6">
+          <MigrationUserGoalsButton />
+        </div>
+      )}
+    </>
   );
 };
