@@ -564,9 +564,10 @@ export default function GuestListManager() {
                         dates.map((date) => (
                           <TableRow key={date.id}>
                             <TableCell>
-                              {format(new Date(date.event_date), "dd/MM/yyyy", {
-                                locale: ptBR,
-                              })}
+                              {(() => {
+                                const [year, month, day] = date.event_date.split('-');
+                                return `${day}/${month}/${year}`;
+                              })()}
                             </TableCell>
                             <TableCell>
                               {date.name || "-"}
@@ -690,7 +691,10 @@ export default function GuestListManager() {
                               <SelectItem value="all">Todas as datas</SelectItem>
                               {datesForFilteredEvent.map((date) => (
                                 <SelectItem key={date.id} value={date.id}>
-                                  {format(new Date(date.event_date), "dd/MM/yyyy", { locale: ptBR })}
+                                  {(() => {
+                                    const [year, month, day] = date.event_date.split('-');
+                                    return `${day}/${month}/${year}`;
+                                  })()}
                                   {date.name && ` - ${date.name}`}
                                 </SelectItem>
                               ))}
