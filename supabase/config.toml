@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.auto-deactivate-events]
 verify_jwt = false
+
+[functions.validate-guest-registration]
+verify_jwt = false
+
+[functions.track-guest-list-analytics]
+verify_jwt = false
