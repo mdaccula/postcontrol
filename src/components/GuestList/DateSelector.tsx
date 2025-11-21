@@ -1,14 +1,9 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Calendar, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface GuestListDate {
   id: string;
@@ -25,19 +20,17 @@ interface GuestListDate {
 
 interface DateSelectorProps {
   dates: GuestListDate[];
-  selectedDateId: string;
-  onSelectDate: (dateId: string) => void;
+  selectedDateIds: string[];
+  onSelectDates: (dateIds: string[]) => void;
   userGender?: string;
 }
 
 export const DateSelector = ({ 
   dates, 
-  selectedDateId, 
-  onSelectDate,
+  selectedDateIds, 
+  onSelectDates,
   userGender 
 }: DateSelectorProps) => {
-  const selectedDate = dates.find(d => d.id === selectedDateId);
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -45,98 +38,122 @@ export const DateSelector = ({
     }).format(price);
   };
 
-  const getDisplayPrice = () => {
-    if (!selectedDate) return null;
-    
-    if (userGender === 'feminino') {
-      return formatPrice(selectedDate.female_price);
-    } else if (userGender === 'masculino') {
-      return formatPrice(selectedDate.male_price);
+  const handleToggleDate = (dateId: string) => {
+    if (selectedDateIds.includes(dateId)) {
+      onSelectDates(selectedDateIds.filter(id => id !== dateId));
+    } else {
+      onSelectDates([...selectedDateIds, dateId]);
     }
-    
-    // Mostrar ambos os preços se não houver gênero selecionado
-    return `${formatPrice(selectedDate.female_price)} (F) / ${formatPrice(selectedDate.male_price)} (M)`;
+  };
+
+  const getDatePrice = (date: GuestListDate) => {
+    if (userGender === 'feminino') {
+      return formatPrice(date.female_price);
+    } else if (userGender === 'masculino') {
+      return formatPrice(date.male_price);
+    }
+    return `${formatPrice(date.female_price)} (F) / ${formatPrice(date.male_price)} (M)`;
   };
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
+      <div className="space-y-3">
         <label className="text-sm font-medium text-foreground">
-          📅 Selecione a data do evento
+          📅 Selecione as datas do evento
         </label>
-        <Select value={selectedDateId} onValueChange={onSelectDate}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Escolha uma data" />
-          </SelectTrigger>
-          <SelectContent>
-            {dates.map((date) => (
-              <SelectItem key={date.id} value={date.id}>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {format(new Date(date.event_date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <p className="text-xs text-muted-foreground">
+          Você pode selecionar múltiplas datas para se inscrever de uma vez
+        </p>
+        
+        <div className="space-y-3">
+          {dates.map((date) => {
+            const isSelected = selectedDateIds.includes(date.id);
+            
+            return (
+              <Card 
+                key={date.id} 
+                className={`cursor-pointer transition-all ${
+                  isSelected 
+                    ? 'border-primary bg-primary/5 shadow-md' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+                onClick={() => handleToggleDate(date.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => handleToggleDate(date.id)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      {date.image_url && (
+                        <div className="rounded-lg overflow-hidden">
+                          <img 
+                            src={date.image_url} 
+                            alt={date.name || "Evento"} 
+                            className="w-full h-32 object-cover"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="space-y-1">
+                        {date.name && (
+                          <h4 className="font-bold text-base">{date.name}</h4>
+                        )}
+                        
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          <span className="font-medium">
+                            {format(new Date(date.event_date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                          </span>
+                        </div>
+                        
+                        {(date.start_time || date.end_time) && (
+                          <div className="text-xs text-muted-foreground">
+                            {date.start_time && date.end_time ? (
+                              <span>{date.start_time.slice(0, 5)} às {date.end_time.slice(0, 5)}</span>
+                            ) : date.start_time ? (
+                              <span>Início: {date.start_time.slice(0, 5)}</span>
+                            ) : (
+                              <span>Término: {date.end_time.slice(0, 5)}</span>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-xs text-muted-foreground">Valor:</span>
+                          <span className="text-lg font-bold text-primary">
+                            {getDatePrice(date)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {isSelected && (
+                      <div className="bg-primary text-primary-foreground rounded-full p-1">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        
+        {selectedDateIds.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center pt-2">
+            ⚠️ Selecione pelo menos uma data para continuar
+          </p>
+        )}
+        
+        {selectedDateIds.length > 0 && (
+          <p className="text-sm text-primary font-medium text-center pt-2">
+            ✓ {selectedDateIds.length} data{selectedDateIds.length > 1 ? 's' : ''} selecionada{selectedDateIds.length > 1 ? 's' : ''}
+          </p>
+        )}
       </div>
-
-      {selectedDate && (
-        <Card className="border-primary/20 bg-primary/5 overflow-hidden">
-          <CardContent className="pt-6">
-            <div className="space-y-3">
-              {selectedDate.image_url && (
-                <div className="rounded-lg overflow-hidden -mx-6 -mt-6 mb-4">
-                  <img 
-                    src={selectedDate.image_url} 
-                    alt={selectedDate.name || "Evento"} 
-                    className="w-full h-48 object-cover"
-                  />
-                </div>
-              )}
-              
-              {selectedDate.name && (
-                <h4 className="font-bold text-lg">{selectedDate.name}</h4>
-              )}
-              
-              {(selectedDate.start_time || selectedDate.end_time) && (
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  {selectedDate.start_time && selectedDate.end_time ? (
-                    <span>{selectedDate.start_time.slice(0, 5)} às {selectedDate.end_time.slice(0, 5)}</span>
-                  ) : selectedDate.start_time ? (
-                    <span>Início: {selectedDate.start_time.slice(0, 5)}</span>
-                  ) : (
-                    <span>Término: {selectedDate.end_time.slice(0, 5)}</span>
-                  )}
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Valor da Lista:</span>
-                <span className="text-xl font-bold text-primary">
-                  {getDisplayPrice()}
-                </span>
-              </div>
-              
-              {!userGender && (
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div>💃 Lista Feminina: {formatPrice(selectedDate.female_price)}</div>
-                  <div>🕺 Lista Masculina: {formatPrice(selectedDate.male_price)}</div>
-                </div>
-              )}
-
-              {selectedDate.max_capacity && (
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  <span>👥 Vagas limitadas</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

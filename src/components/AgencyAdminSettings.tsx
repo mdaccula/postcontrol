@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Save, Building2, User, Lock, Calendar, CreditCard, Upload, Image as ImageIcon } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -189,79 +190,86 @@ export const AgencyAdminSettings = () => {
     setUploadProgress(0);
     
     try {
-      console.log('📸 Iniciando upload de logo...');
+      console.log('[LOGO] 📸 Iniciando upload de logo...');
       
       const fileExt = logoFile.name.split('.').pop();
-      const fileName = `agency-logos/${agencyId}_${Date.now()}.${fileExt}`;
+      const fileName = `${agencyId}/logo.${fileExt}`;
+      const filePath = `agency-logos/${fileName}`;
       
       // Simular progresso
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
       
-      // Deletar logos antigos
-      const { data: oldFiles } = await sb.storage
-        .from('screenshots')
-        .list('agency-logos', { search: agencyId });
+      console.log('[LOGO] Fazendo upload para:', filePath);
       
-      if (oldFiles && oldFiles.length > 0) {
-        await Promise.all(
-          oldFiles.map(file => 
-            sb.storage
-              .from('screenshots')
-              .remove([`agency-logos/${file.name}`])
-          )
-        );
-      }
-      
-      // Upload
-      const { error: uploadError } = await sb.storage
-        .from('screenshots')
-        .upload(fileName, logoFile, { upsert: true });
+      // Upload para o bucket agency-logos
+      const { error: uploadError } = await supabase.storage
+        .from('agency-logos')
+        .upload(fileName, logoFile, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
       
       clearInterval(progressInterval);
       setUploadProgress(95);
       
-      if (uploadError) throw uploadError;
-      
-      // 🔧 CORREÇÃO 5: Usar URL pública permanente (não expira)
-      const { data: publicData } = sb.storage
-        .from('screenshots')
-        .getPublicUrl(fileName);
-      
-      console.log('✅ Logo URL pública:', publicData.publicUrl);
-      
-      // Atualizar agência com URL permanente
-      const { error: updateError } = await sb
-        .from('agencies')
-        .update({ logo_url: publicData.publicUrl })
-        .eq('id', agencyId);
-      
-      if (updateError) throw updateError;
-      
-      setUploadProgress(100);
-      setAgencyLogoUrl(publicData.publicUrl);
-      setLogoPreview(publicData.publicUrl);
-      
-      // Verificar se URL está acessível
-      try {
-        const response = await fetch(publicData.publicUrl, { method: 'HEAD' });
-        if (!response.ok) {
-          console.error('❌ Logo URL não acessível (403/404). Verificar RLS policy do bucket.');
-          toast.warning("Logo salvo, mas pode não estar visível. Verifique as permissões.");
-        }
-      } catch (e) {
-        console.error('❌ Erro ao verificar logo URL:', e);
+      if (uploadError) {
+        console.error('[LOGO] ❌ Erro no upload:', uploadError);
+        toast.error(`Erro no upload: ${uploadError.message}`);
+        throw uploadError;
       }
       
-      toast.success("Logo atualizado com sucesso! O logo será atualizado automaticamente no painel.");
+      console.log('[LOGO] ✅ Upload concluído');
+      
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('agency-logos')
+        .getPublicUrl(fileName);
+      
+      console.log('[LOGO] URL pública:', publicUrl);
+      
+      // Atualizar agencies table
+      const { error: updateError } = await supabase
+        .from('agencies')
+        .update({ logo_url: publicUrl })
+        .eq('id', agencyId);
+      
+      if (updateError) {
+        console.error('[LOGO] ❌ Erro ao atualizar agencies:', updateError);
+        toast.error(`Erro ao atualizar banco: ${updateError.message}`);
+        throw updateError;
+      }
+      
+      console.log('[LOGO] ✅ Logo salvo com sucesso no banco');
+      
+      setUploadProgress(100);
+      setAgencyLogoUrl(publicUrl);
+      setLogoPreview(publicUrl);
+      
+      // Verificar se URL está acessível (apenas log, não gerar erro)
+      try {
+        const response = await fetch(publicUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          console.warn('[LOGO] ⚠️ Logo URL retornou status', response.status);
+        } else {
+          console.log('[LOGO] ✅ Logo acessível publicamente');
+        }
+      } catch (e) {
+        console.warn('[LOGO] ⚠️ Não foi possível verificar acessibilidade:', e);
+      }
+      
+      toast.success("Logo salvo com sucesso!");
       setLogoFile(null);
+      
+      // Recarregar dados para atualizar preview
+      await loadData();
       
       // Resetar progresso após 1s
       setTimeout(() => setUploadProgress(0), 1000);
     } catch (error: any) {
-      console.error('❌ Erro ao salvar logo:', error);
-      toast.error(error.message || "Erro ao salvar logo");
+      console.error('[LOGO] ❌ Erro ao salvar logo:', error);
+      // Toasts específicos já foram mostrados acima
       setUploadProgress(0);
     }
   };

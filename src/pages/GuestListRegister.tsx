@@ -44,7 +44,7 @@ export default function GuestListRegister() {
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<GuestListEvent | null>(null);
   const [dates, setDates] = useState<GuestListDate[]>([]);
-  const [selectedDateId, setSelectedDateId] = useState<string>("");
+  const [selectedDateIds, setSelectedDateIds] = useState<string[]>([]);
   const [selectedGender, setSelectedGender] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
@@ -118,7 +118,7 @@ export default function GuestListRegister() {
       }
 
       setDates(activeDates);
-      setSelectedDateId(activeDates[0].id); // Selecionar primeira data automaticamente
+      // Não selecionar nenhuma data automaticamente para permitir seleção múltipla
 
     } catch (err: any) {
       console.error('Erro ao carregar evento:', err);
@@ -144,7 +144,7 @@ export default function GuestListRegister() {
       await supabase.functions.invoke('track-guest-list-analytics', {
         body: {
           eventId: event.id,
-          dateId: selectedDateId || undefined,
+          dateId: selectedDateIds[0] || undefined,
           eventType,
           utmParams,
         },
@@ -158,14 +158,16 @@ export default function GuestListRegister() {
     trackAnalytics('form_start');
   };
 
-  const handleSuccess = (registrationId: string, formData: any) => {
-    // Redirecionar para página de confirmação
-    navigate(`/lista/${slug}/confirmacao/${registrationId}`, {
+  const handleSuccess = (registrationIds: string[], formData: any) => {
+    // Redirecionar para página de confirmação com primeira inscrição
+    const selectedDates = dates.filter(d => selectedDateIds.includes(d.id));
+    navigate(`/lista/${slug}/confirmacao/${registrationIds[0]}`, {
       state: {
         eventName: event?.name,
         agencyName: event?.agencies?.name,
         agencyLogo: event?.agencies?.logo_url,
-        selectedDate: dates.find(d => d.id === selectedDateId),
+        selectedDates,
+        registrationIds,
         formData,
       },
     });
@@ -241,15 +243,15 @@ export default function GuestListRegister() {
             {/* Seletor de Datas */}
             <DateSelector
               dates={dates}
-              selectedDateId={selectedDateId}
-              onSelectDate={setSelectedDateId}
+              selectedDateIds={selectedDateIds}
+              onSelectDates={setSelectedDateIds}
               userGender={selectedGender}
             />
 
             <Separator />
 
             {/* Formulário */}
-            {selectedDateId && (
+            {selectedDateIds.length > 0 && (
               <div className="space-y-4">
                 <div className="text-center space-y-2">
                   <h3 className="text-xl font-semibold">
@@ -262,7 +264,7 @@ export default function GuestListRegister() {
 
                 <GuestListForm
                   eventId={event.id}
-                  dateId={selectedDateId}
+                  dateIds={selectedDateIds}
                   agencyPhone={event.agency_phone || undefined}
                   whatsappLink={event.whatsapp_link || undefined}
                   eventName={event.name}

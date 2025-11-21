@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Instagram, Globe, MessageCircle, Ticket, Share2, CheckCircle } from "lucide-react";
+import { Instagram, Globe, MessageCircle, Ticket, Share2, CheckCircle, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 interface RegistrationData {
   id: string;
@@ -52,11 +53,16 @@ interface DateData {
 export default function GuestListConfirmation() {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
   const [event, setEvent] = useState<EventData | null>(null);
   const [agency, setAgency] = useState<AgencyData | null>(null);
   const [dateData, setDateData] = useState<DateData | null>(null);
+  const [allDates, setAllDates] = useState<DateData[]>([]);
+  
+  // Pegar datas do state se vieram da navegação
+  const selectedDatesFromState = location.state?.selectedDates as DateData[] | undefined;
 
   useEffect(() => {
     loadConfirmationData();
@@ -152,6 +158,15 @@ export default function GuestListConfirmation() {
       if (dateInfo) {
         console.log('[CONFIRMATION] Data encontrada:', dateInfo);
         setDateData(dateInfo);
+      }
+      
+      // Se temos múltiplas datas do state, usar elas
+      if (selectedDatesFromState && selectedDatesFromState.length > 0) {
+        console.log('[CONFIRMATION] Usando datas do state:', selectedDatesFromState);
+        setAllDates(selectedDatesFromState);
+      } else if (dateInfo) {
+        // Caso contrário, usar apenas a data única
+        setAllDates([dateInfo]);
       }
 
       console.log('[CONFIRMATION] ✅ Dados carregados com sucesso');
@@ -288,49 +303,82 @@ Garanta sua vaga também: ${shareUrl}`;
         </div>
 
         {/* Event Info - Detalhado */}
-        <div className="bg-muted/30 rounded-lg p-4 space-y-3 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+        <div className="bg-muted/30 rounded-lg p-4 space-y-4 animate-fade-in" style={{ animationDelay: "0.4s" }}>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Evento</p>
             <p className="font-bold text-lg text-foreground">{event.name}</p>
           </div>
-          
-          {dateData?.name && (
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Edição</p>
-              <p className="font-semibold text-foreground">{dateData.name}</p>
-            </div>
-          )}
-          
-          {dateData && (
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Data e Horário</p>
-              <p className="font-semibold text-foreground">
-                {formatDate(dateData.event_date)}
-                {dateData.start_time && dateData.end_time && (
-                  <span className="text-sm text-muted-foreground ml-2">
-                    ({formatTime(dateData.start_time)} - {formatTime(dateData.end_time)})
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
           
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Local</p>
             <p className="font-semibold text-foreground">{event.location}</p>
           </div>
           
-          {dateData && (
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Valor da Lista</p>
-              <p className="font-bold text-lg text-primary">
-                R$ {registration.gender === 'feminino' 
-                  ? dateData.female_price.toFixed(2).replace('.', ',')
-                  : dateData.male_price.toFixed(2).replace('.', ',')}
+          <Separator />
+          
+          {/* Múltiplas Datas */}
+          {allDates.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                {allDates.length > 1 ? 'Datas Selecionadas' : 'Data Selecionada'}
               </p>
-              <p className="text-xs text-muted-foreground">
-                ({registration.gender === 'feminino' ? 'Lista Feminina' : 'Lista Masculina'})
-              </p>
+              
+              {allDates.map((date, index) => (
+                <div key={date.id} className="bg-background/50 rounded-lg p-3 space-y-2">
+                  {date.image_url && (
+                    <div className="rounded overflow-hidden mb-2">
+                      <img 
+                        src={date.image_url} 
+                        alt={date.name || 'Data do evento'} 
+                        className="w-full h-24 object-cover"
+                      />
+                    </div>
+                  )}
+                  
+                  {date.name && (
+                    <p className="font-semibold text-foreground">{date.name}</p>
+                  )}
+                  
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span className="font-medium">
+                      {formatDate(date.event_date)}
+                    </span>
+                    {date.start_time && date.end_time && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatTime(date.start_time)} - {formatTime(date.end_time)}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-muted-foreground">Valor:</span>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">
+                        R$ {registration.gender === 'feminino' 
+                          ? date.female_price.toFixed(2).replace('.', ',')
+                          : date.male_price.toFixed(2).replace('.', ',')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ({registration.gender === 'feminino' ? 'Lista Feminina' : 'Lista Masculina'})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {allDates.length > 1 && (
+                <div className="bg-primary/10 rounded-lg p-3 mt-2">
+                  <p className="text-sm font-semibold text-primary">
+                    Total: R$ {allDates.reduce((sum, date) => {
+                      const price = registration.gender === 'feminino' 
+                        ? date.female_price 
+                        : date.male_price;
+                      return sum + price;
+                    }, 0).toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

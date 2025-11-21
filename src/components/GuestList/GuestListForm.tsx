@@ -24,18 +24,18 @@ type FormData = z.infer<typeof formSchema>;
 
 interface GuestListFormProps {
   eventId: string;
-  dateId: string;
+  dateIds: string[];
   agencyPhone?: string;
   whatsappLink?: string;
   eventName: string;
-  onSuccess: (registrationId: string, data: FormData) => void;
+  onSuccess: (registrationIds: string[], data: FormData) => void;
   onFormStart: () => void;
   onGenderChange?: (gender: string) => void;
 }
 
 export const GuestListForm = ({
   eventId,
-  dateId,
+  dateIds,
   agencyPhone,
   whatsappLink,
   eventName,
@@ -75,47 +75,63 @@ export const GuestListForm = ({
         campaign: urlParams.get('utm_campaign') || undefined,
       };
 
-      // Chamar edge function de validação
-      const { data: result, error } = await supabase.functions.invoke(
-        'validate-guest-registration',
-        {
-          body: {
-            email: data.email,
-            honeypot,
-            eventId,
-            dateId,
-            fullName: data.fullName,
-            gender: data.gender,
-            utmParams,
-          },
+      // Array para armazenar IDs das inscrições
+      const registrationIds: string[] = [];
+      let hasError = false;
+      
+      // Processar cada data selecionada
+      for (const dateId of dateIds) {
+        const { data: result, error } = await supabase.functions.invoke(
+          'validate-guest-registration',
+          {
+            body: {
+              email: data.email,
+              honeypot,
+              eventId,
+              dateId,
+              fullName: data.fullName,
+              gender: data.gender,
+              utmParams,
+            },
+          }
+        );
+
+        if (error) {
+          console.error('Erro ao processar data:', dateId, error);
+          hasError = true;
+          continue;
         }
-      );
 
-      if (error) throw error;
+        if (result.error || result.isBotSuspected || result.isDisposable) {
+          hasError = true;
+          continue;
+        }
 
-      if (result.error) {
-        toast.error(result.error);
-        return;
+        if (result.isDuplicate) {
+          // Se já está cadastrado nesta data, apenas adicionar o ID existente
+          console.log('Já cadastrado na data:', dateId);
+        }
+
+        if (result.registration?.id) {
+          registrationIds.push(result.registration.id);
+        }
       }
 
-      if (result.isBotSuspected) {
-        toast.error("Atividade suspeita detectada.");
-        return;
-      }
-
-      if (result.isDisposable) {
-        toast.error("Use um email válido, não temporário.");
-        return;
-      }
-
-      if (result.isDuplicate) {
-        toast.warning("Você já está cadastrado neste evento!");
+      if (registrationIds.length === 0) {
+        if (hasError) {
+          toast.error("Erro ao processar inscrições. Tente novamente.");
+        } else {
+          toast.warning("Você já está cadastrado em todas as datas selecionadas!");
+        }
         return;
       }
 
       // Sucesso!
-      toast.success("Inscrição realizada com sucesso! 🎉");
-      onSuccess(result.registration.id, data);
+      const message = dateIds.length > 1 
+        ? `Inscrição realizada com sucesso em ${registrationIds.length} data${registrationIds.length > 1 ? 's' : ''}! 🎉`
+        : "Inscrição realizada com sucesso! 🎉";
+      toast.success(message);
+      onSuccess(registrationIds, data);
 
     } catch (error: any) {
       console.error('Erro ao enviar inscrição:', error);
@@ -239,7 +255,7 @@ export const GuestListForm = ({
       <Button
         type="submit"
         className="w-full h-12 text-lg font-semibold"
-        disabled={isSubmitting || !dateId}
+        disabled={isSubmitting || dateIds.length === 0}
       >
         {isSubmitting ? (
           <>
