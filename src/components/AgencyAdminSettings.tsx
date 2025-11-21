@@ -26,6 +26,12 @@ export const AgencyAdminSettings = () => {
   const [ogImageUrl, setOgImageUrl] = useState<string | null>(null);
   const [ogImageFile, setOgImageFile] = useState<File | null>(null);
   
+  // Agency URLs
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [whatsappGroupUrl, setWhatsappGroupUrl] = useState("");
+  const [ticketsGroupUrl, setTicketsGroupUrl] = useState("");
+  
   // Personal Data
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -74,7 +80,7 @@ export const AgencyAdminSettings = () => {
       if (profileData.agency_id) {
         const { data: agencyData } = await sb
           .from('agencies')
-          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url')
+          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url')
           .eq('id', profileData.agency_id)
           .maybeSingle();
 
@@ -86,6 +92,10 @@ export const AgencyAdminSettings = () => {
           setAgencyLogoUrl(agencyData.logo_url);
           setLogoPreview(agencyData.logo_url);
           setOgImageUrl(agencyData.og_image_url);
+          setInstagramUrl(agencyData.instagram_url || "");
+          setWebsiteUrl(agencyData.website_url || "");
+          setWhatsappGroupUrl(agencyData.whatsapp_group_url || "");
+          setTicketsGroupUrl(agencyData.tickets_group_url || "");
         }
       }
     }
@@ -242,11 +252,17 @@ export const AgencyAdminSettings = () => {
 
       if (profileError) throw profileError;
 
-      // Update agency name if changed
-      if (agencyId && agencyName) {
+      // Update agency data if changed
+      if (agencyId) {
         const { error: agencyError } = await sb
           .from('agencies')
-          .update({ name: agencyName })
+          .update({ 
+            name: agencyName,
+            instagram_url: instagramUrl || null,
+            website_url: websiteUrl || null,
+            whatsapp_group_url: whatsappGroupUrl || null,
+            tickets_group_url: ticketsGroupUrl || null,
+          })
           .eq('id', agencyId);
 
         if (agencyError) throw agencyError;
@@ -338,6 +354,56 @@ export const AgencyAdminSettings = () => {
         </div>
         
         {/* ✅ ITEM 3: Seção de logo REMOVIDA - Logo agora é sincronizado automaticamente com avatar do admin */}
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="instagramUrl">Instagram da Agência</Label>
+            <Input
+              id="instagramUrl"
+              type="url"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              placeholder="https://instagram.com/suaagencia"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="websiteUrl">Website</Label>
+            <Input
+              id="websiteUrl"
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://suaagencia.com.br"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="whatsappGroupUrl">Grupo WhatsApp da Agência</Label>
+            <Input
+              id="whatsappGroupUrl"
+              type="url"
+              value={whatsappGroupUrl}
+              onChange={(e) => setWhatsappGroupUrl(e.target.value)}
+              placeholder="https://chat.whatsapp.com/..."
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ticketsGroupUrl">Grupo Compra e Venda de Ingressos</Label>
+            <Input
+              id="ticketsGroupUrl"
+              type="url"
+              value={ticketsGroupUrl}
+              onChange={(e) => setTicketsGroupUrl(e.target.value)}
+              placeholder="https://chat.whatsapp.com/..."
+              disabled={saving}
+            />
+          </div>
+        </div>
         
         <div className="space-y-2">
           <Label htmlFor="ogImage">Imagem de Preview (Open Graph)</Label>

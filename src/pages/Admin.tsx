@@ -1829,7 +1829,7 @@ const Admin = () => {
               Convidados
             </TabsTrigger>
             <TabsTrigger value="guest-lists" className="text-xs sm:text-sm py-2">
-              Listas VIP
+              📋 Listas
             </TabsTrigger>
             <TabsTrigger value="audit" className="text-xs sm:text-sm py-2">
               Auditoria

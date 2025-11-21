@@ -735,33 +735,45 @@ export type Database = {
       guest_list_dates: {
         Row: {
           created_at: string | null
+          end_time: string | null
           event_date: string
           event_id: string
           female_price: number
           id: string
+          image_url: string | null
           is_active: boolean | null
           male_price: number
           max_capacity: number | null
+          name: string | null
+          start_time: string | null
         }
         Insert: {
           created_at?: string | null
+          end_time?: string | null
           event_date: string
           event_id: string
           female_price: number
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           male_price: number
           max_capacity?: number | null
+          name?: string | null
+          start_time?: string | null
         }
         Update: {
           created_at?: string | null
+          end_time?: string | null
           event_date?: string
           event_id?: string
           female_price?: number
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           male_price?: number
           max_capacity?: number | null
+          name?: string | null
+          start_time?: string | null
         }
         Relationships: [
           {
