@@ -100,6 +100,9 @@ const EventSlotsCounter = lazy(() =>
 const SlotExhaustionPrediction = lazy(() =>
   import("@/components/SlotExhaustionPrediction").then((m) => ({ default: m.SlotExhaustionPrediction })),
 );
+const SlotExhaustionAlert = lazy(() =>
+  import("@/components/SlotExhaustionAlert").then((m) => ({ default: m.SlotExhaustionAlert })),
+);
 
 // FASE 2: Componentes memoizados para performance
 const MemoizedDashboardStats = lazy(() =>
@@ -1607,6 +1610,15 @@ const Admin = () => {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Slot Exhaustion Alerts */}
+      {currentAgency && (
+        <div className="container mx-auto px-4 pt-6">
+          <Suspense fallback={null}>
+            <SlotExhaustionAlert />
+          </Suspense>
         </div>
       )}
 
