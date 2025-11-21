@@ -17,6 +17,10 @@ interface GuestListDate {
   male_price: number;
   max_capacity: number | null;
   is_active: boolean;
+  name?: string | null;
+  image_url?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
 }
 
 interface DateSelectorProps {
@@ -80,9 +84,36 @@ export const DateSelector = ({
       </div>
 
       {selectedDate && (
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-primary/20 bg-primary/5 overflow-hidden">
           <CardContent className="pt-6">
             <div className="space-y-3">
+              {selectedDate.image_url && (
+                <div className="rounded-lg overflow-hidden -mx-6 -mt-6 mb-4">
+                  <img 
+                    src={selectedDate.image_url} 
+                    alt={selectedDate.name || "Evento"} 
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              )}
+              
+              {selectedDate.name && (
+                <h4 className="font-bold text-lg">{selectedDate.name}</h4>
+              )}
+              
+              {(selectedDate.start_time || selectedDate.end_time) && (
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  {selectedDate.start_time && selectedDate.end_time ? (
+                    <span>{selectedDate.start_time} às {selectedDate.end_time}</span>
+                  ) : selectedDate.start_time ? (
+                    <span>Início: {selectedDate.start_time}</span>
+                  ) : (
+                    <span>Término: {selectedDate.end_time}</span>
+                  )}
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Valor da Lista:</span>
                 <span className="text-xl font-bold text-primary">

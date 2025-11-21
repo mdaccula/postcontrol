@@ -22,6 +22,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,15 +40,18 @@ import {
   Trash2,
   Calendar,
   Users,
-  DollarSign,
   Download,
-  Eye,
   BarChart3,
+  Copy,
+  Upload,
+  Clock,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { GuestListAnalytics } from "./GuestListAnalytics";
+import imageCompression from "browser-image-compression";
 
 interface GuestListEvent {
   id: string;
@@ -63,6 +73,10 @@ interface GuestListDate {
   male_price: number;
   max_capacity: number | null;
   is_active: boolean;
+  name?: string | null;
+  image_url?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
 }
 
 interface GuestListRegistration {
@@ -86,6 +100,12 @@ export default function GuestListManager() {
   const [dateDialogOpen, setDateDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<GuestListEvent | null>(null);
   const [editingDate, setEditingDate] = useState<GuestListDate | null>(null);
+  
+  // Filtros para inscritos
+  const [filterEventId, setFilterEventId] = useState<string>("all");
+  const [filterDateId, setFilterDateId] = useState<string>("all");
+  const [filterGender, setFilterGender] = useState<string>("all");
+  
   const queryClient = useQueryClient();
 
   // Query: Buscar eventos
@@ -117,6 +137,20 @@ export default function GuestListManager() {
       return data as GuestListDate[];
     },
     enabled: !!selectedEvent,
+  });
+
+  // Query: Buscar todas as datas (para filtros)
+  const { data: allDates } = useQuery({
+    queryKey: ["guest-list-all-dates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("guest_list_dates")
+        .select("*")
+        .order("event_date", { ascending: true });
+
+      if (error) throw error;
+      return data as GuestListDate[];
+    },
   });
 
   // Query: Buscar inscritos
@@ -227,6 +261,7 @@ export default function GuestListManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest-list-dates", selectedEvent] });
+      queryClient.invalidateQueries({ queryKey: ["guest-list-all-dates"] });
       setDateDialogOpen(false);
       setEditingDate(null);
       toast.success(editingDate ? "Data atualizada!" : "Data criada!");
@@ -247,6 +282,7 @@ export default function GuestListManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest-list-dates", selectedEvent] });
+      queryClient.invalidateQueries({ queryKey: ["guest-list-all-dates"] });
       toast.success("Data deletada!");
     },
     onError: (error: any) => {
@@ -254,15 +290,45 @@ export default function GuestListManager() {
     },
   });
 
-  // Exportar para XLSX
+  // Copiar slug para clipboard
+  const copySlugToClipboard = (slug: string) => {
+    const url = `${window.location.origin}/lista/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copiado para clipboard!");
+  };
+
+  // Aplicar filtros em cascata
+  const filteredRegistrations = registrations?.filter((reg) => {
+    if (filterEventId !== "all" && reg.event_id !== filterEventId) return false;
+    if (filterDateId !== "all" && reg.date_id !== filterDateId) return false;
+    if (filterGender !== "all" && reg.gender !== filterGender) return false;
+    return true;
+  }) || [];
+
+  // Copiar nomes filtrados
+  const copyFilteredNames = () => {
+    if (filteredRegistrations.length === 0) {
+      toast.error("Nenhum nome para copiar");
+      return;
+    }
+    
+    const names = filteredRegistrations
+      .map((r) => r.full_name)
+      .join("\n");
+    
+    navigator.clipboard.writeText(names);
+    toast.success(`${filteredRegistrations.length} nomes copiados!`);
+  };
+
+  // Exportar para XLSX (com filtros aplicados)
   const handleExportXLSX = () => {
-    if (!registrations || registrations.length === 0) {
+    if (filteredRegistrations.length === 0) {
       toast.error("Nenhum inscrito para exportar");
       return;
     }
 
     const worksheet = XLSX.utils.json_to_sheet(
-      registrations.map((reg) => ({
+      filteredRegistrations.map((reg) => ({
         Nome: reg.full_name,
         Email: reg.email,
         Sexo: reg.gender,
@@ -288,6 +354,11 @@ export default function GuestListManager() {
   };
 
   const selectedEventData = events?.find((e) => e.id === selectedEvent);
+
+  // Datas filtradas por evento selecionado no filtro
+  const datesForFilteredEvent = allDates?.filter((d) => 
+    filterEventId === "all" ? true : d.event_id === filterEventId
+  ) || [];
 
   return (
     <div className="space-y-6">
@@ -360,55 +431,70 @@ export default function GuestListManager() {
                   <p className="text-muted-foreground">Carregando eventos...</p>
                 ) : events && events.length > 0 ? (
                   events.map((event) => (
-                    <Card
-                      key={event.id}
-                      className={`cursor-pointer transition-all hover:border-primary ${
-                        selectedEvent === event.id ? "border-primary bg-primary/5" : ""
-                      }`}
-                      onClick={() => setSelectedEvent(event.id)}
-                    >
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1 flex-1">
-                            <CardTitle className="text-lg">{event.name}</CardTitle>
-                            <CardDescription>{event.location}</CardDescription>
-                            <div className="flex gap-2 mt-2">
-                              <Badge variant={event.is_active ? "default" : "secondary"}>
-                                {event.is_active ? "Ativo" : "Inativo"}
-                              </Badge>
-                              <Badge variant="outline">/lista/{event.slug}</Badge>
+                    <div key={event.id} className="space-y-2">
+                      {/* Slug fora do card */}
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          /lista/{event.slug}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2"
+                          onClick={() => copySlugToClipboard(event.slug)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      
+                      <Card
+                        className={`cursor-pointer transition-all hover:border-primary ${
+                          selectedEvent === event.id ? "border-primary bg-primary/5" : ""
+                        }`}
+                        onClick={() => setSelectedEvent(event.id)}
+                      >
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1 flex-1">
+                              <CardTitle className="text-lg">{event.name}</CardTitle>
+                              <CardDescription>{event.location}</CardDescription>
+                              <div className="flex gap-2 mt-2">
+                                <Badge variant={event.is_active ? "default" : "secondary"}>
+                                  {event.is_active ? "Ativo" : "Inativo"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingEvent(event);
+                                  setEventDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (
+                                    confirm("Tem certeza que deseja deletar este evento?")
+                                  ) {
+                                    deleteEventMutation.mutate(event.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingEvent(event);
-                                setEventDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (
-                                  confirm("Tem certeza que deseja deletar este evento?")
-                                ) {
-                                  deleteEventMutation.mutate(event.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                    </Card>
+                        </CardHeader>
+                      </Card>
+                    </div>
                   ))
                 ) : (
                   <Card>
@@ -435,7 +521,7 @@ export default function GuestListManager() {
                           Nova Data
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>
                             {editingDate ? "Editar Data" : "Adicionar Nova Data"}
@@ -457,9 +543,10 @@ export default function GuestListManager() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Data</TableHead>
-                        <TableHead>Valor Feminino</TableHead>
-                        <TableHead>Valor Masculino</TableHead>
-                        <TableHead>Capacidade</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Horários</TableHead>
+                        <TableHead>Valor F</TableHead>
+                        <TableHead>Valor M</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -467,7 +554,7 @@ export default function GuestListManager() {
                     <TableBody>
                       {datesLoading ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center">
+                          <TableCell colSpan={7} className="text-center">
                             Carregando...
                           </TableCell>
                         </TableRow>
@@ -479,11 +566,21 @@ export default function GuestListManager() {
                                 locale: ptBR,
                               })}
                             </TableCell>
+                            <TableCell>
+                              {date.name || "-"}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {date.start_time || date.end_time ? (
+                                <>
+                                  {date.start_time && <div>{date.start_time}</div>}
+                                  {date.end_time && <div>até {date.end_time}</div>}
+                                </>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
                             <TableCell>R$ {date.female_price.toFixed(2)}</TableCell>
                             <TableCell>R$ {date.male_price.toFixed(2)}</TableCell>
-                            <TableCell>
-                              {date.max_capacity ? date.max_capacity : "Ilimitado"}
-                            </TableCell>
                             <TableCell>
                               <Badge variant={date.is_active ? "default" : "secondary"}>
                                 {date.is_active ? "Ativo" : "Inativo"}
@@ -518,7 +615,7 @@ export default function GuestListManager() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground">
                             Nenhuma data cadastrada
                           </TableCell>
                         </TableRow>
@@ -537,11 +634,84 @@ export default function GuestListManager() {
                     <h3 className="text-lg font-semibold">
                       Inscritos - {selectedEventData.name}
                     </h3>
-                    <Button onClick={handleExportXLSX} variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar XLSX
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={copyFilteredNames} variant="outline" size="sm">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Copiar Nomes
+                      </Button>
+                      <Button onClick={handleExportXLSX} variant="outline" size="sm">
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar XLSX
+                      </Button>
+                    </div>
                   </div>
+
+                  {/* Filtros em Cascata */}
+                  <Card className="p-4">
+                    <div className="space-y-2">
+                      <Label>Filtros</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="filter-event" className="text-xs">Evento</Label>
+                          <Select
+                            value={filterEventId}
+                            onValueChange={(value) => {
+                              setFilterEventId(value);
+                              setFilterDateId("all"); // Reset filtro de data
+                            }}
+                          >
+                            <SelectTrigger id="filter-event">
+                              <SelectValue placeholder="Todos os eventos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos os eventos</SelectItem>
+                              {events?.map((event) => (
+                                <SelectItem key={event.id} value={event.id}>
+                                  {event.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="filter-date" className="text-xs">Data</Label>
+                          <Select
+                            value={filterDateId}
+                            onValueChange={setFilterDateId}
+                            disabled={filterEventId === "all"}
+                          >
+                            <SelectTrigger id="filter-date">
+                              <SelectValue placeholder="Todas as datas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas as datas</SelectItem>
+                              {datesForFilteredEvent.map((date) => (
+                                <SelectItem key={date.id} value={date.id}>
+                                  {format(new Date(date.event_date), "dd/MM/yyyy", { locale: ptBR })}
+                                  {date.name && ` - ${date.name}`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="filter-gender" className="text-xs">Sexo</Label>
+                          <Select value={filterGender} onValueChange={setFilterGender}>
+                            <SelectTrigger id="filter-gender">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos</SelectItem>
+                              <SelectItem value="feminino">Feminino</SelectItem>
+                              <SelectItem value="masculino">Masculino</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
 
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <Card>
@@ -550,7 +720,7 @@ export default function GuestListManager() {
                           <div>
                             <p className="text-sm text-muted-foreground">Total Inscritos</p>
                             <p className="text-2xl font-bold">
-                              {registrations?.length || 0}
+                              {filteredRegistrations.length}
                             </p>
                           </div>
                           <Users className="h-8 w-8 text-muted-foreground" />
@@ -563,8 +733,7 @@ export default function GuestListManager() {
                           <div>
                             <p className="text-sm text-muted-foreground">Feminino</p>
                             <p className="text-2xl font-bold">
-                              {registrations?.filter((r) => r.gender === "feminino").length ||
-                                0}
+                              {filteredRegistrations.filter((r) => r.gender === "feminino").length}
                             </p>
                           </div>
                           <Users className="h-8 w-8 text-pink-500" />
@@ -577,8 +746,7 @@ export default function GuestListManager() {
                           <div>
                             <p className="text-sm text-muted-foreground">Masculino</p>
                             <p className="text-2xl font-bold">
-                              {registrations?.filter((r) => r.gender === "masculino").length ||
-                                0}
+                              {filteredRegistrations.filter((r) => r.gender === "masculino").length}
                             </p>
                           </div>
                           <Users className="h-8 w-8 text-blue-500" />
@@ -604,8 +772,8 @@ export default function GuestListManager() {
                             Carregando...
                           </TableCell>
                         </TableRow>
-                      ) : registrations && registrations.length > 0 ? (
-                        registrations.map((reg) => (
+                      ) : filteredRegistrations.length > 0 ? (
+                        filteredRegistrations.map((reg) => (
                           <TableRow key={reg.id}>
                             <TableCell className="font-medium">{reg.full_name}</TableCell>
                             <TableCell>{reg.email}</TableCell>
@@ -639,7 +807,7 @@ export default function GuestListManager() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            Nenhum inscrito ainda
+                            Nenhum inscrito encontrado com os filtros aplicados
                           </TableCell>
                         </TableRow>
                       )}
@@ -690,13 +858,17 @@ function EventDialogForm({
       className="space-y-4"
     >
       <div className="space-y-2">
-        <Label htmlFor="name">Nome do Evento *</Label>
+        <Label htmlFor="name">Nome do Local *</Label>
         <Input
           id="name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="Ex: DEDGE Club"
           required
         />
+        <p className="text-xs text-muted-foreground">
+          Nome do estabelecimento/local onde acontecem os eventos
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -749,12 +921,12 @@ function EventDialogForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="agency_phone">Telefone da Agência (WhatsApp)</Label>
+        <Label htmlFor="agency_phone">Telefone da Agência</Label>
         <Input
           id="agency_phone"
           value={formData.agency_phone}
           onChange={(e) => setFormData({ ...formData, agency_phone: e.target.value })}
-          placeholder="5511999999999"
+          placeholder="(11) 99999-9999"
         />
       </div>
 
@@ -789,20 +961,88 @@ function DateDialogForm({
 }) {
   const [formData, setFormData] = useState({
     event_date: date?.event_date || format(new Date(), "yyyy-MM-dd"),
+    name: date?.name || "",
     female_price: date?.female_price || 0,
     male_price: date?.male_price || 0,
     max_capacity: date?.max_capacity || null,
     is_active: date?.is_active ?? true,
+    image_url: date?.image_url || "",
+    start_time: date?.start_time || "",
+    end_time: date?.end_time || "",
   });
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(date?.image_url || "");
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione uma imagem válida");
+      return;
+    }
+
+    setImageFile(file);
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return formData.image_url;
+
+    setUploading(true);
+    try {
+      const compressedFile = await imageCompression(imageFile, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+      });
+
+      const fileExt = compressedFile.name.split(".").pop();
+      const fileName = `guest-list-dates/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("agency-og-images")
+        .upload(fileName, compressedFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("agency-og-images")
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error: any) {
+      console.error("Erro ao fazer upload:", error);
+      toast.error("Erro ao fazer upload da imagem");
+      return formData.image_url;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const imageUrl = await uploadImage();
+    
+    onSubmit({
+      ...formData,
+      image_url: imageUrl || null,
+      name: formData.name || null,
+      start_time: formData.start_time || null,
+      end_time: formData.end_time || null,
+    });
+  };
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(formData);
-      }}
-      className="space-y-4"
-    >
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="event_date">Data do Evento *</Label>
         <Input
@@ -812,6 +1052,69 @@ function DateDialogForm({
           onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
           required
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="name">Nome da Festa (opcional)</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="Ex: Noite das Estrelas"
+        />
+        <p className="text-xs text-muted-foreground">
+          Nome específico da festa deste dia (deixe vazio para usar apenas a data)
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="image">Foto do Evento (opcional)</Label>
+        <div className="space-y-2">
+          {imagePreview && (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-full h-40 object-cover rounded border"
+            />
+          )}
+          <Input
+            id="image"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+          />
+          <p className="text-xs text-muted-foreground">
+            Imagem específica para esta data/festa
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="start_time">
+            <Clock className="inline h-3 w-3 mr-1" />
+            Horário de Início
+          </Label>
+          <Input
+            id="start_time"
+            type="time"
+            value={formData.start_time}
+            onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="end_time">
+            <Clock className="inline h-3 w-3 mr-1" />
+            Horário de Término
+          </Label>
+          <Input
+            id="end_time"
+            type="time"
+            value={formData.end_time}
+            onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -870,10 +1173,19 @@ function DateDialogForm({
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={uploading}>
           Cancelar
         </Button>
-        <Button type="submit">{date ? "Atualizar" : "Adicionar"} Data</Button>
+        <Button type="submit" disabled={uploading}>
+          {uploading ? (
+            <>
+              <Upload className="mr-2 h-4 w-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>{date ? "Atualizar" : "Adicionar"} Data</>
+          )}
+        </Button>
       </DialogFooter>
     </form>
   );
