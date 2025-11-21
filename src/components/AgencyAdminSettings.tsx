@@ -422,7 +422,67 @@ export const AgencyAdminSettings = () => {
           />
         </div>
         
-        {/* ✅ ITEM 3: Seção de logo REMOVIDA - Logo agora é sincronizado automaticamente com avatar do admin */}
+        {/* Logo Upload Section */}
+        <div className="space-y-2">
+          <Label htmlFor="logoUpload">Logo da Agência</Label>
+          <p className="text-xs text-muted-foreground">
+            Faça upload do logo que aparecerá na página de confirmação da lista VIP
+          </p>
+          
+          {/* Logo Preview */}
+          {logoPreview && (
+            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/30">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={logoPreview} alt="Logo da agência" />
+                <AvatarFallback>
+                  <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Logo atual</p>
+                <p className="text-xs text-muted-foreground">
+                  {agencyLogoUrl ? "Sincronizado com o banco de dados" : "Pronto para salvar"}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* File Input */}
+          <div className="flex gap-2">
+            <Input
+              id="logoUpload"
+              type="file"
+              accept="image/*"
+              onChange={handleLogoChange}
+              disabled={saving}
+              className="flex-1"
+            />
+            {logoFile && (
+              <Button 
+                onClick={saveLogo}
+                disabled={saving || !logoFile}
+                size="sm"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Salvar Logo
+              </Button>
+            )}
+          </div>
+          
+          {/* Upload Progress */}
+          {uploadProgress > 0 && uploadProgress < 100 && (
+            <div className="space-y-1">
+              <Progress value={uploadProgress} className="h-2" />
+              <p className="text-xs text-muted-foreground text-center">
+                Fazendo upload... {uploadProgress}%
+              </p>
+            </div>
+          )}
+          
+          <p className="text-xs text-muted-foreground">
+            Formatos aceitos: PNG, JPG, WEBP. Tamanho máximo: 5MB
+          </p>
+        </div>
         
         <div className="space-y-4">
           <div className="space-y-2">
