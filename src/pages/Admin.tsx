@@ -1503,9 +1503,9 @@ const Admin = () => {
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {currentAgency.logo_url && <img src={currentAgency.logo_url} alt={`Logo ${currentAgency.name}`} className="h-10 w-10 object-contain rounded-lg bg-card p-1" onError={e => {
+                {currentAgency.logo_url && <img src={currentAgency.logo_url} alt={`Logo ${currentAgency.name}`} onError={e => {
               e.currentTarget.style.display = "none";
-            }} />}
+            }} className="h-20 w-20 object-contain rounded-lg bg-card p-1" />}
                 <div>
                   <p className="text-sm text-muted-foreground">Visualizando dados de:</p>
                   <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
