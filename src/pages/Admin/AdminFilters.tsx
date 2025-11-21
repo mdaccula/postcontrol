@@ -112,27 +112,59 @@ const AdminFiltersComponent = ({
   isLoadingSubmissions = false
 }: AdminFiltersProps) => {
   /**
-   * Obter números de postagens disponíveis baseado no evento selecionado
-   * ✅ R2: Filtro em cascata - apenas posts que tenham submissões
+   * ✅ CASCATA MELHORADA: Filtrar submissões aplicando todos os filtros ativos
+   */
+  const getFilteredSubmissions = () => {
+    return submissions.filter(s => {
+      // Filtro 1: Evento selecionado
+      if (submissionEventFilter !== 'all' && s.event_id !== submissionEventFilter) return false;
+      
+      // Filtro 2: Status selecionado
+      if (submissionStatusFilter !== 'all' && s.status !== submissionStatusFilter) return false;
+      
+      // Filtro 3: Tipo de post selecionado
+      if (postTypeFilter !== 'all' && s.submission_type !== postTypeFilter) return false;
+      
+      return true;
+    });
+  };
+
+  /**
+   * ✅ CASCATA: Obter números de postagens disponíveis respeitando filtros anteriores
    */
   const getAvailablePostNumbers = () => {
-    // Buscar apenas posts que tenham pelo menos 1 submissão
-    const postsWithSubmissions = new Set(submissions.filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter).map(s => s.post_id).filter(Boolean));
+    const filteredSubs = getFilteredSubmissions();
+    const postsWithSubmissions = new Set(filteredSubs.map(s => s.post_id).filter(Boolean));
 
     // Se allPosts foi fornecido, usar ele
-    const postsToUse = allPosts || submissions.map((s: any) => s.posts).filter(Boolean);
+    const postsToUse = allPosts || filteredSubs.map((s: any) => s.posts).filter(Boolean);
 
-    // Filtrar apenas posts que têm submissões
-    const filtered = postsToUse.filter((p: any) => postsWithSubmissions.has(p?.id) && (submissionEventFilter === 'all' || p?.event_id === submissionEventFilter));
+    // Filtrar apenas posts que têm submissões nos filtros atuais
+    const filtered = postsToUse.filter((p: any) => 
+      postsWithSubmissions.has(p?.id) && 
+      (submissionEventFilter === 'all' || p?.event_id === submissionEventFilter)
+    );
+    
     const postNumbers = new Set(filtered.map((p: any) => p?.post_number).filter(Boolean));
     return Array.from(postNumbers).sort((a, b) => a - b);
   };
 
   /**
-   * ✅ R2: Obter status disponíveis baseado no evento selecionado
+   * ✅ CASCATA: Obter status disponíveis respeitando filtros anteriores
    */
   const getAvailableStatuses = () => {
-    const statusesInEvent = new Set(submissions.filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter).map(s => s.status));
+    // Aplicar filtros exceto o de status
+    const filteredSubs = submissions.filter(s => {
+      if (submissionEventFilter !== 'all' && s.event_id !== submissionEventFilter) return false;
+      if (postTypeFilter !== 'all' && s.submission_type !== postTypeFilter) return false;
+      if (submissionPostFilter !== 'all') {
+        const postNum = (s.posts as any)?.post_number;
+        if (postNum !== parseInt(submissionPostFilter)) return false;
+      }
+      return true;
+    });
+    
+    const statusesInEvent = new Set(filteredSubs.map(s => s.status));
     return [{
       value: 'pending',
       label: 'Aguardando aprovação',
@@ -146,6 +178,17 @@ const AdminFiltersComponent = ({
       label: 'Reprovados',
       available: statusesInEvent.has('rejected')
     }];
+  };
+
+  /**
+   * ✅ CASCATA: Obter eventos disponíveis respeitando filtro de status ativo/inativo
+   */
+  const getAvailableEvents = () => {
+    return events.filter(event => {
+      if (submissionActiveFilter === 'active') return event.is_active === true;
+      if (submissionActiveFilter === 'inactive') return event.is_active === false;
+      return true; // 'all'
+    });
   };
   return <div className="flex flex-col gap-4">
       {/* Header com contadores e ações */}
@@ -188,20 +231,15 @@ const AdminFiltersComponent = ({
         </Select>
 
         {/* Filtro de Evento */}
-        {/* ✅ ITEM 5: Skeleton enquanto carrega */}
+        {/* ✅ CASCATA: Skeleton enquanto carrega */}
         {isLoadingSubmissions ? <Skeleton className="h-10 w-full" /> : <Select value={submissionEventFilter} onValueChange={onSubmissionEventFilterChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Filtrar por evento" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Selecione um evento</SelectItem>
-              {/* ✅ ITEM 5: Filtrar eventos baseado no status */}
-              {events.filter(event => {
-            if (submissionActiveFilter === "all") return true;
-            if (submissionActiveFilter === "active") return event.is_active === true;
-            if (submissionActiveFilter === "inactive") return event.is_active === false;
-            return true;
-          }).map(event => <SelectItem key={event.id} value={event.id}>
+              <SelectItem value="all">Todos os eventos</SelectItem>
+              {/* ✅ CASCATA: Usar função que respeita filtro ativo/inativo */}
+              {getAvailableEvents().map(event => <SelectItem key={event.id} value={event.id}>
                     {event.title}
                   </SelectItem>)}
             </SelectContent>
