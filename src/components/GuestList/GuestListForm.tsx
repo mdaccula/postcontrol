@@ -201,13 +201,13 @@ export const GuestListForm = ({
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="feminino" id="feminino" />
                 <Label htmlFor="feminino" className="font-normal cursor-pointer">
-                  💃 Feminino
+                  Feminino
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="masculino" id="masculino" />
                 <Label htmlFor="masculino" className="font-normal cursor-pointer">
-                  🕺 Masculino
+                  Masculino
                 </Label>
               </div>
             </RadioGroup>

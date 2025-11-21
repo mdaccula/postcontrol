@@ -323,6 +323,32 @@ export default function GuestListManager() {
     toast.success(`${filteredRegistrations.length} nomes copiados!`);
   };
 
+  // Mutation: Deletar inscrição
+  const deleteRegistrationMutation = useMutation({
+    mutationFn: async (registrationId: string) => {
+      const { error } = await supabase
+        .from("guest_list_registrations")
+        .delete()
+        .eq("id", registrationId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["guest-list-registrations"] });
+      toast.success("Inscrição deletada com sucesso!");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao deletar inscrição:", error);
+      toast.error("Erro ao deletar inscrição.");
+    },
+  });
+
+  const handleDeleteRegistration = (registrationId: string, guestName: string) => {
+    if (confirm(`Tem certeza que deseja deletar a inscrição de ${guestName}?`)) {
+      deleteRegistrationMutation.mutate(registrationId);
+    }
+  };
+
   // Exportar para XLSX (com filtros aplicados)
   const handleExportXLSX = () => {
     if (filteredRegistrations.length === 0) {
@@ -770,12 +796,13 @@ export default function GuestListManager() {
                         <TableHead>Sexo</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>UTM</TableHead>
+                        <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {registrationsLoading ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center">
+                          <TableCell colSpan={6} className="text-center">
                             Carregando...
                           </TableCell>
                         </TableRow>
@@ -809,11 +836,21 @@ export default function GuestListManager() {
                                 "-"
                               )}
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteRegistration(reg.id, reg.full_name)}
+                                disabled={deleteRegistrationMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center text-muted-foreground">
                             Nenhum inscrito encontrado com os filtros aplicados
                           </TableCell>
                         </TableRow>

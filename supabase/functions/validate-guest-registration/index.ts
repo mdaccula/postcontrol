@@ -109,11 +109,12 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 5️⃣ VERIFICAR DUPLICATAS (mesmo email + mesmo evento)
+    // 5️⃣ VERIFICAR DUPLICATAS (mesmo email + mesmo evento + mesma data)
     const { data: existingReg, error: checkError } = await supabase
       .from('guest_list_registrations')
       .select('id, full_name, registered_at')
       .eq('event_id', eventId)
+      .eq('date_id', dateId)
       .eq('email', email)
       .maybeSingle();
 
@@ -129,7 +130,7 @@ serve(async (req: Request) => {
       });
       return new Response(
         JSON.stringify({ 
-          error: 'Este email já está cadastrado neste evento.', 
+          error: 'Este email já está cadastrado nesta data do evento.', 
           isDuplicate: true,
           existingRegistration: {
             id: existingReg.id,
