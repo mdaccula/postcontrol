@@ -158,6 +158,8 @@ const Admin = () => {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [selectedEventForPrediction, setSelectedEventForPrediction] = useState<string | null>(null);
+  const [selectedEventForRanking, setSelectedEventForRanking] = useState<string | null>(null);
   const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false); // ✅ ITEM 5 FASE 2
   const [addSubmissionDialogOpen, setAddSubmissionDialogOpen] = useState(false);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
@@ -1969,14 +1971,13 @@ const Admin = () => {
               )}
             </Card>
 
-            {/* Vagas Disponíveis e Previsão */}
+            {/* Controle de Vagas - Grid Completo */}
             {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active && e.numero_de_vagas).length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold">📊 Controle de Vagas</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <h3 className="text-xl font-bold">📊 Controle de Vagas - Todos os Eventos</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredEvents
                     .filter(e => e.is_active && e.numero_de_vagas)
-                    .slice(0, 4)
                     .map((event) => (
                       <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
                         <EventSlotsCounter eventId={event.id} variant="detailed" />
@@ -1986,36 +1987,69 @@ const Admin = () => {
               </div>
             )}
 
-            {/* Previsão de Esgotamento (IA) */}
+            {/* Previsão de Esgotamento (IA) - Seletor Único */}
             {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active && e.numero_de_vagas).length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold">🤖 Previsão de Esgotamento (IA)</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {filteredEvents
-                    .filter(e => e.is_active && e.numero_de_vagas)
-                    .slice(0, 2)
-                    .map((event) => (
-                      <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
-                        <SlotExhaustionPrediction eventId={event.id} eventTitle={event.title} />
-                      </Suspense>
-                    ))}
+                <h3 className="text-xl font-bold">🤖 Previsão Detalhada de Esgotamento (IA)</h3>
+                <div className="space-y-4">
+                  <Select
+                    value={selectedEventForPrediction || ""}
+                    onValueChange={setSelectedEventForPrediction}
+                  >
+                    <SelectTrigger className="w-full max-w-md">
+                      <SelectValue placeholder="Selecione um evento para ver a previsão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredEvents
+                        .filter(e => e.is_active && e.numero_de_vagas)
+                        .map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+
+                  {selectedEventForPrediction && (
+                    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                      <SlotExhaustionPrediction 
+                        eventId={selectedEventForPrediction} 
+                        eventTitle={filteredEvents.find(e => e.id === selectedEventForPrediction)?.title || ''} 
+                      />
+                    </Suspense>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Top Promoters Ranking por Evento */}
+            {/* Top Promoters Ranking - Seletor Único */}
             {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active).length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold">🏆 Rankings por Evento</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {filteredEvents
-                    .filter(e => e.is_active)
-                    .slice(0, 4)
-                    .map((event) => (
-                      <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
-                        <TopPromotersRanking eventId={event.id} limit={5} />
-                      </Suspense>
-                    ))}
+                <h3 className="text-xl font-bold">🏆 Ranking de Divulgadoras</h3>
+                <div className="space-y-4">
+                  <Select
+                    value={selectedEventForRanking || ""}
+                    onValueChange={setSelectedEventForRanking}
+                  >
+                    <SelectTrigger className="w-full max-w-md">
+                      <SelectValue placeholder="Selecione um evento para ver o ranking" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredEvents
+                        .filter(e => e.is_active)
+                        .map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+
+                  {selectedEventForRanking && (
+                    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                      <TopPromotersRanking eventId={selectedEventForRanking} limit={10} />
+                    </Suspense>
+                  )}
                 </div>
               </div>
             )}
