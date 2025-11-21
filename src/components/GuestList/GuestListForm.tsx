@@ -11,17 +11,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AntiSpamField } from "./AntiSpamField";
-
 const formSchema = z.object({
   fullName: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   email: z.string().email("Email inválido").max(255),
   gender: z.enum(["feminino", "masculino"], {
-    required_error: "Selecione seu sexo",
-  }),
+    required_error: "Selecione seu sexo"
+  })
 });
-
 type FormData = z.infer<typeof formSchema>;
-
 interface GuestListFormProps {
   eventId: string;
   dateIds: string[];
@@ -32,7 +29,6 @@ interface GuestListFormProps {
   onFormStart: () => void;
   onGenderChange?: (gender: string) => void;
 }
-
 export const GuestListForm = ({
   eventId,
   dateIds,
@@ -41,82 +37,75 @@ export const GuestListForm = ({
   eventName,
   onSuccess,
   onFormStart,
-  onGenderChange,
+  onGenderChange
 }: GuestListFormProps) => {
   const [honeypot, setHoneypot] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-
   const {
     register,
     handleSubmit,
-    formState: { errors },
-    control,
+    formState: {
+      errors
+    },
+    control
   } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema)
   });
-
   const handleFormStart = () => {
     if (!hasStarted) {
       setHasStarted(true);
       onFormStart();
     }
   };
-
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
-
     try {
       // Capturar UTM params da URL
       const urlParams = new URLSearchParams(window.location.search);
       const utmParams = {
         source: urlParams.get('utm_source') || undefined,
         medium: urlParams.get('utm_medium') || undefined,
-        campaign: urlParams.get('utm_campaign') || undefined,
+        campaign: urlParams.get('utm_campaign') || undefined
       };
 
       // Array para armazenar IDs das inscrições
       const registrationIds: string[] = [];
       let hasError = false;
-      
+
       // Processar cada data selecionada
       for (const dateId of dateIds) {
-        const { data: result, error } = await supabase.functions.invoke(
-          'validate-guest-registration',
-          {
-            body: {
-              email: data.email,
-              honeypot,
-              eventId,
-              dateId,
-              fullName: data.fullName,
-              gender: data.gender,
-              utmParams,
-            },
+        const {
+          data: result,
+          error
+        } = await supabase.functions.invoke('validate-guest-registration', {
+          body: {
+            email: data.email,
+            honeypot,
+            eventId,
+            dateId,
+            fullName: data.fullName,
+            gender: data.gender,
+            utmParams
           }
-        );
-
+        });
         if (error) {
           console.error('Erro ao processar data:', dateId, error);
           hasError = true;
           continue;
         }
-
         if (result.error || result.isBotSuspected || result.isDisposable) {
           hasError = true;
           continue;
         }
-
         if (result.isDuplicate) {
           // Se já está cadastrado nesta data, apenas adicionar o ID existente
           console.log('Já cadastrado na data:', dateId);
         }
-
         if (result.registration?.id) {
           registrationIds.push(result.registration.id);
         }
       }
-
       if (registrationIds.length === 0) {
         if (hasError) {
           toast.error("Erro ao processar inscrições. Tente novamente.");
@@ -127,12 +116,9 @@ export const GuestListForm = ({
       }
 
       // Sucesso!
-      const message = dateIds.length > 1 
-        ? `Inscrição realizada com sucesso em ${registrationIds.length} data${registrationIds.length > 1 ? 's' : ''}! 🎉`
-        : "Inscrição realizada com sucesso! 🎉";
+      const message = dateIds.length > 1 ? `Inscrição realizada com sucesso em ${registrationIds.length} data${registrationIds.length > 1 ? 's' : ''}! 🎉` : "Inscrição realizada com sucesso! 🎉";
       toast.success(message);
       onSuccess(registrationIds, data);
-
     } catch (error: any) {
       console.error('Erro ao enviar inscrição:', error);
       toast.error("Erro ao processar inscrição. Tente novamente.");
@@ -140,64 +126,38 @@ export const GuestListForm = ({
       setIsSubmitting(false);
     }
   };
-
   const generateDivulgadorMessage = () => {
     const message = `Olá, vim pelo lista do ${eventName} e queria ser um divulgador da agência! 🎉`;
     return encodeURIComponent(message);
   };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  return <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Campo Honeypot (invisível) */}
       <AntiSpamField value={honeypot} onChange={setHoneypot} />
 
       {/* Nome Completo */}
       <div className="space-y-2">
         <Label htmlFor="fullName">Nome Completo *</Label>
-        <Input
-          id="fullName"
-          {...register("fullName")}
-          placeholder="Seu nome completo"
-          onFocus={handleFormStart}
-          disabled={isSubmitting}
-        />
-        {errors.fullName && (
-          <p className="text-sm text-destructive">{errors.fullName.message}</p>
-        )}
+        <Input id="fullName" {...register("fullName")} placeholder="Seu nome completo" onFocus={handleFormStart} disabled={isSubmitting} />
+        {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
       </div>
 
       {/* Email */}
       <div className="space-y-2">
         <Label htmlFor="email">Email *</Label>
-        <Input
-          id="email"
-          type="email"
-          {...register("email")}
-          placeholder="seu@email.com"
-          onFocus={handleFormStart}
-          disabled={isSubmitting}
-        />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
+        <Input id="email" type="email" {...register("email")} placeholder="seu@email.com" onFocus={handleFormStart} disabled={isSubmitting} />
+        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
       </div>
 
       {/* Sexo */}
       <div className="space-y-3">
         <Label>Sexo *</Label>
-        <Controller
-          name="gender"
-          control={control}
-          render={({ field }) => (
-            <RadioGroup
-              onValueChange={(value) => {
-                field.onChange(value);
-                handleFormStart();
-                onGenderChange?.(value);
-              }}
-              value={field.value}
-              disabled={isSubmitting}
-            >
+        <Controller name="gender" control={control} render={({
+        field
+      }) => <RadioGroup onValueChange={value => {
+        field.onChange(value);
+        handleFormStart();
+        onGenderChange?.(value);
+      }} value={field.value} disabled={isSubmitting}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="feminino" id="feminino" />
                 <Label htmlFor="feminino" className="font-normal cursor-pointer">
@@ -210,63 +170,30 @@ export const GuestListForm = ({
                   Masculino
                 </Label>
               </div>
-            </RadioGroup>
-          )}
-        />
-        {errors.gender && (
-          <p className="text-sm text-destructive">{errors.gender.message}</p>
-        )}
+            </RadioGroup>} />
+        {errors.gender && <p className="text-sm text-destructive">{errors.gender.message}</p>}
       </div>
 
       {/* Botões WhatsApp */}
-      {(whatsappLink || agencyPhone) && (
-        <div className="space-y-3 pt-4 border-t">
-          {whatsappLink && (
-            <Button
-              type="button"
-              className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold w-full"
-              onClick={() => window.open(whatsappLink, '_blank')}
-            >
+      {(whatsappLink || agencyPhone) && <div className="space-y-3 pt-4 border-t">
+          {whatsappLink && <Button type="button" className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold w-full" onClick={() => window.open(whatsappLink, '_blank')}>
               <ExternalLink className="w-4 h-4 mr-2" />
               Grupo da Agência no WhatsApp
-            </Button>
-          )}
+            </Button>}
 
-          {agencyPhone && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
-              onClick={() => 
-                window.open(
-                  `https://wa.me/${agencyPhone.replace(/\D/g, '')}?text=${generateDivulgadorMessage()}`,
-                  '_blank'
-                )
-              }
-            >
-              🌟 Quer ser um divulgador e ter cortesia?
-            </Button>
-          )}
-        </div>
-      )}
+          {agencyPhone && <Button type="button" variant="secondary" onClick={() => window.open(`https://wa.me/${agencyPhone.replace(/\D/g, '')}?text=${generateDivulgadorMessage()}`, '_blank')} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 mt-[20px]">
+              🌟 Quer ser um divulgador e ter cortesia para os eventos ?
+            </Button>}
+        </div>}
 
       {/* Botão Submit */}
-      <Button
-        type="submit"
-        className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
-        disabled={isSubmitting || dateIds.length === 0}
-      >
-        {isSubmitting ? (
-          <>
+      <Button type="submit" disabled={isSubmitting || dateIds.length === 0} className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white mt-[100px]">
+        {isSubmitting ? <>
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             Enviando...
-          </>
-        ) : (
-          <>
+          </> : <>
             ✅ Garantir Minha Vaga
-          </>
-        )}
+          </>}
       </Button>
-    </form>
-  );
+    </form>;
 };
