@@ -25,6 +25,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { z } from "zod";
+import { EventSlotsCounter } from "@/components/EventSlotsCounter";
 
 interface Post {
   id: string;
@@ -1277,13 +1278,14 @@ const Submit = () => {
                         <span>{selectedEventData.setor}</span>
                       </div>
                     )}
-                    {selectedEventData.numero_de_vagas && (
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium text-muted-foreground">Vagas:</span>
-                        <span>{selectedEventData.numero_de_vagas} vagas disponíveis</span>
-                      </div>
-                    )}
                   </div>
+
+                  {/* Contador de vagas disponíveis em tempo real */}
+                  {selectedEventData.numero_de_vagas && (
+                    <div className="mt-3">
+                      <EventSlotsCounter eventId={selectedEvent} variant="compact" />
+                    </div>
+                  )}
                 </div>
               )}
 

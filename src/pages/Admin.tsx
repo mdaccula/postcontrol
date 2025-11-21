@@ -94,6 +94,12 @@ const TopPromotersRanking = lazy(() =>
 const GoalNotificationSettings = lazy(() =>
   import("@/components/GoalNotificationSettings").then((m) => ({ default: m.GoalNotificationSettings })),
 );
+const EventSlotsCounter = lazy(() =>
+  import("@/components/EventSlotsCounter").then((m) => ({ default: m.EventSlotsCounter })),
+);
+const SlotExhaustionPrediction = lazy(() =>
+  import("@/components/SlotExhaustionPrediction").then((m) => ({ default: m.SlotExhaustionPrediction })),
+);
 
 // FASE 2: Componentes memoizados para performance
 const MemoizedDashboardStats = lazy(() =>
@@ -1950,6 +1956,40 @@ const Admin = () => {
                 </div>
               )}
             </Card>
+
+            {/* Vagas Disponíveis e Previsão */}
+            {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active && e.numero_de_vagas).length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">📊 Controle de Vagas</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {filteredEvents
+                    .filter(e => e.is_active && e.numero_de_vagas)
+                    .slice(0, 4)
+                    .map((event) => (
+                      <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
+                        <EventSlotsCounter eventId={event.id} variant="detailed" />
+                      </Suspense>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Previsão de Esgotamento (IA) */}
+            {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active && e.numero_de_vagas).length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">🤖 Previsão de Esgotamento (IA)</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {filteredEvents
+                    .filter(e => e.is_active && e.numero_de_vagas)
+                    .slice(0, 2)
+                    .map((event) => (
+                      <Suspense key={event.id} fallback={<Skeleton className="h-64 w-full" />}>
+                        <SlotExhaustionPrediction eventId={event.id} eventTitle={event.title} />
+                      </Suspense>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Top Promoters Ranking por Evento */}
             {filteredEvents.length > 0 && filteredEvents.filter(e => e.is_active).length > 0 && (

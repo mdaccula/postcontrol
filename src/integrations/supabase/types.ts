@@ -383,6 +383,47 @@ export type Database = {
           },
         ]
       }
+      event_slots_history: {
+        Row: {
+          available_slots: number
+          created_at: string | null
+          event_id: string
+          id: string
+          occupancy_percentage: number
+          occupied_slots: number
+          recorded_at: string
+          total_slots: number
+        }
+        Insert: {
+          available_slots: number
+          created_at?: string | null
+          event_id: string
+          id?: string
+          occupancy_percentage: number
+          occupied_slots: number
+          recorded_at?: string
+          total_slots: number
+        }
+        Update: {
+          available_slots?: number
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          occupancy_percentage?: number
+          occupied_slots?: number
+          recorded_at?: string
+          total_slots?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_slots_history_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_templates: {
         Row: {
           agency_id: string | null
@@ -1658,6 +1699,15 @@ export type Database = {
         Returns: number
       }
       get_current_user_agency_id: { Args: never; Returns: string }
+      get_event_available_slots: {
+        Args: { p_event_id: string }
+        Returns: {
+          available_slots: number
+          occupancy_percentage: number
+          occupied_slots: number
+          total_slots: number
+        }[]
+      }
       get_submission_counts_by_event: {
         Args: { p_agency_id: string }
         Returns: {
@@ -1714,6 +1764,10 @@ export type Database = {
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
       link_admin_to_agency: {
         Args: { p_admin_email: string; p_agency_id: string }
+        Returns: undefined
+      }
+      record_slots_snapshot: {
+        Args: { p_event_id: string }
         Returns: undefined
       }
       send_event_reminders: { Args: never; Returns: undefined }
