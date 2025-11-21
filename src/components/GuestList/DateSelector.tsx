@@ -85,6 +85,7 @@ export const DateSelector = ({
         
         <div className="space-y-3">
           {dates.map((date) => {
+            console.log('DateSelector - Date important_info:', date.name, date.important_info); // DEBUG
             const isSelected = selectedDateIds.includes(date.id);
             
             return (

@@ -92,6 +92,15 @@ interface GuestListRegistration {
   utm_campaign: string | null;
   shared_via_whatsapp: boolean;
   is_bot_suspected: boolean;
+  guest_list_events?: {
+    id: string;
+    name: string;
+  };
+  guest_list_dates?: {
+    id: string;
+    event_date: string;
+    name?: string | null;
+  };
 }
 
 export default function GuestListManager() {
@@ -162,7 +171,18 @@ export default function GuestListManager() {
     queryFn: async () => {
       let query = supabase
         .from("guest_list_registrations")
-        .select("*")
+        .select(`
+          *,
+          guest_list_events!inner (
+            id,
+            name
+          ),
+          guest_list_dates!inner (
+            id,
+            event_date,
+            name
+          )
+        `)
         .order("registered_at", { ascending: false });
       
       // Só filtrar por evento se houver seleção
@@ -380,6 +400,10 @@ export default function GuestListManager() {
     const worksheet = XLSX.utils.json_to_sheet(
       selected.map((reg) => ({
         Nome: reg.full_name,
+        Evento: reg.guest_list_events?.name || "-",
+        "Data do Evento": reg.guest_list_dates 
+          ? `${format(new Date(reg.guest_list_dates.event_date), "dd/MM/yyyy")}${reg.guest_list_dates.name ? ` - ${reg.guest_list_dates.name}` : ''}`
+          : "-",
         Email: reg.email,
         Sexo: reg.gender,
         "Data de Registro": format(new Date(reg.registered_at), "dd/MM/yyyy HH:mm", {
@@ -422,6 +446,10 @@ export default function GuestListManager() {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredRegistrations.map((reg) => ({
         Nome: reg.full_name,
+        Evento: reg.guest_list_events?.name || "-",
+        "Data do Evento": reg.guest_list_dates 
+          ? `${format(new Date(reg.guest_list_dates.event_date), "dd/MM/yyyy")}${reg.guest_list_dates.name ? ` - ${reg.guest_list_dates.name}` : ''}`
+          : "-",
         Email: reg.email,
         Sexo: reg.gender,
         "Data de Registro": format(new Date(reg.registered_at), "dd/MM/yyyy HH:mm", {
@@ -888,9 +916,11 @@ export default function GuestListManager() {
                           />
                         </TableHead>
                         <TableHead>Nome</TableHead>
+                        <TableHead>Evento</TableHead>
+                        <TableHead>Data do Evento</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Sexo</TableHead>
-                        <TableHead>Data</TableHead>
+                        <TableHead>Data Inscrição</TableHead>
                         <TableHead>UTM</TableHead>
                         <TableHead>Ações</TableHead>
                       </TableRow>
@@ -898,7 +928,7 @@ export default function GuestListManager() {
                     <TableBody>
                       {registrationsLoading ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center">
+                          <TableCell colSpan={9} className="text-center">
                             Carregando...
                           </TableCell>
                         </TableRow>
@@ -912,6 +942,21 @@ export default function GuestListManager() {
                               />
                             </TableCell>
                             <TableCell className="font-medium">{reg.full_name}</TableCell>
+                            <TableCell>{reg.guest_list_events?.name || "-"}</TableCell>
+                            <TableCell>
+                              {reg.guest_list_dates ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">
+                                    {format(new Date(reg.guest_list_dates.event_date), "dd/MM/yyyy")}
+                                  </div>
+                                  {reg.guest_list_dates.name && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {reg.guest_list_dates.name}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : "-"}
+                            </TableCell>
                             <TableCell>{reg.email}</TableCell>
                             <TableCell>
                               <Badge
@@ -952,7 +997,7 @@ export default function GuestListManager() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          <TableCell colSpan={9} className="text-center text-muted-foreground">
                             Nenhum inscrito encontrado com os filtros aplicados
                           </TableCell>
                         </TableRow>
