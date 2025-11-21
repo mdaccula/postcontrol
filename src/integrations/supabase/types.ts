@@ -1736,6 +1736,7 @@ export type Database = {
       get_top_promoters_ranking: {
         Args: { p_event_id: string; p_limit?: number }
         Returns: {
+          achieved_requirement_id: string
           avatar_url: string
           completion_percentage: number
           current_posts: number

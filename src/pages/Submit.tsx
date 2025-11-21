@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { z } from "zod";
 import { EventSlotsCounter } from "@/components/EventSlotsCounter";
+import { EventRequirementsDisplay } from "@/components/EventRequirementsDisplay";
 
 interface Post {
   id: string;
@@ -1436,24 +1437,7 @@ const Submit = () => {
                   )}
 
                   {requirements.length > 0 && (
-                    <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-sm mb-2">Condições para Cortesia:</h3>
-                          <div className="space-y-2">
-                            {requirements.map((req, index) => (
-                              <div key={req.id} className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-primary">{index > 0 ? "OU" : "•"}</span>
-                                <span>
-                                  {req.description || `${req.required_posts} postagens e ${req.required_sales} vendas`}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <EventRequirementsDisplay eventId={selectedEvent} variant="compact" />
                   )}
                 </>
               )}

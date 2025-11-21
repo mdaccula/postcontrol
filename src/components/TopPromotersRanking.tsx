@@ -3,8 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Medal, Award } from 'lucide-react';
+import { Trophy, Medal, Award, CheckCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 
 interface TopPromotersRankingProps {
   eventId: string;
@@ -22,6 +27,7 @@ interface PromoterRank {
   completion_percentage: number;
   goal_achieved: boolean;
   rank: number;
+  achieved_requirement_id?: string;
 }
 
 export const TopPromotersRanking = ({ eventId, limit = 10 }: TopPromotersRankingProps) => {
@@ -98,7 +104,7 @@ export const TopPromotersRanking = ({ eventId, limit = 10 }: TopPromotersRanking
               key={promoter.user_id}
               className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                 promoter.goal_achieved 
-                  ? 'bg-yellow-500/10 border border-yellow-500/20' 
+                  ? 'bg-green-500/10 border border-green-500/20' 
                   : 'hover:bg-muted/50'
               }`}
             >
@@ -125,9 +131,27 @@ export const TopPromotersRanking = ({ eventId, limit = 10 }: TopPromotersRanking
 
               <div className="flex items-center gap-2">
                 {promoter.goal_achieved ? (
-                  <Badge className="bg-yellow-500 text-white">
-                    Meta OK
-                  </Badge>
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <Badge className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20 cursor-help">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Meta
+                      </Badge>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-64">
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">✅ Meta Conquistada</p>
+                        <p className="text-xs text-muted-foreground">
+                          Completou: {promoter.required_posts} posts + {promoter.required_sales} vendas
+                        </p>
+                        {promoter.achieved_requirement_id && (
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            🎯 Vaga garantida no evento
+                          </p>
+                        )}
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
                 ) : (
                   <Badge variant="outline">
                     {promoter.completion_percentage}%

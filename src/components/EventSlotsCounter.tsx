@@ -1,8 +1,14 @@
 import { useEventAvailableSlots } from '@/hooks/useEventAvailableSlots';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, TrendingUp, Users } from 'lucide-react';
+import { AlertCircle, TrendingUp, Users, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface EventSlotsCounterProps {
   eventId: string;
@@ -65,6 +71,18 @@ export const EventSlotsCounter = ({ eventId, variant = 'compact' }: EventSlotsCo
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             <h4 className="font-semibold">Vagas Disponíveis</h4>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs">
+                    Contabiliza divulgadoras que completaram qualquer uma das metas disponíveis para o evento.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <Badge variant={getStatusBadgeVariant()}>
             {getStatusText()}
