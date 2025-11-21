@@ -81,6 +81,7 @@ const SubmissionImageDisplay = lazy(() =>
   import("@/components/SubmissionImageDisplay").then((m) => ({ default: m.SubmissionImageDisplay })),
 );
 const GuestManager = lazy(() => import("@/components/GuestManager").then((m) => ({ default: m.GuestManager })));
+const GuestListManager = lazy(() => import("@/components/GuestListManager").then((m) => ({ default: m.default })));
 const GuestAuditLog = lazy(() => import("@/components/GuestAuditLog").then((m) => ({ default: m.GuestAuditLog })));
 const SuggestionDialog = lazy(() =>
   import("@/components/SuggestionDialog").then((m) => ({ default: m.SuggestionDialog })),
@@ -1811,7 +1812,7 @@ const Admin = () => {
             }
           }}
         >
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-9 gap-1 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-10 gap-1 h-auto">
             <TabsTrigger value="events" className="text-xs sm:text-sm py-2">
               Eventos
             </TabsTrigger>
@@ -1826,6 +1827,9 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="guests" className="text-xs sm:text-sm py-2">
               Convidados
+            </TabsTrigger>
+            <TabsTrigger value="guest-lists" className="text-xs sm:text-sm py-2">
+              Listas VIP
             </TabsTrigger>
             <TabsTrigger value="audit" className="text-xs sm:text-sm py-2">
               Auditoria
@@ -2797,6 +2801,12 @@ const Admin = () => {
           <TabsContent value="guests" className="space-y-6">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
               {currentAgency && <GuestManager agencyId={currentAgency.id} />}
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="guest-lists" className="space-y-6">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <GuestListManager />
             </Suspense>
           </TabsContent>
 
