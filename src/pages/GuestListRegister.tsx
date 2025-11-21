@@ -227,7 +227,7 @@ export default function GuestListRegister() {
                   </p>
                 </div>
 
-                <GuestListForm eventId={event.id} dateIds={selectedDateIds} agencyPhone={event.agency_phone || undefined} whatsappLink={event.whatsapp_link || undefined} eventName={event.name} onSuccess={handleSuccess} onFormStart={handleFormStart} onGenderChange={setSelectedGender} className="my-0" />
+                <GuestListForm eventId={event.id} dateIds={selectedDateIds} agencyPhone={event.agency_phone || undefined} whatsappLink={event.whatsapp_link || undefined} eventName={event.name} onSuccess={handleSuccess} onFormStart={handleFormStart} onGenderChange={setSelectedGender} />
               </div>}
           </CardContent>
         </Card>
