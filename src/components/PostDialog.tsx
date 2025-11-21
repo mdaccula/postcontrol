@@ -102,7 +102,9 @@ export const PostDialog = ({ open, onOpenChange, onPostCreated, post }: PostDial
       console.log('👑 Master Admin - Mostrando todos os eventos');
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading events:', error);

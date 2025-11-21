@@ -12,10 +12,11 @@ import {
 
 interface EventSlotsCounterProps {
   eventId: string;
+  eventTitle?: string;
   variant?: 'compact' | 'detailed';
 }
 
-export const EventSlotsCounter = ({ eventId, variant = 'compact' }: EventSlotsCounterProps) => {
+export const EventSlotsCounter = ({ eventId, eventTitle, variant = 'compact' }: EventSlotsCounterProps) => {
   const { data: slots, isLoading } = useEventAvailableSlots(eventId);
 
   if (isLoading || !slots) {
@@ -67,6 +68,11 @@ export const EventSlotsCounter = ({ eventId, variant = 'compact' }: EventSlotsCo
   return (
     <Card className="p-4">
       <div className="space-y-3">
+        {eventTitle && (
+          <div className="pb-2 border-b">
+            <h3 className="font-bold text-lg">{eventTitle}</h3>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
