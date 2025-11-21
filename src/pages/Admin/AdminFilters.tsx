@@ -40,14 +40,14 @@ interface AdminFiltersProps {
   kanbanView: boolean;
   /** Whether cards grid view is enabled */
   cardsGridView: boolean;
-  
+
   /** Available events for dropdown */
   events: Event[];
   /** All submissions for post number extraction */
   submissions: any[];
   /** All posts available in the event for number extraction */
   allPosts?: any[];
-  
+
   /** ✅ ITEM 5: Callback quando filtro de status muda */
   onSubmissionActiveFilterChange: (value: string) => void;
   /** Callback when event filter changes */
@@ -68,21 +68,21 @@ interface AdminFiltersProps {
   onKanbanViewToggle: () => void;
   /** Callback when cards grid view toggles */
   onCardsGridViewToggle: () => void;
-  
+
   /** Optional export handler */
   onExport?: () => void;
-  
+
   /** Number of submissions after filters applied */
   filteredCount: number;
   /** Total number of submissions before filters */
   totalCount: number;
-  
+
   /** ✅ ITEM 5: Loading state for submissions */
   isLoadingSubmissions?: boolean;
 }
-
 const AdminFiltersComponent = ({
-  submissionActiveFilter, // ✅ ITEM 5
+  submissionActiveFilter,
+  // ✅ ITEM 5
   submissionEventFilter,
   submissionPostFilter,
   submissionStatusFilter,
@@ -95,7 +95,8 @@ const AdminFiltersComponent = ({
   events,
   submissions,
   allPosts,
-  onSubmissionActiveFilterChange, // ✅ ITEM 5
+  onSubmissionActiveFilterChange,
+  // ✅ ITEM 5
   onSubmissionEventFilterChange,
   onSubmissionPostFilterChange,
   onSubmissionStatusFilterChange,
@@ -108,7 +109,7 @@ const AdminFiltersComponent = ({
   onExport,
   filteredCount,
   totalCount,
-  isLoadingSubmissions = false,
+  isLoadingSubmissions = false
 }: AdminFiltersProps) => {
   /**
    * Obter números de postagens disponíveis baseado no evento selecionado
@@ -116,22 +117,13 @@ const AdminFiltersComponent = ({
    */
   const getAvailablePostNumbers = () => {
     // Buscar apenas posts que tenham pelo menos 1 submissão
-    const postsWithSubmissions = new Set(
-      submissions
-        .filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter)
-        .map(s => s.post_id)
-        .filter(Boolean)
-    );
-    
+    const postsWithSubmissions = new Set(submissions.filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter).map(s => s.post_id).filter(Boolean));
+
     // Se allPosts foi fornecido, usar ele
     const postsToUse = allPosts || submissions.map((s: any) => s.posts).filter(Boolean);
-    
+
     // Filtrar apenas posts que têm submissões
-    const filtered = postsToUse.filter(
-      (p: any) => postsWithSubmissions.has(p?.id) && 
-                  (submissionEventFilter === 'all' || p?.event_id === submissionEventFilter)
-    );
-    
+    const filtered = postsToUse.filter((p: any) => postsWithSubmissions.has(p?.id) && (submissionEventFilter === 'all' || p?.event_id === submissionEventFilter));
     const postNumbers = new Set(filtered.map((p: any) => p?.post_number).filter(Boolean));
     return Array.from(postNumbers).sort((a, b) => a - b);
   };
@@ -140,21 +132,22 @@ const AdminFiltersComponent = ({
    * ✅ R2: Obter status disponíveis baseado no evento selecionado
    */
   const getAvailableStatuses = () => {
-    const statusesInEvent = new Set(
-      submissions
-        .filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter)
-        .map(s => s.status)
-    );
-    
-    return [
-      { value: 'pending', label: 'Aguardando aprovação', available: statusesInEvent.has('pending') },
-      { value: 'approved', label: 'Aprovados', available: statusesInEvent.has('approved') },
-      { value: 'rejected', label: 'Reprovados', available: statusesInEvent.has('rejected') },
-    ];
+    const statusesInEvent = new Set(submissions.filter(s => submissionEventFilter === 'all' || s.event_id === submissionEventFilter).map(s => s.status));
+    return [{
+      value: 'pending',
+      label: 'Aguardando aprovação',
+      available: statusesInEvent.has('pending')
+    }, {
+      value: 'approved',
+      label: 'Aprovados',
+      available: statusesInEvent.has('approved')
+    }, {
+      value: 'rejected',
+      label: 'Reprovados',
+      available: statusesInEvent.has('rejected')
+    }];
   };
-
-  return (
-    <div className="flex flex-col gap-4">
+  return <div className="flex flex-col gap-4">
       {/* Header com contadores e ações */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -165,29 +158,15 @@ const AdminFiltersComponent = ({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant={cardsGridView ? 'default' : 'outline'} 
-            size="sm" 
-            onClick={onCardsGridViewToggle}
-            disabled={kanbanView}
-          >
+          <Button variant={cardsGridView ? 'default' : 'outline'} size="sm" onClick={onCardsGridViewToggle} disabled={kanbanView}>
             <Grid3x3 className="mr-2 h-4 w-4" />
             Cards
           </Button>
-          <Button 
-            variant={!cardsGridView && !kanbanView ? 'default' : 'outline'} 
-            size="sm" 
-            onClick={onCardsGridViewToggle}
-            disabled={kanbanView}
-          >
+          <Button variant={!cardsGridView && !kanbanView ? 'default' : 'outline'} size="sm" onClick={onCardsGridViewToggle} disabled={kanbanView}>
             <List className="mr-2 h-4 w-4" />
             Lista
           </Button>
-          <Button 
-            variant={kanbanView ? 'default' : 'outline'} 
-            size="sm" 
-            onClick={onKanbanViewToggle}
-          >
+          <Button variant={kanbanView ? 'default' : 'outline'} size="sm" onClick={onKanbanViewToggle}>
             <Columns3 className="mr-2 h-4 w-4" />
             Kanban
           </Button>
@@ -195,12 +174,9 @@ const AdminFiltersComponent = ({
       </div>
 
       {/* Grid de filtros principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-2 md:grid-cols-3 gap-2">
         {/* ✅ ITEM 5: Novo filtro primário de status ativo/inativo */}
-        <Select
-          value={submissionActiveFilter}
-          onValueChange={onSubmissionActiveFilterChange}
-        >
+        <Select value={submissionActiveFilter} onValueChange={onSubmissionActiveFilterChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Status do evento" />
           </SelectTrigger>
@@ -213,99 +189,63 @@ const AdminFiltersComponent = ({
 
         {/* Filtro de Evento */}
         {/* ✅ ITEM 5: Skeleton enquanto carrega */}
-        {isLoadingSubmissions ? (
-          <Skeleton className="h-10 w-full" />
-        ) : (
-          <Select
-            value={submissionEventFilter}
-            onValueChange={onSubmissionEventFilterChange}
-          >
+        {isLoadingSubmissions ? <Skeleton className="h-10 w-full" /> : <Select value={submissionEventFilter} onValueChange={onSubmissionEventFilterChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Filtrar por evento" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Selecione um evento</SelectItem>
               {/* ✅ ITEM 5: Filtrar eventos baseado no status */}
-              {events
-                .filter((event) => {
-                  if (submissionActiveFilter === "all") return true;
-                  if (submissionActiveFilter === "active") return event.is_active === true;
-                  if (submissionActiveFilter === "inactive") return event.is_active === false;
-                  return true;
-                })
-                .map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
+              {events.filter(event => {
+            if (submissionActiveFilter === "all") return true;
+            if (submissionActiveFilter === "active") return event.is_active === true;
+            if (submissionActiveFilter === "inactive") return event.is_active === false;
+            return true;
+          }).map(event => <SelectItem key={event.id} value={event.id}>
                     {event.title}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
             </SelectContent>
-          </Select>
-        )}
+          </Select>}
 
         {/* Filtro de Número da Postagem */}
-        <Select
-          value={submissionPostFilter}
-          onValueChange={onSubmissionPostFilterChange}
-          disabled={submissionEventFilter === 'all'}
-        >
+        <Select value={submissionPostFilter} onValueChange={onSubmissionPostFilterChange} disabled={submissionEventFilter === 'all'}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Número da postagem" />
           </SelectTrigger>
           <SelectContent>
-            {getAvailablePostNumbers().length === 0 ? (
-              <SelectItem value="none" disabled>
+            {getAvailablePostNumbers().length === 0 ? <SelectItem value="none" disabled>
                 Nenhum post com submissões
-              </SelectItem>
-            ) : (
-              <>
+              </SelectItem> : <>
                 <SelectItem value="all">Todos os números</SelectItem>
-                {getAvailablePostNumbers().map((num) => {
-                  const submission = submissions.find(
-                    s => (s.posts as any)?.post_number === num &&
-                    (submissionEventFilter === 'all' || (s.posts as any)?.event_id === submissionEventFilter)
-                  );
-                  const postType = (submission?.posts as any)?.post_type || null;
-                  return (
-                    <SelectItem key={num} value={num.toString()}>
+                {getAvailablePostNumbers().map(num => {
+              const submission = submissions.find(s => (s.posts as any)?.post_number === num && (submissionEventFilter === 'all' || (s.posts as any)?.event_id === submissionEventFilter));
+              const postType = (submission?.posts as any)?.post_type || null;
+              return <SelectItem key={num} value={num.toString()}>
                       {formatPostName(postType, num)}
-                    </SelectItem>
-                  );
-                })}
-              </>
-            )}
+                    </SelectItem>;
+            })}
+              </>}
           </SelectContent>
         </Select>
 
         {/* Filtro de Status */}
-        <Select
-          value={submissionStatusFilter}
-          onValueChange={onSubmissionStatusFilterChange}
-        >
+        <Select value={submissionStatusFilter} onValueChange={onSubmissionStatusFilterChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
-            {getAvailableStatuses().map(status => (
-              <SelectItem 
-                key={status.value} 
-                value={status.value}
-                disabled={!status.available && submissionEventFilter !== 'all'}
-              >
+            {getAvailableStatuses().map(status => <SelectItem key={status.value} value={status.value} disabled={!status.available && submissionEventFilter !== 'all'}>
                 {status.label}
                 {!status.available && submissionEventFilter !== 'all' && ' (sem resultados)'}
-              </SelectItem>
-            ))}
+              </SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
       {/* Filtro de Tipo de Postagem */}
       <div className="grid grid-cols-1 gap-2">
-        <Select
-          value={postTypeFilter}
-          onValueChange={onPostTypeFilterChange}
-        >
+        <Select value={postTypeFilter} onValueChange={onPostTypeFilterChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Tipo de Postagem" />
           </SelectTrigger>
@@ -320,49 +260,29 @@ const AdminFiltersComponent = ({
 
       {/* 🆕 CORREÇÃO #2: Campo de Busca - SEMPRE VISÍVEL */}
       <div className="grid grid-cols-1 gap-2">
-        <Input
-          placeholder="Buscar por nome, email ou Instagram..."
-          value={searchTerm}
-          onChange={(e) => onSearchTermChange(e.target.value)}
-          className="w-full"
-        />
+        <Input placeholder="Buscar por nome, email ou Instagram..." value={searchTerm} onChange={e => onSearchTermChange(e.target.value)} className="w-full" />
       </div>
 
       {/* Filtros de Data (apenas quando evento estiver selecionado) */}
-      {submissionEventFilter !== 'all' && (
-        <>
+      {submissionEventFilter !== 'all' && <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Data Inicial</label>
-              <Input
-                type="date"
-                value={dateFilterStart}
-                onChange={(e) => onDateFilterStartChange(e.target.value)}
-                className="w-full"
-              />
+              <Input type="date" value={dateFilterStart} onChange={e => onDateFilterStartChange(e.target.value)} className="w-full" />
             </div>
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Data Final</label>
-              <Input
-                type="date"
-                value={dateFilterEnd}
-                onChange={(e) => onDateFilterEndChange(e.target.value)}
-                className="w-full"
-              />
+              <Input type="date" value={dateFilterEnd} onChange={e => onDateFilterEndChange(e.target.value)} className="w-full" />
             </div>
           </div>
 
           {/* Botão de Exportação */}
-          {onExport && (
-            <Button variant="outline" onClick={onExport} className="w-full sm:w-auto">
+          {onExport && <Button variant="outline" onClick={onExport} className="w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
               Exportar para Excel
-            </Button>
-          )}
-        </>
-      )}
-    </div>
-  );
+            </Button>}
+        </>}
+    </div>;
 };
 
 /**
