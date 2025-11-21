@@ -176,12 +176,12 @@ export const GuestListForm = ({
 
       {/* Botões WhatsApp */}
       {(whatsappLink || agencyPhone) && <div className="space-y-3 pt-4 border-t">
-          {whatsappLink && <Button type="button" className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold w-full" onClick={() => window.open(whatsappLink, '_blank')}>
+          {whatsappLink && <Button type="button" onClick={() => window.open(whatsappLink, '_blank')} className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold w-full mt-[20px] mb-[20px]">
               <ExternalLink className="w-4 h-4 mr-2" />
               Grupo da Agência no WhatsApp
             </Button>}
 
-          {agencyPhone && <Button type="button" variant="secondary" onClick={() => window.open(`https://wa.me/${agencyPhone.replace(/\D/g, '')}?text=${generateDivulgadorMessage()}`, '_blank')} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 mt-[20px]">
+          {agencyPhone && <Button type="button" variant="secondary" onClick={() => window.open(`https://wa.me/${agencyPhone.replace(/\D/g, '')}?text=${generateDivulgadorMessage()}`, '_blank')} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 mt-[20px] mb-[20px]">
               🌟 Quer ser um divulgador e ter cortesia para os eventos ?
             </Button>}
         </div>}
