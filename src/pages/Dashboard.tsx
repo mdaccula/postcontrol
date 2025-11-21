@@ -22,6 +22,7 @@ import {
   Lock,
   Send,
   Users, // ✅ ITEM 7: Ícone para Guest Dashboard
+  ClipboardCheck, // ✅ R2: Ícone para Análise Manual
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -681,26 +682,48 @@ const Dashboard = () => {
               <h2 className="text-2xl font-bold mb-6">Progresso dos Eventos</h2>
               <div className="space-y-6">
                 {filteredEventStats.length > 0 ? (
-                  filteredEventStats.map((stat) => (
-                    <div key={stat.eventId} className="space-y-3">
-                      <div className="space-y-3 p-4 rounded-lg bg-muted/30">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <h3 className="font-semibold text-lg">{stat.eventTitle}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {stat.submitted} de {stat.isApproximate ? "~" : ""}
-                              {stat.totalRequired} posts aprovados
-                            </p>
+                  filteredEventStats.map((stat) => {
+                    // ✅ Verificar se evento é de análise manual (sem metas definidas)
+                    const isManualReview = (!stat.totalRequired || stat.totalRequired === 0);
+                    
+                    return (
+                      <div key={stat.eventId} className="space-y-3">
+                        <div className="space-y-3 p-4 rounded-lg bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-lg">{stat.eventTitle}</h3>
+                                {isManualReview && (
+                                  <Badge variant="outline" className="border-purple-500 text-purple-700 dark:text-purple-400 text-xs">
+                                    <ClipboardCheck className="w-3 h-3 mr-1" />
+                                    Análise Manual
+                                  </Badge>
+                                )}
+                              </div>
+                              {!isManualReview ? (
+                                <p className="text-sm text-muted-foreground">
+                                  {stat.submitted} de {stat.isApproximate ? "~" : ""}
+                                  {stat.totalRequired} posts aprovados
+                                </p>
+                              ) : (
+                                <p className="text-xs text-purple-600 dark:text-purple-400">
+                                  Este evento não possui metas automáticas
+                                </p>
+                              )}
+                            </div>
+                            {!isManualReview && (
+                              <Badge variant={stat.percentage >= 100 ? "default" : "secondary"} className="text-lg px-4 py-2">
+                                {stat.percentage.toFixed(0)}%
+                              </Badge>
+                            )}
                           </div>
-                          <Badge variant={stat.percentage >= 100 ? "default" : "secondary"} className="text-lg px-4 py-2">
-                            {stat.percentage.toFixed(0)}%
-                          </Badge>
+                          {!isManualReview && (
+                            <Progress value={stat.percentage} className="h-3" />
+                          )}
                         </div>
-                        <Progress value={stat.percentage} className="h-3" />
-                      </div>
                       
                       {/* Goal Progress Badge */}
-                      {user && (
+                      {user && !isManualReview && (
                         <GoalProgressBadge 
                           eventId={stat.eventId} 
                           userId={user.id}
@@ -708,7 +731,8 @@ const Dashboard = () => {
                         />
                       )}
                     </div>
-                  ))
+                  );
+                })
                 ) : (
                   <p className="text-center text-muted-foreground py-8">Nenhum evento ativo no momento</p>
                 )}
