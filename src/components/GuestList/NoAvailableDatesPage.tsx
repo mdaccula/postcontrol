@@ -29,16 +29,12 @@ export function NoAvailableDatesPage({ event, agency }: NoAvailableDatesPageProp
         {/* Logo da Agência */}
         {agency.logo_url && (
           <div className="flex justify-center animate-fade-in">
-            <img 
-              src={agency.logo_url} 
-              alt={agency.name} 
-              className="h-40 w-auto object-contain" 
-            />
+            <img src={agency.logo_url} alt={agency.name} className="h-40 w-auto object-contain" />
           </div>
         )}
-        
+
         {/* Card Principal */}
-        <Card className="border-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <Card className="border-2 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           <CardHeader className="text-center space-y-4">
             {/* Ícone de Info */}
             <div className="flex justify-center">
@@ -46,65 +42,59 @@ export function NoAvailableDatesPage({ event, agency }: NoAvailableDatesPageProp
                 <Calendar className="h-12 w-12 text-muted-foreground" />
               </div>
             </div>
-            
+
             <div>
-              <CardTitle className="text-3xl font-bold">
-                {event.name}
-              </CardTitle>
-              <CardDescription className="text-lg mt-2">
-                {agency.name}
-              </CardDescription>
+              <CardTitle className="text-3xl font-bold">{event.name}</CardTitle>
+              <CardDescription className="text-lg mt-2">{agency.name}</CardDescription>
             </div>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Mensagem Customizável */}
             <Alert className="bg-primary/5 border-primary/20">
               <AlertDescription className="text-center whitespace-pre-wrap">
-                {event.no_dates_message || 'Não há datas disponíveis no momento. Fique atento às nossas redes sociais!'}
+                {event.no_dates_message || "Não há datas disponíveis no momento. Fique atento às nossas redes sociais!"}
               </AlertDescription>
             </Alert>
-            
+
             {/* Botões de Ação */}
             {(event.no_dates_show_tickets || event.no_dates_show_whatsapp) && (
               <>
                 <Separator />
                 <div className="space-y-3">
                   {event.no_dates_show_tickets && agency.tickets_group_url && (
-                    <Button 
-                      size="lg" 
+                    <Button
+                      size="lg"
                       className="w-full"
-                      onClick={() => window.open(agency.tickets_group_url!, '_blank')}
+                      onClick={() => window.open(agency.tickets_group_url!, "_blank")}
                     >
                       <Ticket className="mr-2 h-5 w-5" />
-                      Comprar Ingressos
+                      Grupo Compra e Venda de Ingressos
                     </Button>
                   )}
-                  
+
                   {event.no_dates_show_whatsapp && agency.whatsapp_group_url && (
-                    <Button 
-                      size="lg" 
+                    <Button
+                      size="lg"
                       variant="outline"
                       className="w-full"
-                      onClick={() => window.open(agency.whatsapp_group_url!, '_blank')}
+                      onClick={() => window.open(agency.whatsapp_group_url!, "_blank")}
                     >
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Grupo WhatsApp
+                      Grupo Exclusivo de Benefícios no WhatsApp
                     </Button>
                   )}
                 </div>
               </>
             )}
-            
+
             {/* Redes Sociais */}
             {event.no_dates_show_social && (agency.instagram_url || agency.website_url) && (
               <>
                 <Separator />
                 <div className="space-y-3">
-                  <p className="text-sm text-center text-muted-foreground">
-                    Fique por dentro das próximas datas
-                  </p>
-                  
+                  <p className="text-sm text-center text-muted-foreground">Fique por dentro das próximas datas</p>
+
                   <div className="flex justify-center gap-4">
                     {agency.instagram_url && (
                       <a
@@ -117,7 +107,7 @@ export function NoAvailableDatesPage({ event, agency }: NoAvailableDatesPageProp
                         <Instagram className="h-5 w-5" />
                       </a>
                     )}
-                    
+
                     {agency.website_url && (
                       <a
                         href={agency.website_url}
@@ -135,7 +125,7 @@ export function NoAvailableDatesPage({ event, agency }: NoAvailableDatesPageProp
             )}
           </CardContent>
         </Card>
-        
+
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground">
           <p>Volte em breve para novas datas!</p>
