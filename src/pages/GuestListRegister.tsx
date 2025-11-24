@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, MapPin, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
+import { Loader2, MapPin, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DateSelector } from "@/components/GuestList/DateSelector";
 import { GuestListForm } from "@/components/GuestList/GuestListForm";
+import { NoAvailableDatesPage } from "@/components/GuestList/NoAvailableDatesPage";
 import { toast } from "sonner";
-import { parseDateTimeBRT, hasEventPassed } from "@/lib/dateUtils";
+import { hasEventPassed } from "@/lib/dateUtils";
 interface GuestListEvent {
   id: string;
   agency_id: string;
@@ -18,9 +19,17 @@ interface GuestListEvent {
   whatsapp_link: string | null;
   agency_phone: string | null;
   slug: string;
+  no_dates_message?: string | null;
+  no_dates_show_social?: boolean;
+  no_dates_show_tickets?: boolean;
+  no_dates_show_whatsapp?: boolean;
   agencies: {
     name: string;
     logo_url: string | null;
+    instagram_url?: string | null;
+    website_url?: string | null;
+    whatsapp_group_url?: string | null;
+    tickets_group_url?: string | null;
   };
 }
 interface GuestListDate {
@@ -36,6 +45,9 @@ interface GuestListDate {
   end_time?: string;
   auto_deactivate_after_start?: boolean;
   important_info?: string | null;
+  alternative_link_female?: string | null;
+  alternative_link_male?: string | null;
+  show_alternative_after_start?: boolean;
 }
 export default function GuestListRegister() {
   const {
@@ -52,6 +64,7 @@ export default function GuestListRegister() {
   const [selectedDateIds, setSelectedDateIds] = useState<string[]>([]);
   const [selectedGender, setSelectedGender] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [hasNoDates, setHasNoDates] = useState(false);
   useEffect(() => {
     if (!agencySlug || !eventSlug) return;
     loadEventData();
@@ -76,11 +89,16 @@ export default function GuestListRegister() {
           agencies!inner (
             name,
             logo_url,
-            slug
+            slug,
+            instagram_url,
+            website_url,
+            whatsapp_group_url,
+            tickets_group_url
           )
         `).eq('slug', eventSlug).eq('agencies.slug', agencySlug).eq('is_active', true).single();
       if (eventError || !eventData) {
         setError('Evento não encontrado ou não está mais disponível.');
+        setHasNoDates(false);
         return;
       }
       setEvent(eventData as any);
@@ -94,23 +112,29 @@ export default function GuestListRegister() {
       });
       if (datesError) throw datesError;
       if (!datesData || datesData.length === 0) {
-        setError('Não há datas disponíveis para este evento.');
+        setHasNoDates(true);
         return;
       }
 
-      // Filtrar datas que devem ser desativadas após início
+      // Filtrar datas que devem ser desativadas após início OU mostrar com links alternativos
       const activeDates = datesData.filter(date => {
         if (!date.auto_deactivate_after_start) return true;
         if (!date.start_time) return true;
         
-        // Usar helper para verificar se passou
+        // Se tem link alternativo configurado, SEMPRE mostra
+        const hasAlternative = date.show_alternative_after_start && 
+                              (date.alternative_link_female || date.alternative_link_male);
+        if (hasAlternative) return true;
+        
+        // Senão, só mostra se não passou
         return !hasEventPassed(date.event_date, date.start_time);
       });
       if (activeDates.length === 0) {
-        setError('Não há datas disponíveis para este evento.');
+        setHasNoDates(true);
         return;
       }
       setDates(activeDates);
+      setHasNoDates(false);
       // Não selecionar nenhuma data automaticamente para permitir seleção múltipla
     } catch (err: any) {
       console.error('Erro ao carregar evento:', err);
@@ -167,6 +191,11 @@ export default function GuestListRegister() {
         </div>
       </div>;
   }
+  
+  if (hasNoDates && event) {
+    return <NoAvailableDatesPage event={event} agency={event.agencies} />;
+  }
+  
   if (error || !event) {
     return <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Alert variant="destructive" className="max-w-md">
@@ -212,7 +241,13 @@ export default function GuestListRegister() {
 
           <CardContent className="pt-6 space-y-6">
             {/* Seletor de Datas */}
-            <DateSelector dates={dates} selectedDateIds={selectedDateIds} onSelectDates={setSelectedDateIds} userGender={selectedGender} />
+            <DateSelector 
+              dates={dates} 
+              selectedDateIds={selectedDateIds} 
+              onSelectDates={setSelectedDateIds} 
+              userGender={selectedGender}
+              eventName={event.name}
+            />
 
             <Separator />
 

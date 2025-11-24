@@ -33,6 +33,9 @@ interface GuestListDate {
   auto_deactivate_after_start?: boolean;
   price_type?: string;
   important_info?: string | null;
+  alternative_link_female?: string | null;
+  alternative_link_male?: string | null;
+  show_alternative_after_start?: boolean;
   created_at?: string;
 }
 
@@ -56,6 +59,9 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
     auto_deactivate_after_start: date?.auto_deactivate_after_start ?? false,
     price_type: date?.price_type || "entry_only",
     important_info: date?.important_info || "",
+    alternative_link_female: date?.alternative_link_female || "",
+    alternative_link_male: date?.alternative_link_male || "",
+    show_alternative_after_start: date?.show_alternative_after_start ?? false,
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -132,6 +138,9 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
       auto_deactivate_after_start: formData.auto_deactivate_after_start,
       price_type: formData.price_type,
       important_info: formData.important_info || null,
+      alternative_link_female: formData.alternative_link_female || null,
+      alternative_link_male: formData.alternative_link_male || null,
+      show_alternative_after_start: formData.show_alternative_after_start,
     });
   };
 
@@ -323,6 +332,54 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
             A data será desativada automaticamente quando o evento iniciar
           </p>
         </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show_alternative"
+              checked={formData.show_alternative_after_start}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, show_alternative_after_start: checked })
+              }
+            />
+            <Label htmlFor="show_alternative">
+              Mostrar links alternativos após início
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground ml-9">
+            Em vez de esconder a data, mostra links alternativos para os usuários
+          </p>
+        </div>
+
+        {formData.show_alternative_after_start && (
+          <div className="space-y-3 pl-9 border-l-2 border-muted">
+            <div className="space-y-2">
+              <Label htmlFor="alternative_link_female">Link Alternativo - Feminino</Label>
+              <Input
+                id="alternative_link_female"
+                value={formData.alternative_link_female}
+                onChange={(e) => setFormData({ ...formData, alternative_link_female: e.target.value })}
+                placeholder="https://wa.me/..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Link para lista feminina (ex: WhatsApp, Telegram)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="alternative_link_male">Link Alternativo - Masculino</Label>
+              <Input
+                id="alternative_link_male"
+                value={formData.alternative_link_male}
+                onChange={(e) => setFormData({ ...formData, alternative_link_male: e.target.value })}
+                placeholder="https://wa.me/..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Link para lista masculina (ex: WhatsApp, Telegram)
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <DialogFooter>

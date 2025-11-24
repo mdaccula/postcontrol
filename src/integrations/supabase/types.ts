@@ -734,6 +734,8 @@ export type Database = {
       }
       guest_list_dates: {
         Row: {
+          alternative_link_female: string | null
+          alternative_link_male: string | null
           auto_deactivate_after_start: boolean | null
           created_at: string | null
           end_time: string | null
@@ -748,9 +750,12 @@ export type Database = {
           max_capacity: number | null
           name: string | null
           price_type: string | null
+          show_alternative_after_start: boolean | null
           start_time: string | null
         }
         Insert: {
+          alternative_link_female?: string | null
+          alternative_link_male?: string | null
           auto_deactivate_after_start?: boolean | null
           created_at?: string | null
           end_time?: string | null
@@ -765,9 +770,12 @@ export type Database = {
           max_capacity?: number | null
           name?: string | null
           price_type?: string | null
+          show_alternative_after_start?: boolean | null
           start_time?: string | null
         }
         Update: {
+          alternative_link_female?: string | null
+          alternative_link_male?: string | null
           auto_deactivate_after_start?: boolean | null
           created_at?: string | null
           end_time?: string | null
@@ -782,6 +790,7 @@ export type Database = {
           max_capacity?: number | null
           name?: string | null
           price_type?: string | null
+          show_alternative_after_start?: boolean | null
           start_time?: string | null
         }
         Relationships: [
@@ -804,6 +813,10 @@ export type Database = {
           is_active: boolean | null
           location: string
           name: string
+          no_dates_message: string | null
+          no_dates_show_social: boolean | null
+          no_dates_show_tickets: boolean | null
+          no_dates_show_whatsapp: boolean | null
           slug: string
           updated_at: string | null
           whatsapp_link: string | null
@@ -817,6 +830,10 @@ export type Database = {
           is_active?: boolean | null
           location: string
           name: string
+          no_dates_message?: string | null
+          no_dates_show_social?: boolean | null
+          no_dates_show_tickets?: boolean | null
+          no_dates_show_whatsapp?: boolean | null
           slug: string
           updated_at?: string | null
           whatsapp_link?: string | null
@@ -830,6 +847,10 @@ export type Database = {
           is_active?: boolean | null
           location?: string
           name?: string
+          no_dates_message?: string | null
+          no_dates_show_social?: boolean | null
+          no_dates_show_tickets?: boolean | null
+          no_dates_show_whatsapp?: boolean | null
           slug?: string
           updated_at?: string | null
           whatsapp_link?: string | null
