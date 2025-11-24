@@ -808,6 +808,7 @@ export type Database = {
           agency_id: string
           agency_phone: string | null
           created_at: string | null
+          event_image_url: string | null
           extra_info: string | null
           id: string
           is_active: boolean | null
@@ -825,6 +826,7 @@ export type Database = {
           agency_id: string
           agency_phone?: string | null
           created_at?: string | null
+          event_image_url?: string | null
           extra_info?: string | null
           id?: string
           is_active?: boolean | null
@@ -842,6 +844,7 @@ export type Database = {
           agency_id?: string
           agency_phone?: string | null
           created_at?: string | null
+          event_image_url?: string | null
           extra_info?: string | null
           id?: string
           is_active?: boolean | null

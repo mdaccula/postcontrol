@@ -8,6 +8,9 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Upload, X } from "lucide-react";
 
 interface GuestListEvent {
   id: string;
@@ -18,6 +21,7 @@ interface GuestListEvent {
   whatsapp_link: string | null;
   agency_phone: string | null;
   is_active: boolean;
+  event_image_url?: string | null;
   no_dates_message?: string | null;
   no_dates_show_social?: boolean;
   no_dates_show_tickets?: boolean;
@@ -40,11 +44,67 @@ export function EventDialogForm({ event, onSubmit, onCancel }: EventDialogFormPr
     whatsapp_link: event?.whatsapp_link || "",
     agency_phone: event?.agency_phone || "",
     is_active: event?.is_active ?? true,
+    event_image_url: event?.event_image_url || "",
     no_dates_message: event?.no_dates_message || "Não há datas disponíveis no momento. Fique atento às nossas redes sociais!",
     no_dates_show_social: event?.no_dates_show_social ?? true,
     no_dates_show_tickets: event?.no_dates_show_tickets ?? true,
     no_dates_show_whatsapp: event?.no_dates_show_whatsapp ?? true,
   });
+
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione uma imagem válida');
+      return;
+    }
+
+    // Validar tamanho (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande. Máximo 5MB');
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      // Gerar nome único para o arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `event-images/${fileName}`;
+
+      // Upload para o bucket público
+      const { error: uploadError } = await supabase.storage
+        .from('agency-og-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('agency-og-images')
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, event_image_url: publicUrl });
+      toast.success('Imagem carregada com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao fazer upload:', error);
+      toast.error('Erro ao fazer upload da imagem');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData({ ...formData, event_image_url: "" });
+  };
 
   return (
     <form
@@ -102,6 +162,60 @@ export function EventDialogForm({ event, onSubmit, onCancel }: EventDialogFormPr
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="event_image">Imagem do Evento</Label>
+            {formData.event_image_url ? (
+              <div className="space-y-2">
+                <div className="relative rounded-lg overflow-hidden border-2 border-border">
+                  <img 
+                    src={formData.event_image_url} 
+                    alt="Preview" 
+                    className="w-full h-48 object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Imagem será exibida na página pública do evento
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label htmlFor="event_image" className="cursor-pointer">
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2">
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                        <p className="text-sm text-muted-foreground">Carregando...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm font-medium">Clique para fazer upload</p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG até 5MB</p>
+                      </>
+                    )}
+                  </div>
+                </label>
+                <input
+                  id="event_image"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

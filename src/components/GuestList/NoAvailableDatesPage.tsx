@@ -7,6 +7,7 @@ import { Calendar, Ticket, MessageCircle, Instagram, Globe } from "lucide-react"
 interface NoAvailableDatesPageProps {
   event: {
     name: string;
+    event_image_url?: string | null;
     no_dates_message?: string | null;
     no_dates_show_social?: boolean;
     no_dates_show_tickets?: boolean;
@@ -49,7 +50,18 @@ export function NoAvailableDatesPage({ event, agency }: NoAvailableDatesPageProp
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          {/* Imagem do Evento */}
+          {event.event_image_url && (
+            <div className="px-6">
+              <img 
+                src={event.event_image_url} 
+                alt={event.name}
+                className="w-full rounded-lg object-cover max-h-[400px]"
+              />
+            </div>
+          )}
+
+          <CardContent className="space-y-6">{event.event_image_url && <div className="pt-4" />}
             {/* Mensagem Customizável */}
             <Alert className="bg-primary/5 border-primary/20">
               <AlertDescription className="text-center whitespace-pre-wrap">

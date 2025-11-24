@@ -19,6 +19,7 @@ interface GuestListEvent {
   whatsapp_link: string | null;
   agency_phone: string | null;
   slug: string;
+  event_image_url?: string | null;
   no_dates_message?: string | null;
   no_dates_show_social?: boolean;
   no_dates_show_tickets?: boolean;
@@ -236,6 +237,17 @@ export default function GuestListRegister() {
                 </AlertDescription>
               </Alert>}
           </CardHeader>
+
+          {/* Imagem do Evento */}
+          {event.event_image_url && (
+            <div className="px-6 pb-4">
+              <img 
+                src={event.event_image_url} 
+                alt={event.name}
+                className="w-full rounded-lg object-cover max-h-[400px]"
+              />
+            </div>
+          )}
 
           <Separator />
 
