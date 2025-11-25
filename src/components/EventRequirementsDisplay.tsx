@@ -69,6 +69,42 @@ export const EventRequirementsDisplay = ({
     return null;
   }
 
+  // Verificar se há metas reais definidas (posts > 0 OU vendas > 0)
+  const hasActualRequirements = requirements.some(
+    req => req.required_posts > 0 || req.required_sales > 0
+  );
+
+  // Verificar se há descrições
+  const hasDescriptions = requirements.some(
+    req => req.description && req.description.trim() !== ''
+  );
+
+  // Não mostrar nada se não há requisitos nem descrições
+  if (!hasActualRequirements && !hasDescriptions) {
+    return null;
+  }
+
+  // Se não tem metas mas tem descrição, mostrar apenas descrição
+  if (!hasActualRequirements && hasDescriptions) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Target className="w-5 h-5" />
+            Informações do Evento
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {requirements.filter(r => r.description).map((req, index) => (
+            <div key={req.id} className="p-3 bg-muted/30 rounded-md">
+              <p className="text-sm">{req.description}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (variant === 'compact') {
     return (
       <div className="space-y-2">

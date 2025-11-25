@@ -491,6 +491,7 @@ export type Database = {
           is_approximate_total: boolean | null
           location: string | null
           numero_de_vagas: number | null
+          producer_name: string | null
           require_instagram_link: boolean | null
           require_post_screenshot: boolean | null
           require_profile_screenshot: boolean | null
@@ -524,6 +525,7 @@ export type Database = {
           is_approximate_total?: boolean | null
           location?: string | null
           numero_de_vagas?: number | null
+          producer_name?: string | null
           require_instagram_link?: boolean | null
           require_post_screenshot?: boolean | null
           require_profile_screenshot?: boolean | null
@@ -557,6 +559,7 @@ export type Database = {
           is_approximate_total?: boolean | null
           location?: string | null
           numero_de_vagas?: number | null
+          producer_name?: string | null
           require_instagram_link?: boolean | null
           require_post_screenshot?: boolean | null
           require_profile_screenshot?: boolean | null

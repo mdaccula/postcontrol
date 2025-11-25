@@ -42,6 +42,7 @@ interface Event {
   event_date: string | null;
   location: string | null;
   setor: string | null;
+  producer_name?: string;
   numero_de_vagas: number | null;
   event_image_url: string | null;
   require_instagram_link: boolean;
@@ -247,7 +248,7 @@ const Submit = () => {
       const { data, error } = await sb
         .from("events")
         .select(
-          "id, title, description, event_date, location, setor, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, whatsapp_group_title, ticketer_email, target_gender",
+          "id, title, description, event_date, location, setor, producer_name, numero_de_vagas, event_image_url, require_instagram_link, event_purpose, accept_sales, accept_posts, require_profile_screenshot, require_post_screenshot, whatsapp_group_url, whatsapp_group_title, ticketer_email, target_gender",
         )
         .eq("is_active", true)
         .eq("agency_id", contextAgencyId)
@@ -1277,6 +1278,12 @@ const Submit = () => {
                       <div className="flex items-start gap-2">
                         <span className="font-medium text-muted-foreground">Setor:</span>
                         <span>{selectedEventData.setor}</span>
+                      </div>
+                    )}
+                    {selectedEventData.producer_name && (
+                      <div className="flex items-start gap-2">
+                        <span className="font-medium text-muted-foreground">Produtor(a):</span>
+                        <span>{selectedEventData.producer_name}</span>
                       </div>
                     )}
                   </div>

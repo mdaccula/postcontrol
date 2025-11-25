@@ -34,6 +34,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
   const [eventDate, setEventDate] = useState("");
   const [location, setLocation] = useState("");
   const [setor, setSetor] = useState("");
+  const [producerName, setProducerName] = useState("");
   const [numeroDeVagas, setNumeroDeVagas] = useState("");
   const [eventSlug, setEventSlug] = useState("");
   const [requirements, setRequirements] = useState<EventRequirement[]>([
@@ -97,6 +98,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
       }
         setLocation(event.location || "");
         setSetor(event.setor || "");
+        setProducerName(event.producer_name || "");
         setNumeroDeVagas(event.numero_de_vagas ? String(event.numero_de_vagas) : "");
         setEventSlug(event.event_slug || "");
         setEventImageUrl(event.event_image_url || "");
@@ -134,6 +136,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         setEventDate("");
         setLocation("");
         setSetor("");
+        setProducerName("");
         setNumeroDeVagas("");
         setEventSlug("");
         setRequirements([{ required_posts: 0, required_sales: 0, description: "", display_order: 0 }]);
@@ -335,6 +338,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         })() : null,
             location,
             setor: setor || null,
+            producer_name: producerName || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
             event_slug: eventSlug.trim() || null,
             event_image_url: imageUrl || null, // 🆕 Nova URL
@@ -373,6 +377,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             event_date: eventDate ? (new Date(eventDate + ':00-03:00').toISOString()) : null,
             location,
             setor: setor || null,
+            producer_name: producerName || null,
             numero_de_vagas: numeroDeVagas ? parseInt(numeroDeVagas) : null,
             event_slug: eventSlug.trim() || null,
             event_image_url: imageUrl || null,
@@ -556,23 +561,37 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                     id="setor"
                     value={setor}
                     onChange={(e) => setSetor(e.target.value)}
-                    placeholder="Setor do evento"
+                    placeholder="Ex: Pista, Camarote"
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="numero_de_vagas">Número de Vagas</Label>
+                  <Label htmlFor="producer_name">Produtor(a)</Label>
                   <Input
-                    id="numero_de_vagas"
-                    type="number"
-                    value={numeroDeVagas}
-                    onChange={(e) => setNumeroDeVagas(e.target.value)}
-                    placeholder="Ex: 50"
-                    min="0"
+                    id="producer_name"
+                    value={producerName}
+                    onChange={(e) => setProducerName(e.target.value)}
+                    placeholder="Nome do produtor/produtora do evento"
                     disabled={loading}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Opcional - Será exibido para os divulgadores
+                  </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="numero_de_vagas">Número de Vagas</Label>
+                <Input
+                  id="numero_de_vagas"
+                  type="number"
+                  value={numeroDeVagas}
+                  onChange={(e) => setNumeroDeVagas(e.target.value)}
+                  placeholder="Ex: 50"
+                  min="0"
+                  disabled={loading}
+                />
               </div>
 
               <div className="space-y-2">
@@ -644,7 +663,9 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
             {/* ABA 2: REQUISITOS & METAS */}
             <TabsContent value="requisitos" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="total_required_posts">Total de Postagens Obrigatórias *</Label>
+                <Label htmlFor="total_required_posts">
+                  Quantidade de Postagens Previstas <span className="text-xs text-muted-foreground">(apenas informativo)</span>
+                </Label>
                 <Input
                   id="total_required_posts"
                   type="number"
@@ -696,9 +717,9 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                 
                 <div className="space-y-3">
                   {requirements.map((req, index) => (
-                    <div key={index} className="p-4 border rounded-lg space-y-3 bg-card">
+                    <div key={index} className="p-4 border rounded-lg space-y-3 bg-muted/30">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Opção {index + 1}</Label>
+                        <Label className="text-base font-semibold">Opção {index + 1}</Label>
                         {requirements.length > 1 && (
                           <Button
                             type="button"
@@ -707,46 +728,13 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                             onClick={() => setRequirements(requirements.filter((_, i) => i !== index))}
                             disabled={loading}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <X className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Posts</Label>
-                          <Input
-                            type="number"
-                            value={req.required_posts}
-                            onChange={(e) => {
-                              const newReqs = [...requirements];
-                              newReqs[index].required_posts = parseInt(e.target.value) || 0;
-                              setRequirements(newReqs);
-                            }}
-                            placeholder="0"
-                            min="0"
-                            disabled={loading}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Vendas</Label>
-                          <Input
-                            type="number"
-                            value={req.required_sales}
-                            onChange={(e) => {
-                              const newReqs = [...requirements];
-                              newReqs[index].required_sales = parseInt(e.target.value) || 0;
-                              setRequirements(newReqs);
-                            }}
-                            placeholder="0"
-                            min="0"
-                            disabled={loading}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <Label className="text-xs">Descrição (opcional)</Label>
+
+                      <div className="space-y-2">
+                        <Label>Descrição (opcional)</Label>
                         <Input
                           value={req.description}
                           onChange={(e) => {
@@ -754,9 +742,44 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                             newReqs[index].description = e.target.value;
                             setRequirements(newReqs);
                           }}
-                          placeholder={`${req.required_posts} postagens e ${req.required_sales} vendas`}
+                          placeholder="Ex: Ideal para pequenos divulgadores"
                           disabled={loading}
                         />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Metas (deixe zerado se não definido)</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label>Posts Obrigatórios</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={req.required_posts}
+                              onChange={(e) => {
+                                const newReqs = [...requirements];
+                                newReqs[index].required_posts = parseInt(e.target.value) || 0;
+                                setRequirements(newReqs);
+                              }}
+                              disabled={loading}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Vendas Obrigatórias</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={req.required_sales}
+                              onChange={(e) => {
+                                const newReqs = [...requirements];
+                                newReqs[index].required_sales = parseInt(e.target.value) || 0;
+                                setRequirements(newReqs);
+                              }}
+                              disabled={loading}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -809,56 +832,78 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
 
               {eventPurpose === "selecao_perfil" && (
                 <div className="space-y-4 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
-                  <Label className="text-base font-semibold">Requisitos para Seleção de Perfil</Label>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center space-x-2">
+                  <Label className="text-base font-semibold">
+                    Configurações de Seleção de Perfil
+                  </Label>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-background/50 rounded-md">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="require_profile_screenshot" className="cursor-pointer">
+                          Exigir print do perfil
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Usuário deve enviar screenshot do perfil para validação
+                        </p>
+                      </div>
                       <Checkbox
                         id="require_profile_screenshot"
                         checked={requireProfileScreenshot}
                         onCheckedChange={(checked) => setRequireProfileScreenshot(checked as boolean)}
                         disabled={loading}
                       />
-                      <Label htmlFor="require_profile_screenshot" className="cursor-pointer font-normal">
-                        Exigir Print do Perfil do Instagram
-                      </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+
+                    <div className="flex items-center justify-between p-3 bg-background/50 rounded-md">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="require_post_screenshot" className="cursor-pointer">
+                          Exigir print de postagem
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Usuário deve enviar screenshot de uma postagem
+                        </p>
+                      </div>
                       <Checkbox
                         id="require_post_screenshot"
                         checked={requirePostScreenshot}
                         onCheckedChange={(checked) => setRequirePostScreenshot(checked as boolean)}
                         disabled={loading}
                       />
-                      <Label htmlFor="require_post_screenshot" className="cursor-pointer font-normal">
-                        Exigir Print de uma Postagem
-                      </Label>
                     </div>
-                  </div>
-
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="whatsapp_group_url">URL do Grupo WhatsApp</Label>
-                    <Input
-                      id="whatsapp_group_url"
-                      type="url"
-                      value={whatsappGroupUrl}
-                      onChange={(e) => setWhatsappGroupUrl(e.target.value)}
-                      placeholder="https://chat.whatsapp.com/..."
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="whatsapp_group_title">Título do Grupo WhatsApp</Label>
-                    <Input
-                      id="whatsapp_group_title"
-                      value={whatsappGroupTitle}
-                      onChange={(e) => setWhatsappGroupTitle(e.target.value)}
-                      placeholder="Ex: Grupo de Resultados"
-                      disabled={loading}
-                    />
                   </div>
                 </div>
               )}
+
+              {/* WhatsApp Group para AMBOS os tipos de evento */}
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <Label className="text-base font-semibold">Grupo WhatsApp (Opcional)</Label>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp_group_url">URL do Grupo</Label>
+                  <Input
+                    id="whatsapp_group_url"
+                    value={whatsappGroupUrl}
+                    onChange={(e) => setWhatsappGroupUrl(e.target.value)}
+                    placeholder="https://chat.whatsapp.com/..."
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp_group_title">Título do Grupo</Label>
+                  <Input
+                    id="whatsapp_group_title"
+                    value={whatsappGroupTitle}
+                    onChange={(e) => setWhatsappGroupTitle(e.target.value)}
+                    placeholder="Ex: Grupo VIP - Nome do Evento"
+                    disabled={loading}
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Link enviado ao divulgador quando atingir a meta
+                </p>
+              </div>
             </TabsContent>
 
             {/* ABA 4: DESCRIÇÃO & PÚBLICO */}
