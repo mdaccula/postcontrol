@@ -26,7 +26,9 @@ export const MigrationUserGoalsButton = () => {
         description: 'Isso pode levar alguns minutos'
       });
 
-      const { data, error } = await supabase.functions.invoke('populate-user-goals-multi-requirements');
+      const { data, error } = await supabase.functions.invoke('populate-user-goals-multi-requirements', {
+        body: {},
+      });
 
       if (error) throw error;
 
@@ -40,8 +42,13 @@ export const MigrationUserGoalsButton = () => {
       }
     } catch (error) {
       console.error('Erro ao executar migração:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
       toast.error('❌ Erro ao executar migração', {
-        description: error instanceof Error ? error.message : 'Erro desconhecido'
+        description: errorMessage.includes('Failed to send') 
+          ? 'A função pode estar demorando muito. Aguarde alguns minutos e tente novamente.'
+          : errorMessage,
+        duration: 5000
       });
     } finally {
       setIsRunning(false);
@@ -64,7 +71,11 @@ export const MigrationUserGoalsButton = () => {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             Esta migração irá processar todos os eventos e usuários para atualizar o sistema de metas.
-            Execute apenas uma vez após atualizar as regras dos eventos.
+            Execute apenas uma vez após atualizar as regras dos eventos. Pode levar até 1 minuto.
+            <br />
+            <strong className="text-xs mt-1 block">
+              Se aparecer erro de conexão, aguarde 1-2 minutos e tente novamente (função está sendo deployada).
+            </strong>
           </AlertDescription>
         </Alert>
 
