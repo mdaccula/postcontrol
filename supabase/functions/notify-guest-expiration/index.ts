@@ -4,16 +4,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 // Resend API wrapper
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
-async function sendEmail(options: {
-  from: string;
-  to: string[];
-  subject: string;
-  html: string;
-}) {
+async function sendEmail(options: { from: string; to: string[]; subject: string; html: string }) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${RESEND_API_KEY}`,
+      Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(options),
@@ -55,10 +50,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: guestsExpiring7Days, error: error7Days } = await supabase
       .from("agency_guests")
-      .select(`
+      .select(
+        `
         *,
         agencies(name, logo_url)
-      `)
+      `,
+      )
       .eq("status", "accepted")
       .eq("notify_before_expiry", true)
       .gte("access_end_date", sevenDaysFromNow.toISOString())
@@ -79,10 +76,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: guestsExpiring1Day, error: error1Day } = await supabase
       .from("agency_guests")
-      .select(`
+      .select(
+        `
         *,
         agencies(name, logo_url)
-      `)
+      `,
+      )
       .eq("status", "accepted")
       .eq("notify_before_expiry", true)
       .gte("access_end_date", oneDayFromNow.toISOString())
@@ -97,13 +96,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Notificar convidados que expiram em 7 dias
     if (guestsExpiring7Days && guestsExpiring7Days.length > 0) {
       console.log(`Found ${guestsExpiring7Days.length} guests expiring in 7 days`);
-      
+
       for (const guest of guestsExpiring7Days) {
         try {
           const emailResponse = await sendEmail({
             from: "Sua Agência <onboarding@resend.dev>",
             to: [guest.guest_email],
-            subject: `⏰ Seu acesso expira em 7 dias - ${guest.agencies.name}`,
+            subject: `⏰ Seu acesso expira em 10 dias - ${guest.agencies.name}`,
             html: `
               <!DOCTYPE html>
               <html>
@@ -134,8 +133,8 @@ const handler = async (req: Request): Promise<Response> => {
                   </div>
                   
                   <div class="warning-box">
-                    <p><strong>Atenção:</strong> Seu acesso aos eventos de <strong>${guest.agencies.name}</strong> expira em <strong>7 dias</strong>!</p>
-                    <p>Data de expiração: <strong>${new Date(guest.access_end_date).toLocaleDateString('pt-BR')}</strong></p>
+                    <p><strong>Atenção:</strong> Seu acesso aos eventos de <strong>${guest.agencies.name}</strong> expira em <strong>10 dias</strong>!</p>
+                    <p>Data de expiração: <strong>${new Date(guest.access_end_date).toLocaleDateString("pt-BR")}</strong></p>
                   </div>
                   
                   <p>Após essa data, você não terá mais acesso aos eventos e submissões.</p>
@@ -155,7 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
             guest: guest.guest_email,
             days: 7,
             status: "sent",
-            emailId: emailResponse.id
+            emailId: emailResponse.id,
           });
         } catch (error: any) {
           console.error(`Failed to send 7-day notification to ${guest.guest_email}:`, error);
@@ -163,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
             guest: guest.guest_email,
             days: 7,
             status: "failed",
-            error: error.message
+            error: error.message,
           });
         }
       }
@@ -172,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Notificar convidados que expiram em 24 horas
     if (guestsExpiring1Day && guestsExpiring1Day.length > 0) {
       console.log(`Found ${guestsExpiring1Day.length} guests expiring in 1 day`);
-      
+
       for (const guest of guestsExpiring1Day) {
         try {
           const emailResponse = await sendEmail({
@@ -210,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
                   
                   <div class="urgent-box">
                     <p><strong>ATENÇÃO:</strong> Seu acesso aos eventos de <strong>${guest.agencies.name}</strong> expira em <strong>24 HORAS</strong>!</p>
-                    <p>Data de expiração: <strong>${new Date(guest.access_end_date).toLocaleDateString('pt-BR')} às ${new Date(guest.access_end_date).toLocaleTimeString('pt-BR')}</strong></p>
+                    <p>Data de expiração: <strong>${new Date(guest.access_end_date).toLocaleDateString("pt-BR")} às ${new Date(guest.access_end_date).toLocaleTimeString("pt-BR")}</strong></p>
                   </div>
                   
                   <p>Este é seu último dia com acesso aos eventos e submissões. Após a expiração, você não poderá mais:</p>
@@ -235,7 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
             guest: guest.guest_email,
             days: 1,
             status: "sent",
-            emailId: emailResponse.id
+            emailId: emailResponse.id,
           });
         } catch (error: any) {
           console.error(`Failed to send 1-day notification to ${guest.guest_email}:`, error);
@@ -243,7 +242,7 @@ const handler = async (req: Request): Promise<Response> => {
             guest: guest.guest_email,
             days: 1,
             status: "failed",
-            error: error.message
+            error: error.message,
           });
         }
       }
@@ -252,29 +251,26 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Notifications sent:", notifications);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         notifications,
         summary: {
           total: notifications.length,
-          sent: notifications.filter(n => n.status === "sent").length,
-          failed: notifications.filter(n => n.status === "failed").length
-        }
+          sent: notifications.filter((n) => n.status === "sent").length,
+          failed: notifications.filter((n) => n.status === "failed").length,
+        },
       }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      },
     );
   } catch (error: any) {
     console.error("Error in notify-guest-expiration function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 

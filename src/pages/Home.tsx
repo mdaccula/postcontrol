@@ -3,17 +3,24 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Upload, Trophy, Users, Zap, Shield, BarChart3, CheckCircle2, Calendar, Clock, Gift, MessageCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Upload,
+  Trophy,
+  Users,
+  Zap,
+  Shield,
+  BarChart3,
+  CheckCircle2,
+  Calendar,
+  Clock,
+  Gift,
+  MessageCircle,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -36,7 +43,7 @@ const FloatingElement = ({ children, delay = 0, duration = 4, x = 0, y = 0 }: an
       duration,
       delay,
       repeat: Infinity,
-      ease: "easeInOut"
+      ease: "easeInOut",
     }}
   >
     {children}
@@ -82,50 +89,50 @@ const Home = () => {
 
   const loadPlans = async () => {
     const { data } = await sb
-      .from('subscription_plans')
-      .select('*')
-      .eq('is_visible', true)
-      .order('display_order', { ascending: true });
-    
+      .from("subscription_plans")
+      .select("*")
+      .eq("is_visible", true)
+      .order("display_order", { ascending: true });
+
     setPlans(data || []);
   };
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
-    element?.scrollIntoView({ behavior: 'smooth' });
+    element?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // ✅ FASE 1 - Item 1.4: Corrigir lógica "Teste 7 Dias Grátis"
+  // ✅ FASE 1 - Item 1.4: Corrigir lógica "Teste 10 Dias Grátis"
   const handleTrialClick = async (planKey: string) => {
     // Se não estiver logado, redirecionar para página de autenticação
     if (!user) {
-      window.location.href = '/auth';
+      window.location.href = "/auth";
       return;
     }
 
     // Se estiver logado, abrir checkout direto com o plano selecionado
     setIsLoading(true);
     try {
-      console.log('🛒 [HOME] Abrindo checkout para plano:', planKey);
-      
-      const { data, error } = await sb.functions.invoke('create-checkout-session', {
-        body: { planKey }
+      console.log("🛒 [HOME] Abrindo checkout para plano:", planKey);
+
+      const { data, error } = await sb.functions.invoke("create-checkout-session", {
+        body: { planKey },
       });
-      
+
       if (error) {
-        console.error('❌ [HOME] Erro ao criar checkout:', error);
+        console.error("❌ [HOME] Erro ao criar checkout:", error);
         throw error;
       }
-      
+
       if (data?.url) {
-        console.log('✅ [HOME] Abrindo checkout na URL:', data.url);
-        window.open(data.url, '_blank');
+        console.log("✅ [HOME] Abrindo checkout na URL:", data.url);
+        window.open(data.url, "_blank");
       } else {
-        throw new Error('URL de checkout não retornada');
+        throw new Error("URL de checkout não retornada");
       }
     } catch (error) {
-      console.error('❌ [HOME] Erro ao processar checkout:', error);
-      toast.error('Erro ao abrir página de assinatura. Tente novamente.');
+      console.error("❌ [HOME] Erro ao processar checkout:", error);
+      toast.error("Erro ao abrir página de assinatura. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -151,22 +158,20 @@ const Home = () => {
 
     setSubmittingRequest(true);
     try {
-      console.log('📝 [HOME] Enviando solicitação de agência');
+      console.log("📝 [HOME] Enviando solicitação de agência");
 
-      const { error } = await sb
-        .from('agency_requests')
-        .insert({
-          user_id: user!.id,
-          agency_name: agencyName,
-          agency_slug: agencySlug,
-          status: 'pending',
-        });
+      const { error } = await sb.from("agency_requests").insert({
+        user_id: user!.id,
+        agency_name: agencyName,
+        agency_slug: agencySlug,
+        status: "pending",
+      });
 
       if (error) {
-        console.error('❌ [HOME] Erro ao criar solicitação:', error);
-        
+        console.error("❌ [HOME] Erro ao criar solicitação:", error);
+
         // Check if it's a unique constraint violation
-        if (error.code === '23505') {
+        if (error.code === "23505") {
           toast.error("Você já tem uma solicitação pendente ou este slug já está em uso");
         } else {
           toast.error("Erro ao enviar solicitação. Tente novamente.");
@@ -174,15 +179,15 @@ const Home = () => {
         return;
       }
 
-      console.log('✅ [HOME] Solicitação enviada com sucesso');
+      console.log("✅ [HOME] Solicitação enviada com sucesso");
       toast.success("Solicitação enviada! Aguarde aprovação do Master Admin.");
-      
+
       // Reset form
       setAgencyName("");
       setAgencySlug("");
       setRequestDialogOpen(false);
     } catch (error) {
-      console.error('❌ [HOME] Erro ao enviar solicitação:', error);
+      console.error("❌ [HOME] Erro ao enviar solicitação:", error);
       toast.error("Erro ao enviar solicitação. Por favor, tente novamente.");
     } finally {
       setSubmittingRequest(false);
@@ -210,42 +215,49 @@ const Home = () => {
               <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center shadow-lg">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                PostControl
-              </span>
+              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">PostControl</span>
             </Link>
-            
+
             {/* Menu Desktop */}
             <div className="hidden md:flex items-center gap-6">
-              <button onClick={() => scrollToSection('recursos')} className="text-sm hover:text-primary transition-colors">
+              <button
+                onClick={() => scrollToSection("recursos")}
+                className="text-sm hover:text-primary transition-colors"
+              >
                 Recursos
               </button>
-              <button onClick={() => scrollToSection('como-funciona')} className="text-sm hover:text-primary transition-colors">
+              <button
+                onClick={() => scrollToSection("como-funciona")}
+                className="text-sm hover:text-primary transition-colors"
+              >
                 Como Funciona
               </button>
-              <button onClick={() => scrollToSection('precos')} className="text-sm hover:text-primary transition-colors">
+              <button
+                onClick={() => scrollToSection("precos")}
+                className="text-sm hover:text-primary transition-colors"
+              >
                 Preços
               </button>
-              <button onClick={() => scrollToSection('faq')} className="text-sm hover:text-primary transition-colors">
+              <button onClick={() => scrollToSection("faq")} className="text-sm hover:text-primary transition-colors">
                 FAQ
               </button>
               {user ? (
                 <>
-                  <Button 
-                    size="sm" 
-                    className="bg-gradient-primary" 
+                  <Button
+                    size="sm"
+                    className="bg-gradient-primary"
                     onClick={() => {
-                      window.location.href = '/dashboard';
+                      window.location.href = "/dashboard";
                     }}
                   >
                     Dashboard
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="ghost"
                     onClick={async () => {
                       await sb.auth.signOut();
-                      window.location.href = '/';
+                      window.location.href = "/";
                     }}
                   >
                     Sair
@@ -253,11 +265,13 @@ const Home = () => {
                 </>
               ) : (
                 <Link to="/auth">
-                  <Button size="sm" className="bg-gradient-primary">Entrar</Button>
+                  <Button size="sm" className="bg-gradient-primary">
+                    Entrar
+                  </Button>
                 </Link>
               )}
             </div>
-            
+
             {/* Menu Mobile - Hamburguer */}
             <div className="md:hidden">
               <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -273,49 +287,61 @@ const Home = () => {
         <div className="md:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm">
           <div className="container mx-auto px-4 py-20">
             <div className="flex flex-col space-y-6">
-              <button 
-                onClick={() => { scrollToSection('recursos'); setMobileMenuOpen(false); }} 
+              <button
+                onClick={() => {
+                  scrollToSection("recursos");
+                  setMobileMenuOpen(false);
+                }}
                 className="text-lg hover:text-primary transition-colors text-left"
               >
                 Recursos
               </button>
-              <button 
-                onClick={() => { scrollToSection('como-funciona'); setMobileMenuOpen(false); }} 
+              <button
+                onClick={() => {
+                  scrollToSection("como-funciona");
+                  setMobileMenuOpen(false);
+                }}
                 className="text-lg hover:text-primary transition-colors text-left"
               >
                 Como Funciona
               </button>
-              <button 
-                onClick={() => { scrollToSection('precos'); setMobileMenuOpen(false); }} 
+              <button
+                onClick={() => {
+                  scrollToSection("precos");
+                  setMobileMenuOpen(false);
+                }}
                 className="text-lg hover:text-primary transition-colors text-left"
               >
                 Preços
               </button>
-              <button 
-                onClick={() => { scrollToSection('faq'); setMobileMenuOpen(false); }} 
+              <button
+                onClick={() => {
+                  scrollToSection("faq");
+                  setMobileMenuOpen(false);
+                }}
                 className="text-lg hover:text-primary transition-colors text-left"
               >
                 FAQ
               </button>
               {user ? (
                 <>
-                  <Button 
-                    size="lg" 
-                    className="bg-gradient-primary w-full" 
+                  <Button
+                    size="lg"
+                    className="bg-gradient-primary w-full"
                     onClick={() => {
-                      window.location.href = '/dashboard';
+                      window.location.href = "/dashboard";
                       setMobileMenuOpen(false);
                     }}
                   >
                     Dashboard
                   </Button>
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     variant="outline"
                     className="w-full"
                     onClick={async () => {
                       await sb.auth.signOut();
-                      window.location.href = '/';
+                      window.location.href = "/";
                       setMobileMenuOpen(false);
                     }}
                   >
@@ -324,7 +350,9 @@ const Home = () => {
                 </>
               ) : (
                 <Link to="/auth" className="w-full">
-                  <Button size="lg" className="bg-gradient-primary w-full">Entrar</Button>
+                  <Button size="lg" className="bg-gradient-primary w-full">
+                    Entrar
+                  </Button>
                 </Link>
               )}
             </div>
@@ -335,11 +363,11 @@ const Home = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 px-4">
         {/* Parallax Background */}
-        <motion.div 
+        <motion.div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ 
+          style={{
             backgroundImage: `url(${heroBg})`,
-            y: backgroundY
+            y: backgroundY,
           }}
         >
           {/* Gradiente Pulsante */}
@@ -350,7 +378,7 @@ const Home = () => {
                 "linear-gradient(135deg, hsl(280 85% 60% / 0.9) 0%, hsl(320 90% 65% / 0.8) 100%)",
                 "linear-gradient(135deg, hsl(290 90% 70% / 0.9) 0%, hsl(280 85% 60% / 0.8) 100%)",
                 "linear-gradient(135deg, hsl(280 85% 60% / 0.9) 0%, hsl(320 90% 65% / 0.8) 100%)",
-              ]
+              ],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           />
@@ -393,21 +421,24 @@ const Home = () => {
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md" />
         </FloatingElement>
         <FloatingElement delay={1.2} duration={5} x={window.innerWidth * 0.75} y={window.innerHeight * 0.2}>
-          <div className="w-20 h-20 bg-gradient-to-br from-accent/30 to-accent/10 backdrop-blur-md" style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }} />
+          <div
+            className="w-20 h-20 bg-gradient-to-br from-accent/30 to-accent/10 backdrop-blur-md"
+            style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }}
+          />
         </FloatingElement>
         <FloatingElement delay={1.8} duration={5.5} x={window.innerWidth * 0.1} y={window.innerHeight * 0.6}>
-          <div className="w-16 h-16 bg-gradient-to-br from-primary/30 to-primary/10 backdrop-blur-md" style={{ clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
+          <div
+            className="w-16 h-16 bg-gradient-to-br from-primary/30 to-primary/10 backdrop-blur-md"
+            style={{ clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
+          />
         </FloatingElement>
-        
-        <motion.div 
-          className="relative z-10 text-center max-w-5xl mx-auto w-full"
-          style={{ y: textY, opacity }}
-        >
+
+        <motion.div className="relative z-10 text-center max-w-5xl mx-auto w-full" style={{ y: textY, opacity }}>
           <Badge className="mb-4 md:mb-6 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-green-500 to-emerald-500 backdrop-blur-sm border-white/30 text-white animate-pulse shadow-glow inline-flex items-center">
             <Gift className="w-3 h-3 md:w-4 md:h-4 mr-2" />
-            🎁 Experimente por 7 dias gratuitamente !
+            🎁 Experimente por 10 dias gratuitamente !
           </Badge>
-          
+
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 text-white animate-float leading-tight px-4">
             Gerencie os Posts dos Seus Usuários com Facilidade
           </h1>
@@ -417,18 +448,26 @@ const Home = () => {
           <p className="text-sm sm:text-base md:text-lg mb-6 md:mb-8 text-white/80 max-w-2xl mx-auto px-4">
             Dashboard completo • Aprovação em massa • Controle total • Relatórios automáticos
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center mb-8 md:mb-12 px-4">
             {user ? (
               <>
                 <Link to="/dashboard" className="w-full sm:w-auto">
-                  <Button size="lg" variant="secondary" className="group text-base md:text-lg px-6 md:px-8 py-4 md:py-6 shadow-xl w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="group text-base md:text-lg px-6 md:px-8 py-4 md:py-6 shadow-xl w-full sm:w-auto"
+                  >
                     Acessar Dashboard
                     <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Link to="/submit" className="w-full sm:w-auto">
-                  <Button size="lg" variant="outline" className="text-base md:text-lg px-6 md:px-8 py-4 md:py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="text-base md:text-lg px-6 md:px-8 py-4 md:py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 w-full sm:w-auto"
+                  >
                     Enviar Postagem
                   </Button>
                 </Link>
@@ -436,24 +475,32 @@ const Home = () => {
             ) : (
               <>
                 <Link to="/auth" className="w-full sm:w-auto">
-                  <Button size="lg" variant="secondary" className="group text-base md:text-lg px-6 md:px-8 py-4 md:py-6 shadow-xl w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="group text-base md:text-lg px-6 md:px-8 py-4 md:py-6 shadow-xl w-full sm:w-auto"
+                  >
                     Começar Agora
                     <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Link to="/auth" className="w-full sm:w-auto">
-                  <Button size="lg" variant="outline" className="text-base md:text-lg px-6 md:px-8 py-4 md:py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="text-base md:text-lg px-6 md:px-8 py-4 md:py-6 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 w-full sm:w-auto"
+                  >
                     Enviar Postagem
                   </Button>
                 </Link>
               </>
             )}
           </div>
-          
+
           <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 text-white/80 text-xs sm:text-sm px-4">
             <div className="flex items-center gap-2">
               <Gift className="w-4 h-4 md:w-5 md:h-5 text-green-400 flex-shrink-0" />
-              <span className="font-semibold">7 dias grátis</span>
+              <span className="font-semibold">10 dias grátis</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -474,7 +521,10 @@ const Home = () => {
       </section>
 
       {/* Recursos */}
-      <section id="recursos" className="py-16 md:py-24 px-4 bg-gradient-to-br from-background via-muted to-background scroll-mt-20">
+      <section
+        id="recursos"
+        className="py-16 md:py-24 px-4 bg-gradient-to-br from-background via-muted to-background scroll-mt-20"
+      >
         <div className="max-w-6xl mx-auto">
           <AnimatedSection>
             <div className="text-center mb-12 md:mb-16">
@@ -487,8 +537,8 @@ const Home = () => {
               </p>
             </div>
           </AnimatedSection>
-          
-          <motion.div 
+
+          <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
             initial="hidden"
             whileInView="visible"
@@ -499,9 +549,9 @@ const Home = () => {
                 opacity: 1,
                 transition: {
                   staggerChildren: 0.1,
-                  delayChildren: 0.2
-                }
-              }
+                  delayChildren: 0.2,
+                },
+              },
             }}
           >
             <motion.div
@@ -511,11 +561,20 @@ const Home = () => {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: "easeOut" }
-                }
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
               }}
             >
-              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5,
+                  boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
                   <div className="w-16 h-16 mb-6 bg-gradient-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Users className="w-8 h-8 text-white" />
@@ -535,18 +594,28 @@ const Home = () => {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: "easeOut" }
-                }
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
               }}
             >
-              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(320 90% 65% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5,
+                  boxShadow: "0 25px 50px -12px hsl(320 90% 65% / 0.3)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
                   <div className="w-16 h-16 mb-6 bg-gradient-secondary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <BarChart3 className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold mb-4">Relatórios Completos</h3>
                   <p className="text-muted-foreground">
-                    Exporte estatísticas detalhadas em Excel ou PDF com um clique, perfeito para análises e apresentações
+                    Exporte estatísticas detalhadas em Excel ou PDF com um clique, perfeito para análises e
+                    apresentações
                   </p>
                 </Card>
               </motion.div>
@@ -559,11 +628,20 @@ const Home = () => {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: "easeOut" }
-                }
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
               }}
             >
-              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5,
+                  boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
                   <div className="w-16 h-16 mb-6 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <CheckCircle2 className="w-8 h-8 text-white" />
@@ -583,11 +661,20 @@ const Home = () => {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: "easeOut" }
-                }
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
               }}
             >
-              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5,
+                  boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
                   <div className="w-16 h-16 mb-6 bg-gradient-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Calendar className="w-8 h-8 text-white" />
@@ -607,11 +694,20 @@ const Home = () => {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: "easeOut" }
-                }
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
               }}
             >
-              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(320 90% 65% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5,
+                  boxShadow: "0 25px 50px -12px hsl(320 90% 65% / 0.3)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
                   <div className="w-16 h-16 mb-6 bg-gradient-secondary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Shield className="w-8 h-8 text-white" />
@@ -631,11 +727,20 @@ const Home = () => {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: "easeOut" }
-                }
+                  transition: { duration: 0.5, ease: "easeOut" },
+                },
               }}
             >
-              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5,
+                  boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
                 <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
                   <div className="w-16 h-16 mb-6 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Zap className="w-8 h-8 text-white" />
@@ -652,22 +757,23 @@ const Home = () => {
       </section>
 
       {/* Como Funciona */}
-      <section id="como-funciona" className="py-16 md:py-24 px-4 bg-gradient-to-br from-muted via-background to-muted scroll-mt-20">
+      <section
+        id="como-funciona"
+        className="py-16 md:py-24 px-4 bg-gradient-to-br from-muted via-background to-muted scroll-mt-20"
+      >
         <div className="max-w-6xl mx-auto">
           <AnimatedSection>
             <div className="text-center mb-12 md:mb-16 px-4">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                Comece em 3 Passos Simples
-              </h2>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Comece em 3 Passos Simples</h2>
               <p className="text-muted-foreground text-base md:text-lg">
                 Configure sua plataforma em minutos e comece a gerenciar seus usuários hoje mesmo
               </p>
             </div>
           </AnimatedSection>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative">
             {/* Linha conectando os passos */}
-            <motion.div 
+            <motion.div
               className="hidden md:block absolute top-10 left-[16.66%] right-[16.66%] h-0.5 bg-gradient-to-r from-primary via-accent to-primary"
               initial={{ scaleX: 0 }}
               whileInView={{ scaleX: 1 }}
@@ -678,7 +784,7 @@ const Home = () => {
             <AnimatedSection delay={0.2}>
               <div className="relative">
                 <div className="text-center">
-                  <motion.div 
+                  <motion.div
                     className="w-20 h-20 mx-auto mb-6 bg-gradient-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow relative z-10"
                     initial={{ scale: 0, opacity: 0 }}
                     whileInView={{ scale: 1, opacity: 1 }}
@@ -689,7 +795,8 @@ const Home = () => {
                   </motion.div>
                   <h3 className="text-2xl font-bold mb-4">Crie sua Conta Admin</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    Cadastro rápido em menos de 2 minutos. Comece com 7 dias grátis para testar todas as funcionalidades
+                    Cadastro rápido em menos de 2 minutos. Comece com 10 dias grátis para testar todas as
+                    funcionalidades
                   </p>
                 </div>
               </div>
@@ -698,7 +805,7 @@ const Home = () => {
             <AnimatedSection delay={0.4}>
               <div className="relative">
                 <div className="text-center">
-                  <motion.div 
+                  <motion.div
                     className="w-20 h-20 mx-auto mb-6 bg-gradient-secondary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow relative z-10"
                     initial={{ scale: 0, opacity: 0 }}
                     whileInView={{ scale: 1, opacity: 1 }}
@@ -709,7 +816,8 @@ const Home = () => {
                   </motion.div>
                   <h3 className="text-2xl font-bold mb-4">Configure seus Eventos</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    Crie eventos, defina prazos e requisitos. Seus usuários enviarão as postagens através do link de submissão
+                    Crie eventos, defina prazos e requisitos. Seus usuários enviarão as postagens através do link de
+                    submissão
                   </p>
                 </div>
               </div>
@@ -718,7 +826,7 @@ const Home = () => {
             <AnimatedSection delay={0.6}>
               <div className="relative">
                 <div className="text-center">
-                  <motion.div 
+                  <motion.div
                     className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow relative z-10"
                     initial={{ scale: 0, opacity: 0 }}
                     whileInView={{ scale: 1, opacity: 1 }}
@@ -729,7 +837,8 @@ const Home = () => {
                   </motion.div>
                   <h3 className="text-2xl font-bold mb-4">Gerencie e Aprove</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    Visualize todas as submissões, aprove em massa e gere relatórios completos. Controle total do seu time!
+                    Visualize todas as submissões, aprove em massa e gere relatórios completos. Controle total do seu
+                    time!
                   </p>
                 </div>
               </div>
@@ -739,19 +848,20 @@ const Home = () => {
       </section>
 
       {/* Pricing */}
-      <section id="precos" className="py-16 md:py-24 px-4 bg-gradient-to-br from-background via-muted to-background scroll-mt-20">
+      <section
+        id="precos"
+        className="py-16 md:py-24 px-4 bg-gradient-to-br from-background via-muted to-background scroll-mt-20"
+      >
         <div className="max-w-7xl mx-auto">
           <AnimatedSection>
             <div className="text-center mb-8 md:mb-12 px-4">
-            <Badge className="mb-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none text-sm md:text-base px-4 md:px-6 py-2 shadow-glow">
-              🎁 Escolha o melhor plano para você
-            </Badge>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              Planos Flexíveis
-            </h2>
-            <p className="text-muted-foreground text-base md:text-lg">
-              Escolha o plano ideal para o tamanho da sua operação
-            </p>
+              <Badge className="mb-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none text-sm md:text-base px-4 md:px-6 py-2 shadow-glow">
+                🎁 Escolha o melhor plano para você
+              </Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Planos Flexíveis</h2>
+              <p className="text-muted-foreground text-base md:text-lg">
+                Escolha o plano ideal para o tamanho da sua operação
+              </p>
             </div>
           </AnimatedSection>
 
@@ -760,7 +870,7 @@ const Home = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : (
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto"
               initial="hidden"
               whileInView="visible"
@@ -771,15 +881,15 @@ const Home = () => {
                   opacity: 1,
                   transition: {
                     staggerChildren: 0.15,
-                    delayChildren: 0.1
-                  }
-                }
+                    delayChildren: 0.1,
+                  },
+                },
               }}
             >
               {plans.map((plan) => {
                 const isPopular = plan.is_popular === true; // ✅ Usa campo do banco
                 const features = Array.isArray(plan.features) ? plan.features : [];
-                
+
                 return (
                   <motion.div
                     key={plan.id}
@@ -789,58 +899,59 @@ const Home = () => {
                         opacity: 1,
                         y: 0,
                         scale: 1,
-                        transition: { duration: 0.5, ease: "easeOut" }
-                      }
+                        transition: { duration: 0.5, ease: "easeOut" },
+                      },
                     }}
                   >
-                    <motion.div whileHover={{ scale: 1.03, y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-                      <Card 
+                    <motion.div
+                      whileHover={{ scale: 1.03, y: -5 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <Card
                         className={`p-6 relative flex flex-col ${
-                          isPopular ? 'border-4 border-primary shadow-glow scale-105 z-10' : 'border-2'
+                          isPopular ? "border-4 border-primary shadow-glow scale-105 z-10" : "border-2"
                         }`}
                       >
-                    {isPopular && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-gradient-primary px-6 py-2 text-sm shadow-lg whitespace-nowrap">
-                          ⭐ MAIS POPULAR
-                        </Badge>
-                      </div>
-                    )}
-                    
-                    <div className="text-center mb-4">
-                      <h3 className="text-xl font-bold mb-2">{plan.plan_name}</h3>
-                      <div className="flex items-baseline justify-center gap-1 mb-2">
-                        <span className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                          R$ {Number(plan.monthly_price).toFixed(2)}
-                        </span>
-                        <span className="text-sm text-muted-foreground">/mês</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {plan.max_influencers === 99999 ? 'Ilimitado' : plan.max_influencers} divulgadores • {plan.max_events === 99999 ? 'Ilimitado' : plan.max_events} eventos
-                      </p>
-                    </div>
+                        {isPopular && (
+                          <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                            <Badge className="bg-gradient-primary px-6 py-2 text-sm shadow-lg whitespace-nowrap">
+                              ⭐ MAIS POPULAR
+                            </Badge>
+                          </div>
+                        )}
 
-                    <div className="space-y-2 mb-6 flex-grow">
-                      {features.map((feature: string, idx: number) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-xs">{feature}</span>
+                        <div className="text-center mb-4">
+                          <h3 className="text-xl font-bold mb-2">{plan.plan_name}</h3>
+                          <div className="flex items-baseline justify-center gap-1 mb-2">
+                            <span className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                              R$ {Number(plan.monthly_price).toFixed(2)}
+                            </span>
+                            <span className="text-sm text-muted-foreground">/mês</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {plan.max_influencers === 99999 ? "Ilimitado" : plan.max_influencers} divulgadores •{" "}
+                            {plan.max_events === 99999 ? "Ilimitado" : plan.max_events} eventos
+                          </p>
                         </div>
-                      ))}
-                    </div>
 
-                    <Button 
-                      size="lg" 
-                      className={`w-full ${
-                        isPopular ? 'bg-gradient-primary' : 'bg-gradient-secondary'
-                      }`}
-                      onClick={() => handleTrialClick(plan.plan_key)}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Processando...' : 'Teste 7 dias grátis'}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                        <div className="space-y-2 mb-6 flex-grow">
+                          {features.map((feature: string, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                              <span className="text-xs">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
 
+                        <Button
+                          size="lg"
+                          className={`w-full ${isPopular ? "bg-gradient-primary" : "bg-gradient-secondary"}`}
+                          onClick={() => handleTrialClick(plan.plan_key)}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? "Processando..." : "Teste 10 dias grátis"}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
                       </Card>
                     </motion.div>
                   </motion.div>
@@ -852,14 +963,15 @@ const Home = () => {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-16 md:py-24 px-4 bg-gradient-to-br from-muted via-background to-muted scroll-mt-20">
+      <section
+        id="faq"
+        className="py-16 md:py-24 px-4 bg-gradient-to-br from-muted via-background to-muted scroll-mt-20"
+      >
         <div className="max-w-4xl mx-auto">
           <AnimatedSection>
             <div className="text-center mb-12 md:mb-16 px-4">
               <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Perguntas Frequentes</Badge>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                Dúvidas? Temos as Respostas
-              </h2>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Dúvidas? Temos as Respostas</h2>
               <p className="text-muted-foreground text-base md:text-lg">
                 Tudo que você precisa saber sobre nossa plataforma
               </p>
@@ -869,89 +981,89 @@ const Home = () => {
           <Accordion type="single" collapsible className="space-y-4">
             <AnimatedSection delay={0.1}>
               <AccordionItem value="item-1" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                Como funciona o período de teste gratuito?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Você tem 7 dias completos para testar todas as funcionalidades da plataforma sem pagar nada. 
-                Não pedimos cartão de crédito no cadastro. Após o período, você decide se quer continuar com o 
-                plano promocional de R$ 29,90 no primeiro mês.
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  Como funciona o período de teste gratuito?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Você tem 10 dias completos para testar todas as funcionalidades da plataforma sem pagar nada. Não
+                  pedimos cartão de crédito no cadastro. Após o período, você decide se quer continuar com o plano
+                  promocional de R$ 29,90 no primeiro mês.
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
 
             <AnimatedSection delay={0.15}>
               <AccordionItem value="item-2" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                Quantos usuários posso gerenciar?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Sem limites! Você pode cadastrar quantos usuários precisar. Nossa plataforma foi criada para 
-                escalar com seu negócio, seja você um pequeno promoter ou uma grande agência gerenciando centenas 
-                de influenciadores.
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  Quantos usuários posso gerenciar?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Sem limites! Você pode cadastrar quantos usuários precisar. Nossa plataforma foi criada para escalar
+                  com seu negócio, seja você um pequeno promoter ou uma grande agência gerenciando centenas de
+                  influenciadores.
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
 
             <AnimatedSection delay={0.2}>
               <AccordionItem value="item-3" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                Como meus usuários enviam as postagens?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Muito simples! Você compartilha o link de submissão com seus usuários. Eles acessam, fazem login, 
-                fazem upload do print da postagem no Instagram e pronto. Você visualiza tudo no painel admin e 
-                aprova com um clique.
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  Como meus usuários enviam as postagens?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Muito simples! Você compartilha o link de submissão com seus usuários. Eles acessam, fazem login,
+                  fazem upload do print da postagem no Instagram e pronto. Você visualiza tudo no painel admin e aprova
+                  com um clique.
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
 
             <AnimatedSection delay={0.25}>
               <AccordionItem value="item-4" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                Posso aprovar várias submissões de uma vez?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Sim! Temos a funcionalidade de aprovação em massa. Você seleciona todas as submissões que deseja 
-                aprovar e faz tudo com apenas um clique. Economize horas de trabalho manual.
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  Posso aprovar várias submissões de uma vez?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Sim! Temos a funcionalidade de aprovação em massa. Você seleciona todas as submissões que deseja
+                  aprovar e faz tudo com apenas um clique. Economize horas de trabalho manual.
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
 
             <AnimatedSection delay={0.3}>
               <AccordionItem value="item-5" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                Quais relatórios estão disponíveis?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Você pode exportar relatórios completos em Excel ou PDF com todas as estatísticas: usuários mais 
-                ativos, taxa de aprovação, progresso por evento, histórico completo e muito mais. Perfeito para 
-                apresentações e análises.
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  Quais relatórios estão disponíveis?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Você pode exportar relatórios completos em Excel ou PDF com todas as estatísticas: usuários mais
+                  ativos, taxa de aprovação, progresso por evento, histórico completo e muito mais. Perfeito para
+                  apresentações e análises.
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
 
             <AnimatedSection delay={0.35}>
               <AccordionItem value="item-6" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                E se eu precisar de ajuda?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Nosso suporte está disponível 24/7 via chat. Além disso, você tem acesso a uma base de conhecimento 
-                completa com tutoriais em vídeo e guias passo a passo. Estamos aqui para garantir seu sucesso!
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  E se eu precisar de ajuda?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Nosso suporte está disponível 24/7 via chat. Além disso, você tem acesso a uma base de conhecimento
+                  completa com tutoriais em vídeo e guias passo a passo. Estamos aqui para garantir seu sucesso!
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
 
             <AnimatedSection delay={0.4}>
               <AccordionItem value="item-7" className="bg-card border-2 rounded-lg px-6">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                Posso cancelar quando quiser?
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                Sim, sem burocracia! Não há contratos ou fidelidade. Você pode cancelar sua assinatura a qualquer 
-                momento com um clique. Seus dados ficam salvos por 30 dias caso decida voltar.
-              </AccordionContent>
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                  Posso cancelar quando quiser?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Sim, sem burocracia! Não há contratos ou fidelidade. Você pode cancelar sua assinatura a qualquer
+                  momento com um clique. Seus dados ficam salvos por 30 dias caso decida voltar.
+                </AccordionContent>
               </AccordionItem>
             </AnimatedSection>
           </Accordion>
@@ -960,20 +1072,20 @@ const Home = () => {
           <AnimatedSection delay={0.5}>
             <div className="mt-12 text-center">
               <Card className="p-8 bg-gradient-to-br from-primary/5 to-accent/5 border-2">
-              <h3 className="text-2xl font-bold mb-4">Ainda tem dúvidas?</h3>
-              <p className="text-muted-foreground mb-6">
-                Nossa equipe está pronta para ajudar! Entre em contato via WhatsApp para suporte personalizado.
-              </p>
-              <a
-                href="https://wa.me/5511999136884?text=Olá!%20Preciso%20de%20ajuda%20com%20a%20plataforma"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button size="lg" variant="default" className="bg-gradient-primary">
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Falar no WhatsApp
-                </Button>
-              </a>
+                <h3 className="text-2xl font-bold mb-4">Ainda tem dúvidas?</h3>
+                <p className="text-muted-foreground mb-6">
+                  Nossa equipe está pronta para ajudar! Entre em contato via WhatsApp para suporte personalizado.
+                </p>
+                <a
+                  href="https://wa.me/5511999136884?text=Olá!%20Preciso%20de%20ajuda%20com%20a%20plataforma"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button size="lg" variant="default" className="bg-gradient-primary">
+                    <MessageCircle className="mr-2 h-5 w-5" />
+                    Falar no WhatsApp
+                  </Button>
+                </a>
               </Card>
             </div>
           </AnimatedSection>
@@ -990,14 +1102,14 @@ const Home = () => {
               "linear-gradient(135deg, hsl(280 85% 60% / 0.95) 0%, hsl(320 90% 65% / 0.85) 100%)",
               "linear-gradient(135deg, hsl(290 90% 70% / 0.95) 0%, hsl(280 85% 60% / 0.85) 100%)",
               "linear-gradient(135deg, hsl(280 85% 60% / 0.95) 0%, hsl(320 90% 65% / 0.85) 100%)",
-            ]
+            ],
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
-        
+
         <AnimatedSection>
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            <motion.h2 
+            <motion.h2
               className="text-4xl md:text-5xl font-bold mb-6 text-white"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -1006,7 +1118,7 @@ const Home = () => {
             >
               Gerencie Seus Usuários com Eficiência
             </motion.h2>
-            <motion.p 
+            <motion.p
               className="text-xl mb-8 text-white/90 max-w-2xl mx-auto"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -1015,7 +1127,7 @@ const Home = () => {
             >
               Junte-se a dezenas de administradores que já facilitaram o controle de postagens com nossa plataforma
             </motion.p>
-            <motion.div 
+            <motion.div
               className="flex flex-col sm:flex-row gap-4 justify-center"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -1025,13 +1137,13 @@ const Home = () => {
               <Link to="/auth">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-xl group">
-                    Começar 7 Dias Grátis
+                    Começar 10 Dias Grátis
                     <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </motion.div>
               </Link>
             </motion.div>
-            <motion.p 
+            <motion.p
               className="mt-8 text-white/70"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -1079,9 +1191,7 @@ const Home = () => {
             <div className="space-y-2">
               <Label htmlFor="agency-slug">
                 Slug da Agência
-                <span className="text-xs text-muted-foreground ml-2">
-                  (usado na URL)
-                </span>
+                <span className="text-xs text-muted-foreground ml-2">(usado na URL)</span>
               </Label>
               <Input
                 id="agency-slug"
@@ -1090,9 +1200,7 @@ const Home = () => {
                 onChange={(e) => setAgencySlug(e.target.value.toLowerCase())}
                 disabled={submittingRequest}
               />
-              <p className="text-xs text-muted-foreground">
-                Apenas letras minúsculas, números e hífens
-              </p>
+              <p className="text-xs text-muted-foreground">Apenas letras minúsculas, números e hífens</p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -1104,11 +1212,7 @@ const Home = () => {
             >
               Cancelar
             </Button>
-            <Button
-              onClick={handleSubmitRequest}
-              disabled={submittingRequest}
-              className="flex-1 bg-gradient-primary"
-            >
+            <Button onClick={handleSubmitRequest} disabled={submittingRequest} className="flex-1 bg-gradient-primary">
               {submittingRequest ? "Enviando..." : "Solicitar Agência"}
             </Button>
           </div>
