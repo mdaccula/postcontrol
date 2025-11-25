@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Lock, Save, FileText, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Lock, Save, FileText, X, Info, Settings, Users, Sparkles, Target } from "lucide-react";
 import { useEventTemplates } from "@/hooks/useEventTemplates";
 
 interface EventDialogProps {
@@ -456,12 +457,12 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-4xl">
         <DialogHeader>
           <DialogTitle>{event ? "Editar Evento" : "Criar Novo Evento"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* M10: Template selector */}
+          {/* Template selector */}
           {!event && templates.length > 0 && (
             <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
               <div className="flex items-center gap-2 mb-2">
@@ -485,534 +486,533 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
               </Select>
             </div>
           )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="title">Nome *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Nome do evento"
-              required
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="eventDate">Data do Evento</Label>
-            <Input
-              id="eventDate"
-              type="datetime-local"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              disabled={loading}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Local</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Local do evento"
-              disabled={loading}
-            />
-          </div>
+          <Tabs defaultValue="basico" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="basico" className="text-xs sm:text-sm">
+                <Info className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Básico</span>
+              </TabsTrigger>
+              <TabsTrigger value="requisitos" className="text-xs sm:text-sm">
+                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Requisitos</span>
+              </TabsTrigger>
+              <TabsTrigger value="configuracoes" className="text-xs sm:text-sm">
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Config</span>
+              </TabsTrigger>
+              <TabsTrigger value="publico" className="text-xs sm:text-sm">
+                <Users className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Público</span>
+              </TabsTrigger>
+              <TabsTrigger value="avancado" className="text-xs sm:text-sm">
+                <Lock className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Avançado</span>
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="setor">Setor</Label>
-            <Input
-              id="setor"
-              value={setor}
-              onChange={(e) => setSetor(e.target.value)}
-              placeholder="Setor do evento"
-              disabled={loading}
-            />
-          </div>
+            {/* ABA 1: INFORMAÇÕES BÁSICAS */}
+            <TabsContent value="basico" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Nome do Evento *</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Nome do evento"
+                  required
+                  disabled={loading}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="eventDate">Data do Evento</Label>
+                  <Input
+                    id="eventDate"
+                    type="datetime-local"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="numero_de_vagas">Número de Vagas (Opcional)</Label>
-            <Input
-              id="numero_de_vagas"
-              type="number"
-              value={numeroDeVagas}
-              onChange={(e) => setNumeroDeVagas(e.target.value)}
-              placeholder="Ex: 50"
-              min="0"
-              disabled={loading}
-            />
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Local</Label>
+                  <Input
+                    id="location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Local do evento"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="event_slug">Slug do Evento (Opcional)</Label>
-            <Input
-              id="event_slug"
-              value={eventSlug}
-              onChange={(e) => {
-                // Converter para lowercase e remover caracteres especiais
-                const slug = e.target.value
-                  .toLowerCase()
-                  .normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-                  .replace(/[^a-z0-9-]/g, '-') // Substitui caracteres especiais por hífen
-                  .replace(/-+/g, '-') // Remove hífens duplicados
-                  .replace(/^-|-$/g, ''); // Remove hífens no início e fim
-                setEventSlug(slug);
-              }}
-              placeholder="ex: black-friday-2025"
-              disabled={loading}
-            />
-            <p className="text-xs text-muted-foreground">
-              Slug único para URL pública do evento. Deixe vazio para não ter URL pública.
-              <br />
-              <strong>Exemplo de URL:</strong> {window.location.origin}/agencia/nome-agencia/evento/<span className="text-primary">{eventSlug || 'slug-do-evento'}</span>
-            </p>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="setor">Setor</Label>
+                  <Input
+                    id="setor"
+                    value={setor}
+                    onChange={(e) => setSetor(e.target.value)}
+                    placeholder="Setor do evento"
+                    disabled={loading}
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="total_required_posts">Total de Postagens Obrigatórias *</Label>
-            <Input
-              id="total_required_posts"
-              type="number"
-              value={totalRequiredPosts}
-              onChange={(e) => setTotalRequiredPosts(parseInt(e.target.value) || 0)}
-              placeholder="Ex: 10"
-              min="0"
-              required
-              disabled={loading}
-            />
-            <div className="flex items-center space-x-2 mt-2">
-              <Checkbox
-                id="is_approximate_total"
-                checked={isApproximateTotal}
-                onCheckedChange={(checked) => setIsApproximateTotal(checked as boolean)}
-                disabled={loading}
-              />
-              <label
-                htmlFor="is_approximate_total"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Aproximado (o número pode mudar)
-              </label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Este número será usado para calcular o progresso dos divulgadores. Se marcar como "aproximado", será exibido ao usuário com a indicação de que pode mudar.
-            </p>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="numero_de_vagas">Número de Vagas</Label>
+                  <Input
+                    id="numero_de_vagas"
+                    type="number"
+                    value={numeroDeVagas}
+                    onChange={(e) => setNumeroDeVagas(e.target.value)}
+                    placeholder="Ex: 50"
+                    min="0"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Requisitos para Cortesia (Opções OU) *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setRequirements([...requirements, { 
-                  required_posts: 0, 
-                  required_sales: 0, 
-                  description: "",
-                  display_order: requirements.length 
-                }])}
-                disabled={loading}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Opção
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Configure múltiplas combinações. Ex: 10 posts + 0 vendas OU 5 posts + 2 vendas
-            </p>
-            
-            <div className="space-y-3">
-              {requirements.map((req, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Opção {index + 1}</Label>
-                    {requirements.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRequirements(requirements.filter((_, i) => i !== index))}
-                        disabled={loading}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Posts (Opcional)</Label>
-                      <Input
-                        type="number"
-                        value={req.required_posts}
-                        onChange={(e) => {
-                          const newReqs = [...requirements];
-                          newReqs[index].required_posts = parseInt(e.target.value) || 0;
-                          setRequirements(newReqs);
-                        }}
-                        placeholder="0"
-                        min="0"
-                        disabled={loading}
-                      />
-                      <p className="text-xs text-muted-foreground">Deixe 0 se não exigir posts</p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Vendas (Opcional)</Label>
-                      <Input
-                        type="number"
-                        value={req.required_sales}
-                        onChange={(e) => {
-                          const newReqs = [...requirements];
-                          newReqs[index].required_sales = parseInt(e.target.value) || 0;
-                          setRequirements(newReqs);
-                        }}
-                        placeholder="0"
-                        min="0"
-                        disabled={loading}
-                      />
-                      <p className="text-xs text-muted-foreground">Deixe 0 se não exigir vendas</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Label className="text-xs">Descrição (opcional)</Label>
-                    <Input
-                      value={req.description}
-                      onChange={(e) => {
-                        const newReqs = [...requirements];
-                        newReqs[index].description = e.target.value;
-                        setRequirements(newReqs);
+              <div className="space-y-2">
+                <Label htmlFor="event_slug">Slug do Evento (URL Pública)</Label>
+                <Input
+                  id="event_slug"
+                  value={eventSlug}
+                  onChange={(e) => {
+                    const slug = e.target.value
+                      .toLowerCase()
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/[^a-z0-9-]/g, '-')
+                      .replace(/-+/g, '-')
+                      .replace(/^-|-$/g, '');
+                    setEventSlug(slug);
+                  }}
+                  placeholder="ex: black-friday-2025"
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deixe vazio se não quiser URL pública
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="eventImage">Imagem do Evento</Label>
+                {(eventImageUrl || eventImage) && (
+                  <div className="relative w-full max-w-sm">
+                    <img 
+                      src={eventImage ? URL.createObjectURL(eventImage) : eventImageUrl} 
+                      alt="Preview" 
+                      className="w-full h-auto rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        setEventImage(null);
+                        setEventImageUrl("");
+                        const fileInput = document.getElementById('eventImage') as HTMLInputElement;
+                        if (fileInput) fileInput.value = '';
                       }}
-                      placeholder={`${req.required_posts} postagens e ${req.required_sales} vendas`}
+                      disabled={loading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Input
+                  id="eventImage"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setEventImage(e.target.files[0]);
+                    }
+                  }}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Formatos: JPG, PNG, WEBP. Máximo 5MB
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* ABA 2: REQUISITOS & METAS */}
+            <TabsContent value="requisitos" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="total_required_posts">Total de Postagens Obrigatórias *</Label>
+                <Input
+                  id="total_required_posts"
+                  type="number"
+                  value={totalRequiredPosts}
+                  onChange={(e) => setTotalRequiredPosts(parseInt(e.target.value) || 0)}
+                  placeholder="Ex: 10"
+                  min="0"
+                  required
+                  disabled={loading}
+                />
+                <div className="flex items-center space-x-2 mt-2">
+                  <Checkbox
+                    id="is_approximate_total"
+                    checked={isApproximateTotal}
+                    onCheckedChange={(checked) => setIsApproximateTotal(checked as boolean)}
+                    disabled={loading}
+                  />
+                  <label
+                    htmlFor="is_approximate_total"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Número aproximado (pode mudar)
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Requisitos para Cortesia (Opções OU) *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRequirements([...requirements, { 
+                      required_posts: 0, 
+                      required_sales: 0, 
+                      description: "",
+                      display_order: requirements.length 
+                    }])}
+                    disabled={loading}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ex: 10 posts + 0 vendas OU 5 posts + 2 vendas
+                </p>
+                
+                <div className="space-y-3">
+                  {requirements.map((req, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-3 bg-card">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Opção {index + 1}</Label>
+                        {requirements.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRequirements(requirements.filter((_, i) => i !== index))}
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Posts</Label>
+                          <Input
+                            type="number"
+                            value={req.required_posts}
+                            onChange={(e) => {
+                              const newReqs = [...requirements];
+                              newReqs[index].required_posts = parseInt(e.target.value) || 0;
+                              setRequirements(newReqs);
+                            }}
+                            placeholder="0"
+                            min="0"
+                            disabled={loading}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Vendas</Label>
+                          <Input
+                            type="number"
+                            value={req.required_sales}
+                            onChange={(e) => {
+                              const newReqs = [...requirements];
+                              newReqs[index].required_sales = parseInt(e.target.value) || 0;
+                              setRequirements(newReqs);
+                            }}
+                            placeholder="0"
+                            min="0"
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <Label className="text-xs">Descrição (opcional)</Label>
+                        <Input
+                          value={req.description}
+                          onChange={(e) => {
+                            const newReqs = [...requirements];
+                            newReqs[index].description = e.target.value;
+                            setRequirements(newReqs);
+                          }}
+                          placeholder={`${req.required_posts} postagens e ${req.required_sales} vendas`}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ABA 3: CONFIGURAÇÕES */}
+            <TabsContent value="configuracoes" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="event_purpose">Tipo de Evento *</Label>
+                <Select value={eventPurpose} onValueChange={setEventPurpose} disabled={loading}>
+                  <SelectTrigger id="event_purpose">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="divulgacao">Divulgação</SelectItem>
+                    <SelectItem value="selecao_perfil">Seleção de Perfil</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipos de Submissão Aceitos *</Label>
+                <div className="flex flex-col gap-3 p-4 border rounded-lg bg-card">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="accept_posts"
+                      checked={acceptPosts}
+                      onCheckedChange={(checked) => setAcceptPosts(checked as boolean)}
+                      disabled={loading}
+                    />
+                    <Label htmlFor="accept_posts" className="cursor-pointer font-normal">
+                      Aceitar Postagens
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="accept_sales"
+                      checked={acceptSales}
+                      onCheckedChange={(checked) => setAcceptSales(checked as boolean)}
+                      disabled={loading}
+                    />
+                    <Label htmlFor="accept_sales" className="cursor-pointer font-normal">
+                      Aceitar Comprovantes de Venda
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {eventPurpose === "selecao_perfil" && (
+                <div className="space-y-4 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                  <Label className="text-base font-semibold">Requisitos para Seleção de Perfil</Label>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="require_profile_screenshot"
+                        checked={requireProfileScreenshot}
+                        onCheckedChange={(checked) => setRequireProfileScreenshot(checked as boolean)}
+                        disabled={loading}
+                      />
+                      <Label htmlFor="require_profile_screenshot" className="cursor-pointer font-normal">
+                        Exigir Print do Perfil do Instagram
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="require_post_screenshot"
+                        checked={requirePostScreenshot}
+                        onCheckedChange={(checked) => setRequirePostScreenshot(checked as boolean)}
+                        disabled={loading}
+                      />
+                      <Label htmlFor="require_post_screenshot" className="cursor-pointer font-normal">
+                        Exigir Print de uma Postagem
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="whatsapp_group_url">URL do Grupo WhatsApp</Label>
+                    <Input
+                      id="whatsapp_group_url"
+                      type="url"
+                      value={whatsappGroupUrl}
+                      onChange={(e) => setWhatsappGroupUrl(e.target.value)}
+                      placeholder="https://chat.whatsapp.com/..."
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsapp_group_title">Título do Grupo WhatsApp</Label>
+                    <Input
+                      id="whatsapp_group_title"
+                      value={whatsappGroupTitle}
+                      onChange={(e) => setWhatsappGroupTitle(e.target.value)}
+                      placeholder="Ex: Grupo de Resultados"
                       disabled={loading}
                     />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
+            </TabsContent>
 
-          <div className="space-y-2">
-            <Label htmlFor="event_purpose">Tipo de Evento *</Label>
-            <Select value={eventPurpose} onValueChange={setEventPurpose} disabled={loading}>
-              <SelectTrigger id="event_purpose">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="divulgacao">Divulgação</SelectItem>
-                <SelectItem value="selecao_perfil">Seleção de Perfil</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Define se o evento é para divulgação de conteúdo ou seleção de perfis
-            </p>
-          </div>
+            {/* ABA 4: DESCRIÇÃO & PÚBLICO */}
+            <TabsContent value="publico" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição do Evento</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descreva o evento"
+                  disabled={loading}
+                  rows={4}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label>Tipos de Submissão Aceitos *</Label>
-            <div className="flex flex-col gap-3 p-4 border rounded-lg">
-              <div className="flex items-center space-x-2">
+              <div className="space-y-2">
+                <Label>Gênero Alvo (Opcional)</Label>
+                <div className="flex flex-col gap-3 p-4 border rounded-lg bg-card">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="feminino"
+                      checked={targetGender.includes("Feminino")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTargetGender([...targetGender, "Feminino"]);
+                        } else {
+                          setTargetGender(targetGender.filter(g => g !== "Feminino"));
+                        }
+                      }}
+                      disabled={loading}
+                    />
+                    <Label htmlFor="feminino" className="cursor-pointer font-normal">
+                      Feminino
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="masculino"
+                      checked={targetGender.includes("Masculino")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTargetGender([...targetGender, "Masculino"]);
+                        } else {
+                          setTargetGender(targetGender.filter(g => g !== "Masculino"));
+                        }
+                      }}
+                      disabled={loading}
+                    />
+                    <Label htmlFor="masculino" className="cursor-pointer font-normal">
+                      Masculino
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="lgbtq"
+                      checked={targetGender.includes("LGBTQ+")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTargetGender([...targetGender, "LGBTQ+"]);
+                        } else {
+                          setTargetGender(targetGender.filter(g => g !== "LGBTQ+"));
+                        }
+                      }}
+                      disabled={loading}
+                    />
+                    <Label htmlFor="lgbtq" className="cursor-pointer font-normal">
+                      LGBTQ+
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 border rounded-lg bg-card">
                 <Checkbox
-                  id="accept_posts"
-                  checked={acceptPosts}
-                  onCheckedChange={(checked) => setAcceptPosts(checked as boolean)}
+                  id="require_instagram_link"
+                  checked={requireInstagramLink}
+                  onCheckedChange={(checked) => setRequireInstagramLink(checked as boolean)}
                   disabled={loading}
                 />
-                <Label htmlFor="accept_posts" className="cursor-pointer font-normal">
-                  Aceitar Postagens
+                <Label htmlFor="require_instagram_link" className="cursor-pointer font-normal">
+                  Solicitar link do Instagram no formulário
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
+
+              <div className="flex items-center gap-3 p-4 border rounded-lg bg-card">
                 <Checkbox
-                  id="accept_sales"
-                  checked={acceptSales}
-                  onCheckedChange={(checked) => setAcceptSales(checked as boolean)}
+                  id="require_ticketer_email"
+                  checked={requireTicketerEmail}
+                  onCheckedChange={(checked) => setRequireTicketerEmail(checked as boolean)}
                   disabled={loading}
                 />
-                <Label htmlFor="accept_sales" className="cursor-pointer font-normal">
-                  Aceitar Comprovantes de Venda
-                </Label>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Selecione pelo menos um tipo de submissão
-            </p>
-          </div>
-
-          {/* 🆕 Configurações para Seleção de Perfil */}
-          {eventPurpose === "selecao_perfil" && (
-            <div className="space-y-2 p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
-              <Label className="text-base font-semibold">Requisitos de Submissão para Seleção de Perfil</Label>
-              <p className="text-xs text-muted-foreground mb-3">
-                Configure quais prints são obrigatórios para participar da seleção
-              </p>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="require_profile_screenshot"
-                    checked={requireProfileScreenshot}
-                    onCheckedChange={(checked) => setRequireProfileScreenshot(checked as boolean)}
-                    disabled={loading}
-                  />
-                  <Label htmlFor="require_profile_screenshot" className="cursor-pointer font-normal">
-                    Exigir Print do Perfil do Instagram
+                <div className="flex-1">
+                  <Label htmlFor="require_ticketer_email" className="cursor-pointer font-normal">
+                    Solicitar e-mail para ticketeira
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="require_post_screenshot"
-                    checked={requirePostScreenshot}
-                    onCheckedChange={(checked) => setRequirePostScreenshot(checked as boolean)}
+              </div>
+
+              {requireTicketerEmail && (
+                <div className="space-y-2 ml-7">
+                  <Label htmlFor="ticketerName">Nome da Ticketeira *</Label>
+                  <Input
+                    id="ticketerName"
+                    placeholder="Ex: Sympla, Eventbrite..."
+                    value={ticketerName}
+                    onChange={(e) => setTicketerName(e.target.value)}
                     disabled={loading}
+                    required={requireTicketerEmail}
                   />
-                  <Label htmlFor="require_post_screenshot" className="cursor-pointer font-normal">
-                  Exigir Print de uma Postagem
-                </Label>
-              </div>
-            </div>
-            <p className="text-xs text-yellow-600 mt-2">
-              ⚠️ A faixa de seguidores sempre será solicitada em eventos de seleção de perfil
-            </p>
+                </div>
+              )}
+            </TabsContent>
 
-            {/* Campos de Grupo WhatsApp para Seleção de Perfil */}
-            <div className="space-y-2 mt-4">
-              <Label htmlFor="whatsapp_group_url">URL do Grupo WhatsApp (Opcional)</Label>
-              <Input
-                id="whatsapp_group_url"
-                type="url"
-                value={whatsappGroupUrl}
-                onChange={(e) => setWhatsappGroupUrl(e.target.value)}
-                placeholder="https://chat.whatsapp.com/..."
-                disabled={loading}
-              />
-              <p className="text-xs text-muted-foreground">
-                📱 Link do grupo onde os resultados da seleção serão divulgados
-              </p>
-            </div>
-
-            <div className="space-y-2 mt-2">
-              <Label htmlFor="whatsapp_group_title">Título do Grupo WhatsApp (Opcional)</Label>
-              <Input
-                id="whatsapp_group_title"
-                type="text"
-                value={whatsappGroupTitle}
-                onChange={(e) => setWhatsappGroupTitle(e.target.value)}
-                placeholder="Ex: Grupo WhatsApp de Resultados"
-                disabled={loading}
-              />
-              <p className="text-xs text-muted-foreground">
-                ✏️ Personalize o texto que aparecerá no formulário. Se deixar em branco, será usado "Grupo WhatsApp de Resultados"
-              </p>
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-            <Label htmlFor="description">Descrição do Evento</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o evento"
-              disabled={loading}
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground">
-              Esta descrição será exibida para os usuários no formulário de envio
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Gênero Alvo (Opcional)</Label>
-            <div className="flex flex-col gap-3 p-4 border rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="feminino"
-                  checked={targetGender.includes("Feminino")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setTargetGender([...targetGender, "Feminino"]);
-                    } else {
-                      setTargetGender(targetGender.filter(g => g !== "Feminino"));
-                    }
-                  }}
+            {/* ABA 5: AVANÇADO */}
+            <TabsContent value="avancado" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="internal_notes">Informações Internas</Label>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <Textarea
+                  id="internal_notes"
+                  value={internalNotes}
+                  onChange={(e) => setInternalNotes(e.target.value)}
+                  placeholder="Notas visíveis apenas para administradores"
                   disabled={loading}
+                  rows={4}
                 />
-                <Label htmlFor="feminino" className="cursor-pointer font-normal">
-                  Feminino
-                </Label>
+                <p className="text-xs text-muted-foreground">
+                  🔒 Informações privadas, nunca exibidas para usuários
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="masculino"
-                  checked={targetGender.includes("Masculino")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setTargetGender([...targetGender, "Masculino"]);
-                    } else {
-                      setTargetGender(targetGender.filter(g => g !== "Masculino"));
-                    }
-                  }}
-                  disabled={loading}
-                />
-                <Label htmlFor="masculino" className="cursor-pointer font-normal">
-                  Masculino
-                </Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="is_active">Status do Evento</Label>
+                <div className="flex items-center gap-3 p-4 border rounded-lg bg-card">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    disabled={loading}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="is_active" className="cursor-pointer font-normal">
+                    Evento ativo (visível para usuários)
+                  </Label>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="lgbtq"
-                  checked={targetGender.includes("LGBTQ+")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setTargetGender([...targetGender, "LGBTQ+"]);
-                    } else {
-                      setTargetGender(targetGender.filter(g => g !== "LGBTQ+"));
-                    }
-                  }}
-                  disabled={loading}
-                />
-                <Label htmlFor="lgbtq" className="cursor-pointer font-normal">
-                  LGBTQ+
-                </Label>
-              </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
 
-          <div className="space-y-2">
-            <Label htmlFor="require_instagram_link">Link do Instagram</Label>
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <Checkbox
-                id="require_instagram_link"
-                checked={requireInstagramLink}
-                onCheckedChange={(checked) => setRequireInstagramLink(checked as boolean)}
-                disabled={loading}
-              />
-              <Label htmlFor="require_instagram_link" className="cursor-pointer font-normal">
-                Solicitar link do perfil do Instagram no formulário de envio
-              </Label>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-4 border rounded-lg">
-            <Checkbox
-              id="require_ticketer_email"
-              checked={requireTicketerEmail}
-              onCheckedChange={(checked) => setRequireTicketerEmail(checked as boolean)}
-              disabled={loading}
-            />
-            <div className="flex-1">
-              <Label htmlFor="require_ticketer_email" className="cursor-pointer font-normal">
-                Solicitar e-mail secundário para ticketeira
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Se marcado, os usuários deverão fornecer um e-mail secundário no formulário
-              </p>
-            </div>
-          </div>
-
-          {requireTicketerEmail && (
-            <div className="space-y-2 ml-7">
-              <Label htmlFor="ticketerName">Nome da Ticketeira *</Label>
-              <Input
-                id="ticketerName"
-                type="text"
-                placeholder="Ex: Sympla, Eventbrite, etc."
-                value={ticketerName}
-                onChange={(e) => setTicketerName(e.target.value)}
-                disabled={loading}
-                required={requireTicketerEmail}
-              />
-              <p className="text-xs text-muted-foreground">
-                📝 Este nome aparecerá no formulário para o usuário saber onde enviar o e-mail
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="internal_notes">Informações Internas</Label>
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <Textarea
-              id="internal_notes"
-              value={internalNotes}
-              onChange={(e) => setInternalNotes(e.target.value)}
-              placeholder="Notas visíveis apenas para administradores"
-              disabled={loading}
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground">
-              🔒 Estas informações são privadas e nunca serão exibidas para os usuários
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="is_active">Status do Evento</Label>
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                disabled={loading}
-                className="h-4 w-4"
-              />
-              <Label htmlFor="is_active" className="cursor-pointer font-normal">
-                Evento ativo (visível para os usuários)
-              </Label>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="eventImage">Imagem do Evento</Label>
-            {(eventImageUrl || eventImage) && (
-              <div className="relative w-full max-w-sm">
-                <img 
-                  src={eventImage ? URL.createObjectURL(eventImage) : eventImageUrl} 
-                  alt="Preview do evento" 
-                  className="w-full h-auto rounded-lg border"
-                />
-                {/* 🆕 Botão de excluir */}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2"
-                  onClick={() => {
-                    setEventImage(null);
-                    setEventImageUrl("");
-                    // Limpar input file
-                    const fileInput = document.getElementById('eventImage') as HTMLInputElement;
-                    if (fileInput) fileInput.value = '';
-                  }}
-                  disabled={loading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            <Input
-              id="eventImage"
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setEventImage(e.target.files[0]);
-                }
-              }}
-              disabled={loading}
-            />
-            <p className="text-xs text-muted-foreground">
-              Formatos aceitos: JPG, PNG, WEBP. Máximo 5MB.
-            </p>
-          </div>
-
-          {/* M10: Botão para salvar como template (apenas em criação) */}
-          <div className="flex gap-2 justify-end">
+          <div className="flex gap-2 justify-end pt-4 border-t">
             {!event && (
               <Button
                 type="button"
@@ -1021,7 +1021,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                 disabled={loading || !title}
               >
                 <Save className="mr-2 h-4 w-4" />
-                Salvar como Template
+                Salvar Template
               </Button>
             )}
             <Button
@@ -1039,14 +1039,14 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
                   {event ? "Atualizando..." : "Criando..."}
                 </>
               ) : (
-                event ? "Atualizar Evento" : "Criar Evento"
+                event ? "Atualizar" : "Criar Evento"
               )}
             </Button>
           </div>
         </form>
       </DialogContent>
 
-      {/* M10: Save Template Dialog */}
+      {/* Save Template Dialog */}
       <Dialog open={showSaveTemplateDialog} onOpenChange={setShowSaveTemplateDialog}>
         <DialogContent>
           <DialogHeader>
