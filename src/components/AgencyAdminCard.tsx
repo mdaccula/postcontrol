@@ -53,7 +53,7 @@ export const AgencyAdminCard = ({
       case 'active':
         return <Badge variant="default" className="bg-green-500">Ativo</Badge>;
       case 'trial':
-        return <Badge variant="secondary">Trial (7 dias)</Badge>;
+        return <Badge variant="secondary">Trial (10 dias)</Badge>;
       case 'suspended':
         return <Badge variant="destructive">Suspenso</Badge>;
       default:

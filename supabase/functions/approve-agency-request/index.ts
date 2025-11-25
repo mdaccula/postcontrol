@@ -69,7 +69,7 @@ serve(async (req) => {
 
       // Create agency
       const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      trialEndDate.setDate(trialEndDate.getDate() + 10);
 
       const { data: newAgency, error: agencyError } = await supabaseClient
         .from("agencies")

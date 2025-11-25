@@ -298,7 +298,7 @@ export const AdminManager = () => {
           subscription_plan: newAdmin.plan,
           subscription_status: 'trial',
           trial_start_date: new Date().toISOString(),
-          trial_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          trial_end_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
           max_influencers: selectedPlan.max_influencers,
           max_events: selectedPlan.max_events,
         })

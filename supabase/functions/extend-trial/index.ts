@@ -79,10 +79,10 @@ serve(async (req) => {
       throw new Error("Agência não está em período de trial");
     }
 
-    // Extend trial by 7 days
+    // Extend trial by 10 days
     const currentEndDate = new Date(agency.trial_end_date);
     const newEndDate = new Date(currentEndDate);
-    newEndDate.setDate(newEndDate.getDate() + 7);
+    newEndDate.setDate(newEndDate.getDate() + 10);
 
     const { error: updateError } = await supabaseClient
       .from("agencies")
@@ -106,7 +106,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         newEndDate: newEndDate.toISOString(),
-        message: "Trial estendido por mais 7 dias"
+        message: "Trial estendido por mais 10 dias"
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

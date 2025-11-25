@@ -26,7 +26,36 @@ Deno.serve(async (req) => {
 
     console.log('🚀 Iniciando migração de metas múltiplas...');
 
-    // Buscar todos os eventos com regras definidas
+    // Buscar eventos que tenham regras em event_requirements OU submissões aprovadas
+    const { data: eventIdsWithRequirements } = await supabase
+      .from('event_requirements')
+      .select('event_id');
+
+    const eventIds = [...new Set(eventIdsWithRequirements?.map(r => r.event_id) || [])];
+
+    console.log(`📋 Encontrados ${eventIds.length} eventos com regras em event_requirements`);
+
+    if (eventIds.length === 0) {
+      console.log('⚠️ Nenhum evento com regras encontrado');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          summary: {
+            eventsProcessed: 0,
+            totalUsers: 0,
+            usersWithGoals: 0,
+            totalErrors: 0,
+          },
+          details: [],
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
+    // Buscar detalhes dos eventos
     const { data: events, error: eventsError } = await supabase
       .from('events')
       .select(`
@@ -36,13 +65,13 @@ Deno.serve(async (req) => {
         required_posts,
         required_sales
       `)
-      .or('required_posts.gt.0,required_sales.gt.0');
+      .in('id', eventIds);
 
     if (eventsError) {
       throw new Error(`Erro ao buscar eventos: ${eventsError.message}`);
     }
 
-    console.log(`📋 Encontrados ${events?.length || 0} eventos com metas`);
+    console.log(`📋 Processando ${events?.length || 0} eventos`);
 
     const results: ProcessingResult[] = [];
 

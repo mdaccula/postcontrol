@@ -40,7 +40,7 @@ serve(async (req) => {
           </p>
           <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">
             <p style="color: white; font-size: 18px; font-weight: bold; margin: 0;">
-              Você agora tem 7 dias grátis para testar todas as funcionalidades no plano Básico.
+              Você agora tem 10 dias grátis para testar todas as funcionalidades no plano Básico.
             </p>
           </div>
           <a href="${Deno.env.get("VITE_SUPABASE_URL")?.replace('/rest/v1', '')}/admin" 
@@ -48,7 +48,7 @@ serve(async (req) => {
             Acessar Painel
           </a>
           <p style="margin-top: 20px; font-size: 14px; color: #666;">
-            Após os 7 dias, você poderá escolher entre os planos Básico, Pro ou Enterprise.
+            Após os 10 dias, você poderá escolher entre os planos Básico, Pro ou Enterprise.
           </p>
           <p style="font-size: 18px; margin-top: 20px;">Boa sorte! 🚀</p>
         </div>
