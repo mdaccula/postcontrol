@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,6 +19,46 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import heroBg from "@/assets/hero-bg.jpg";
 import { sb } from "@/lib/supabaseSafe";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
+
+// Componente para elementos flutuantes
+const FloatingElement = ({ children, delay = 0, duration = 4, x = 0, y = 0 }: any) => (
+  <motion.div
+    className="absolute pointer-events-none"
+    initial={{ opacity: 0, scale: 0 }}
+    animate={{
+      opacity: [0.3, 0.6, 0.3],
+      scale: [1, 1.1, 1],
+      x: [x, x + 20, x],
+      y: [y, y - 30, y],
+    }}
+    transition={{
+      duration,
+      delay,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+  >
+    {children}
+  </motion.div>
+);
+
+// Componente para seções animadas
+const AnimatedSection = ({ children, delay = 0 }: any) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.6, delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 const Home = () => {
   const { user } = useAuthStore();
@@ -29,6 +69,12 @@ const Home = () => {
   const [agencyName, setAgencyName] = useState("");
   const [agencySlug, setAgencySlug] = useState("");
   const [submittingRequest, setSubmittingRequest] = useState(false);
+
+  // Parallax scroll effects
+  const { scrollY } = useScroll();
+  const backgroundY = useTransform(scrollY, [0, 500], [0, 150]);
+  const textY = useTransform(scrollY, [0, 500], [0, -50]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
     loadPlans();
@@ -288,14 +334,75 @@ const Home = () => {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 px-4">
-        <div 
+        {/* Parallax Background */}
+        <motion.div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroBg})` }}
+          style={{ 
+            backgroundImage: `url(${heroBg})`,
+            y: backgroundY
+          }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-accent/80 to-secondary/70" />
-        </div>
+          {/* Gradiente Pulsante */}
+          <motion.div
+            className="absolute inset-0"
+            animate={{
+              background: [
+                "linear-gradient(135deg, hsl(280 85% 60% / 0.9) 0%, hsl(320 90% 65% / 0.8) 100%)",
+                "linear-gradient(135deg, hsl(290 90% 70% / 0.9) 0%, hsl(280 85% 60% / 0.8) 100%)",
+                "linear-gradient(135deg, hsl(280 85% 60% / 0.9) 0%, hsl(320 90% 65% / 0.8) 100%)",
+              ]
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.div>
+
+        {/* Elementos Flutuantes - Ícones */}
+        <FloatingElement delay={0} x={100} y={150}>
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <Upload className="w-8 h-8 text-white/60" />
+          </div>
+        </FloatingElement>
+        <FloatingElement delay={0.5} duration={5} x={window.innerWidth - 200} y={100}>
+          <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <Trophy className="w-10 h-10 text-white/60" />
+          </div>
+        </FloatingElement>
+        <FloatingElement delay={1} duration={6} x={150} y={window.innerHeight - 300}>
+          <div className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <Users className="w-7 h-7 text-white/60" />
+          </div>
+        </FloatingElement>
+        <FloatingElement delay={1.5} duration={4.5} x={window.innerWidth - 150} y={window.innerHeight - 250}>
+          <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <Zap className="w-6 h-6 text-white/60" />
+          </div>
+        </FloatingElement>
+        <FloatingElement delay={2} duration={5.5} x={80} y={window.innerHeight / 2}>
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <Shield className="w-8 h-8 text-white/60" />
+          </div>
+        </FloatingElement>
+        <FloatingElement delay={2.5} duration={4.8} x={window.innerWidth - 180} y={window.innerHeight - 400}>
+          <div className="w-18 h-18 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <BarChart3 className="w-9 h-9 text-white/60" />
+          </div>
+        </FloatingElement>
+
+        {/* Formas Geométricas Decorativas */}
+        <FloatingElement delay={0.3} duration={6} x={window.innerWidth * 0.2} y={window.innerHeight * 0.3}>
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md" />
+        </FloatingElement>
+        <FloatingElement delay={1.2} duration={5} x={window.innerWidth * 0.75} y={window.innerHeight * 0.2}>
+          <div className="w-20 h-20 bg-gradient-to-br from-accent/30 to-accent/10 backdrop-blur-md" style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }} />
+        </FloatingElement>
+        <FloatingElement delay={1.8} duration={5.5} x={window.innerWidth * 0.1} y={window.innerHeight * 0.6}>
+          <div className="w-16 h-16 bg-gradient-to-br from-primary/30 to-primary/10 backdrop-blur-md" style={{ clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }} />
+        </FloatingElement>
         
-        <div className="relative z-10 text-center max-w-5xl mx-auto w-full">
+        <motion.div 
+          className="relative z-10 text-center max-w-5xl mx-auto w-full"
+          style={{ y: textY, opacity }}
+        >
           <Badge className="mb-4 md:mb-6 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-green-500 to-emerald-500 backdrop-blur-sm border-white/30 text-white animate-pulse shadow-glow inline-flex items-center">
             <Gift className="w-3 h-3 md:w-4 md:h-4 mr-2" />
             🎁 Experimente por 7 dias gratuitamente !
@@ -357,7 +464,7 @@ const Home = () => {
               <span>Suporte 24/7</span>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce hidden md:block">
           <div className="w-6 h-10 border-2 border-white/50 rounded-full flex items-start justify-center p-2">
@@ -369,128 +476,264 @@ const Home = () => {
       {/* Recursos */}
       <section id="recursos" className="py-16 md:py-24 px-4 bg-gradient-to-br from-background via-muted to-background scroll-mt-20">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 md:mb-16">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Recursos Premium</Badge>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent px-4">
-              Tudo para Gerenciar Seus Usuários
-            </h2>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto px-4">
-              Ferramentas profissionais para controlar postagens, aprovar submissões e gerar relatórios completos
-            </p>
-          </div>
+          <AnimatedSection>
+            <div className="text-center mb-12 md:mb-16">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Recursos Premium</Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent px-4">
+                Tudo para Gerenciar Seus Usuários
+              </h2>
+              <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto px-4">
+                Ferramentas profissionais para controlar postagens, aprovar submissões e gerar relatórios completos
+              </p>
+            </div>
+          </AnimatedSection>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
-              <div className="w-16 h-16 mb-6 bg-gradient-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Gestão de Usuários</h3>
-              <p className="text-muted-foreground">
-                Gerencie todos os seus usuários em um só lugar, com perfis completos e histórico de atividades
-              </p>
-            </Card>
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                  delayChildren: 0.2
+                }
+              }
+            }}
+          >
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                }
+              }}
+            >
+              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+                <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
+                  <div className="w-16 h-16 mb-6 bg-gradient-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Users className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">Gestão de Usuários</h3>
+                  <p className="text-muted-foreground">
+                    Gerencie todos os seus usuários em um só lugar, com perfis completos e histórico de atividades
+                  </p>
+                </Card>
+              </motion.div>
+            </motion.div>
 
-            <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
-              <div className="w-16 h-16 mb-6 bg-gradient-secondary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <BarChart3 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Relatórios Completos</h3>
-              <p className="text-muted-foreground">
-                Exporte estatísticas detalhadas em Excel ou PDF com um clique, perfeito para análises e apresentações
-              </p>
-            </Card>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                }
+              }}
+            >
+              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(320 90% 65% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+                <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
+                  <div className="w-16 h-16 mb-6 bg-gradient-secondary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <BarChart3 className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">Relatórios Completos</h3>
+                  <p className="text-muted-foreground">
+                    Exporte estatísticas detalhadas em Excel ou PDF com um clique, perfeito para análises e apresentações
+                  </p>
+                </Card>
+              </motion.div>
+            </motion.div>
 
-            <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
-              <div className="w-16 h-16 mb-6 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <CheckCircle2 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Aprovação Inteligente</h3>
-              <p className="text-muted-foreground">
-                Aprove ou rejeite postagens individualmente ou em massa, com visualização completa das submissões
-              </p>
-            </Card>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                }
+              }}
+            >
+              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+                <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
+                  <div className="w-16 h-16 mb-6 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">Aprovação Inteligente</h3>
+                  <p className="text-muted-foreground">
+                    Aprove ou rejeite postagens individualmente ou em massa, com visualização completa das submissões
+                  </p>
+                </Card>
+              </motion.div>
+            </motion.div>
 
-            <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
-              <div className="w-16 h-16 mb-6 bg-gradient-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Calendar className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Gestão de Eventos</h3>
-              <p className="text-muted-foreground">
-                Crie e gerencie múltiplos eventos simultâneos com prazos e requisitos personalizados
-              </p>
-            </Card>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                }
+              }}
+            >
+              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+                <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
+                  <div className="w-16 h-16 mb-6 bg-gradient-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Calendar className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">Gestão de Eventos</h3>
+                  <p className="text-muted-foreground">
+                    Crie e gerencie múltiplos eventos simultâneos com prazos e requisitos personalizados
+                  </p>
+                </Card>
+              </motion.div>
+            </motion.div>
 
-            <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
-              <div className="w-16 h-16 mb-6 bg-gradient-secondary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">100% Seguro</h3>
-              <p className="text-muted-foreground">
-                Todos os dados protegidos com criptografia de nível bancário e controle total de acesso
-              </p>
-            </Card>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                }
+              }}
+            >
+              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(320 90% 65% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+                <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
+                  <div className="w-16 h-16 mb-6 bg-gradient-secondary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Shield className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">100% Seguro</h3>
+                  <p className="text-muted-foreground">
+                    Todos os dados protegidos com criptografia de nível bancário e controle total de acesso
+                  </p>
+                </Card>
+              </motion.div>
+            </motion.div>
 
-            <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
-              <div className="w-16 h-16 mb-6 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Interface Intuitiva</h3>
-              <p className="text-muted-foreground">
-                Interface moderna e fácil de usar, sem necessidade de treinamento técnico
-              </p>
-            </Card>
-          </div>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 30, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: "easeOut" }
+                }
+              }}
+            >
+              <motion.div whileHover={{ scale: 1.05, rotateY: 5, rotateX: -5, boxShadow: "0 25px 50px -12px hsl(280 85% 60% / 0.3)" }} transition={{ type: "spring", stiffness: 300, damping: 20 }} style={{ transformStyle: "preserve-3d" }}>
+                <Card className="p-8 hover:shadow-glow transition-all duration-300 border-2 group">
+                  <div className="w-16 h-16 mb-6 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Zap className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">Interface Intuitiva</h3>
+                  <p className="text-muted-foreground">
+                    Interface moderna e fácil de usar, sem necessidade de treinamento técnico
+                  </p>
+                </Card>
+              </motion.div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       {/* Como Funciona */}
       <section id="como-funciona" className="py-16 md:py-24 px-4 bg-gradient-to-br from-muted via-background to-muted scroll-mt-20">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12 md:mb-16 px-4">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              Comece em 3 Passos Simples
-            </h2>
-            <p className="text-muted-foreground text-base md:text-lg">
-              Configure sua plataforma em minutos e comece a gerenciar seus usuários hoje mesmo
-            </p>
-          </div>
+          <AnimatedSection>
+            <div className="text-center mb-12 md:mb-16 px-4">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                Comece em 3 Passos Simples
+              </h2>
+              <p className="text-muted-foreground text-base md:text-lg">
+                Configure sua plataforma em minutos e comece a gerenciar seus usuários hoje mesmo
+              </p>
+            </div>
+          </AnimatedSection>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-            <div className="relative">
-              <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow">
-                  1
-                </div>
-                <h3 className="text-2xl font-bold mb-4">Crie sua Conta Admin</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Cadastro rápido em menos de 2 minutos. Comece com 7 dias grátis para testar todas as funcionalidades
-                </p>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative">
+            {/* Linha conectando os passos */}
+            <motion.div 
+              className="hidden md:block absolute top-10 left-[16.66%] right-[16.66%] h-0.5 bg-gradient-to-r from-primary via-accent to-primary"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+            />
 
-            <div className="relative">
-              <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-secondary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow">
-                  2
+            <AnimatedSection delay={0.2}>
+              <div className="relative">
+                <div className="text-center">
+                  <motion.div 
+                    className="w-20 h-20 mx-auto mb-6 bg-gradient-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow relative z-10"
+                    initial={{ scale: 0, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: "spring", bounce: 0.5, delay: 0.3 }}
+                  >
+                    1
+                  </motion.div>
+                  <h3 className="text-2xl font-bold mb-4">Crie sua Conta Admin</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Cadastro rápido em menos de 2 minutos. Comece com 7 dias grátis para testar todas as funcionalidades
+                  </p>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Configure seus Eventos</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Crie eventos, defina prazos e requisitos. Seus usuários enviarão as postagens através do link de submissão
-                </p>
               </div>
-            </div>
+            </AnimatedSection>
 
-            <div className="relative">
-              <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow">
-                  3
+            <AnimatedSection delay={0.4}>
+              <div className="relative">
+                <div className="text-center">
+                  <motion.div 
+                    className="w-20 h-20 mx-auto mb-6 bg-gradient-secondary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow relative z-10"
+                    initial={{ scale: 0, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: "spring", bounce: 0.5, delay: 0.5 }}
+                  >
+                    2
+                  </motion.div>
+                  <h3 className="text-2xl font-bold mb-4">Configure seus Eventos</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Crie eventos, defina prazos e requisitos. Seus usuários enviarão as postagens através do link de submissão
+                  </p>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Gerencie e Aprove</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Visualize todas as submissões, aprove em massa e gere relatórios completos. Controle total do seu time!
-                </p>
               </div>
-            </div>
+            </AnimatedSection>
+
+            <AnimatedSection delay={0.6}>
+              <div className="relative">
+                <div className="text-center">
+                  <motion.div 
+                    className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-glow relative z-10"
+                    initial={{ scale: 0, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: "spring", bounce: 0.5, delay: 0.7 }}
+                  >
+                    3
+                  </motion.div>
+                  <h3 className="text-2xl font-bold mb-4">Gerencie e Aprove</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Visualize todas as submissões, aprove em massa e gere relatórios completos. Controle total do seu time!
+                  </p>
+                </div>
+              </div>
+            </AnimatedSection>
           </div>
         </div>
       </section>
@@ -498,7 +741,8 @@ const Home = () => {
       {/* Pricing */}
       <section id="precos" className="py-16 md:py-24 px-4 bg-gradient-to-br from-background via-muted to-background scroll-mt-20">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 md:mb-12 px-4">
+          <AnimatedSection>
+            <div className="text-center mb-8 md:mb-12 px-4">
             <Badge className="mb-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none text-sm md:text-base px-4 md:px-6 py-2 shadow-glow">
               🎁 Escolha o melhor plano para você
             </Badge>
@@ -508,25 +752,53 @@ const Home = () => {
             <p className="text-muted-foreground text-base md:text-lg">
               Escolha o plano ideal para o tamanho da sua operação
             </p>
-          </div>
+            </div>
+          </AnimatedSection>
 
           {plans.length === 0 ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.15,
+                    delayChildren: 0.1
+                  }
+                }
+              }}
+            >
               {plans.map((plan) => {
                 const isPopular = plan.is_popular === true; // ✅ Usa campo do banco
                 const features = Array.isArray(plan.features) ? plan.features : [];
                 
                 return (
-                  <Card 
-                    key={plan.id} 
-                    className={`p-6 relative flex flex-col ${
-                      isPopular ? 'border-4 border-primary shadow-glow scale-105 z-10' : 'border-2'
-                    }`}
+                  <motion.div
+                    key={plan.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 30, scale: 0.9 },
+                      visible: {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        transition: { duration: 0.5, ease: "easeOut" }
+                      }
+                    }}
                   >
+                    <motion.div whileHover={{ scale: 1.03, y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
+                      <Card 
+                        className={`p-6 relative flex flex-col ${
+                          isPopular ? 'border-4 border-primary shadow-glow scale-105 z-10' : 'border-2'
+                        }`}
+                      >
                     {isPopular && (
                       <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                         <Badge className="bg-gradient-primary px-6 py-2 text-sm shadow-lg whitespace-nowrap">
@@ -569,10 +841,12 @@ const Home = () => {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
 
-                  </Card>
+                      </Card>
+                    </motion.div>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
           )}
         </div>
       </section>
@@ -580,18 +854,21 @@ const Home = () => {
       {/* FAQ Section */}
       <section id="faq" className="py-16 md:py-24 px-4 bg-gradient-to-br from-muted via-background to-muted scroll-mt-20">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12 md:mb-16 px-4">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Perguntas Frequentes</Badge>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              Dúvidas? Temos as Respostas
-            </h2>
-            <p className="text-muted-foreground text-base md:text-lg">
-              Tudo que você precisa saber sobre nossa plataforma
-            </p>
-          </div>
+          <AnimatedSection>
+            <div className="text-center mb-12 md:mb-16 px-4">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Perguntas Frequentes</Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                Dúvidas? Temos as Respostas
+              </h2>
+              <p className="text-muted-foreground text-base md:text-lg">
+                Tudo que você precisa saber sobre nossa plataforma
+              </p>
+            </div>
+          </AnimatedSection>
 
           <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="item-1" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.1}>
+              <AccordionItem value="item-1" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 Como funciona o período de teste gratuito?
               </AccordionTrigger>
@@ -600,9 +877,11 @@ const Home = () => {
                 Não pedimos cartão de crédito no cadastro. Após o período, você decide se quer continuar com o 
                 plano promocional de R$ 29,90 no primeiro mês.
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
 
-            <AccordionItem value="item-2" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.15}>
+              <AccordionItem value="item-2" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 Quantos usuários posso gerenciar?
               </AccordionTrigger>
@@ -611,9 +890,11 @@ const Home = () => {
                 escalar com seu negócio, seja você um pequeno promoter ou uma grande agência gerenciando centenas 
                 de influenciadores.
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
 
-            <AccordionItem value="item-3" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.2}>
+              <AccordionItem value="item-3" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 Como meus usuários enviam as postagens?
               </AccordionTrigger>
@@ -622,9 +903,11 @@ const Home = () => {
                 fazem upload do print da postagem no Instagram e pronto. Você visualiza tudo no painel admin e 
                 aprova com um clique.
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
 
-            <AccordionItem value="item-4" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.25}>
+              <AccordionItem value="item-4" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 Posso aprovar várias submissões de uma vez?
               </AccordionTrigger>
@@ -632,9 +915,11 @@ const Home = () => {
                 Sim! Temos a funcionalidade de aprovação em massa. Você seleciona todas as submissões que deseja 
                 aprovar e faz tudo com apenas um clique. Economize horas de trabalho manual.
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
 
-            <AccordionItem value="item-5" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.3}>
+              <AccordionItem value="item-5" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 Quais relatórios estão disponíveis?
               </AccordionTrigger>
@@ -643,9 +928,11 @@ const Home = () => {
                 ativos, taxa de aprovação, progresso por evento, histórico completo e muito mais. Perfeito para 
                 apresentações e análises.
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
 
-            <AccordionItem value="item-6" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.35}>
+              <AccordionItem value="item-6" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 E se eu precisar de ajuda?
               </AccordionTrigger>
@@ -653,9 +940,11 @@ const Home = () => {
                 Nosso suporte está disponível 24/7 via chat. Além disso, você tem acesso a uma base de conhecimento 
                 completa com tutoriais em vídeo e guias passo a passo. Estamos aqui para garantir seu sucesso!
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
 
-            <AccordionItem value="item-7" className="bg-card border-2 rounded-lg px-6">
+            <AnimatedSection delay={0.4}>
+              <AccordionItem value="item-7" className="bg-card border-2 rounded-lg px-6">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                 Posso cancelar quando quiser?
               </AccordionTrigger>
@@ -663,12 +952,14 @@ const Home = () => {
                 Sim, sem burocracia! Não há contratos ou fidelidade. Você pode cancelar sua assinatura a qualquer 
                 momento com um clique. Seus dados ficam salvos por 30 dias caso decida voltar.
               </AccordionContent>
-            </AccordionItem>
+              </AccordionItem>
+            </AnimatedSection>
           </Accordion>
 
           {/* Suporte via WhatsApp */}
-          <div className="mt-12 text-center">
-            <Card className="p-8 bg-gradient-to-br from-primary/5 to-accent/5 border-2">
+          <AnimatedSection delay={0.5}>
+            <div className="mt-12 text-center">
+              <Card className="p-8 bg-gradient-to-br from-primary/5 to-accent/5 border-2">
               <h3 className="text-2xl font-bold mb-4">Ainda tem dúvidas?</h3>
               <p className="text-muted-foreground mb-6">
                 Nossa equipe está pronta para ajudar! Entre em contato via WhatsApp para suporte personalizado.
@@ -683,32 +974,74 @@ const Home = () => {
                   Falar no WhatsApp
                 </Button>
               </a>
-            </Card>
-          </div>
+              </Card>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
       {/* CTA Final */}
-      <section className="py-24 px-4 bg-gradient-hero animate-gradient">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-            Gerencie Seus Usuários com Eficiência
-          </h2>
-          <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
-            Junte-se a dezenas de administradores que já facilitaram o controle de postagens com nossa plataforma
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
-              <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-xl group">
-                Começar 7 Dias Grátis
-                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+      <section className="py-24 px-4 bg-gradient-hero animate-gradient relative overflow-hidden">
+        {/* Gradiente Animado de Fundo */}
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            background: [
+              "linear-gradient(135deg, hsl(280 85% 60% / 0.95) 0%, hsl(320 90% 65% / 0.85) 100%)",
+              "linear-gradient(135deg, hsl(290 90% 70% / 0.95) 0%, hsl(280 85% 60% / 0.85) 100%)",
+              "linear-gradient(135deg, hsl(280 85% 60% / 0.95) 0%, hsl(320 90% 65% / 0.85) 100%)",
+            ]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        
+        <AnimatedSection>
+          <div className="max-w-4xl mx-auto text-center relative z-10">
+            <motion.h2 
+              className="text-4xl md:text-5xl font-bold mb-6 text-white"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              Gerencie Seus Usuários com Eficiência
+            </motion.h2>
+            <motion.p 
+              className="text-xl mb-8 text-white/90 max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              Junte-se a dezenas de administradores que já facilitaram o controle de postagens com nossa plataforma
+            </motion.p>
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Link to="/auth">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-xl group">
+                    Começar 7 Dias Grátis
+                    <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </motion.div>
+              </Link>
+            </motion.div>
+            <motion.p 
+              className="mt-8 text-white/70"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              ⭐ Avaliado com 4.9/5 por administradores satisfeitos
+            </motion.p>
           </div>
-          <p className="mt-8 text-white/70">
-            ⭐ Avaliado com 4.9/5 por administradores satisfeitos
-          </p>
-        </div>
+        </AnimatedSection>
       </section>
 
       {/* Footer */}
