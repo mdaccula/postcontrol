@@ -121,8 +121,8 @@ Deno.serve(async (req) => {
         
         for (const sub of submissions || []) {
           const current = userStats.get(sub.user_id) || { posts: 0, sales: 0 };
-          // CORREÇÃO: Posts = tudo que NÃO é venda (divulgacao, selecao_perfil, etc)
-          if (sub.submission_type !== 'sale') current.posts++;
+          // CORREÇÃO: Posts = APENAS 'divulgacao' (selecao_perfil não conta)
+          if (sub.submission_type === 'divulgacao') current.posts++;
           if (sub.submission_type === 'sale') current.sales++;
           userStats.set(sub.user_id, current);
         }
