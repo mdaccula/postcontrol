@@ -2056,73 +2056,6 @@ const Admin = () => {
               </div>
             )}
 
-            {/* Previsão de Esgotamento (IA) - Seletor Único */}
-            {filteredEvents.length > 0 && filteredEvents.filter((e) => e.is_active && e.numero_de_vagas).length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold">🤖 Previsão Detalhada de Esgotamento (IA)</h3>
-                <div className="space-y-4">
-                  <Select value={selectedEventForPrediction || ""} onValueChange={setSelectedEventForPrediction}>
-                    <SelectTrigger className="w-full max-w-md">
-                      <SelectValue placeholder="Selecione um evento para ver a previsão" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredEvents
-                        .filter((e) => e.is_active && e.numero_de_vagas)
-                        .map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.title}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-
-                  {selectedEventForPrediction && (
-                    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                      <SlotExhaustionPrediction
-                        eventId={selectedEventForPrediction}
-                        eventTitle={filteredEvents.find((e) => e.id === selectedEventForPrediction)?.title || ""}
-                      />
-                    </Suspense>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Top Promoters Ranking - Seletor Único */}
-            {filteredEvents.length > 0 && filteredEvents.filter((e) => e.is_active).length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold">🏆 Ranking de Divulgadoras</h3>
-                <div className="space-y-4">
-                  <Select value={selectedEventForRanking || ""} onValueChange={setSelectedEventForRanking}>
-                    <SelectTrigger className="w-full max-w-md">
-                      <SelectValue placeholder="Selecione um evento para ver o ranking" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredEvents
-                        .filter((e) => e.is_active)
-                        .map((event) => (
-                          <SelectItem key={event.id} value={event.id}>
-                            {event.title}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-
-                  {selectedEventForRanking && (
-                    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                      <TopPromotersRanking eventId={selectedEventForRanking} limit={10} />
-                    </Suspense>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Relatório Detalhado de Metas por Tipo */}
-            {profile?.agency_id && (
-              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                <DetailedGoalsReport agencyId={profile.agency_id} />
-              </Suspense>
-            )}
           </TabsContent>
 
           <TabsContent value="posts" className="space-y-6">
@@ -2867,12 +2800,15 @@ const Admin = () => {
 
           <TabsContent value="statistics" className="space-y-6">
             <Tabs defaultValue="events-stats" className="space-y-6">
-              <TabsList className="grid w-full max-w-md grid-cols-1 sm:grid-cols-2 gap-1 h-auto">
+              <TabsList className="grid w-full max-w-2xl grid-cols-1 sm:grid-cols-3 gap-1 h-auto">
                 <TabsTrigger value="events-stats" className="text-xs sm:text-sm whitespace-normal py-2">
                   Estatísticas por Evento
                 </TabsTrigger>
                 <TabsTrigger value="user-performance" className="text-xs sm:text-sm whitespace-normal py-2">
                   Desempenho por Usuário
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="text-xs sm:text-sm whitespace-normal py-2">
+                  Relatórios
                 </TabsTrigger>
               </TabsList>
 
@@ -2886,6 +2822,76 @@ const Admin = () => {
                 <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                   <MemoizedUserPerformance />
                 </Suspense>
+              </TabsContent>
+
+              <TabsContent value="reports" className="space-y-6">
+                {/* Previsão de Esgotamento (IA) - Seletor Único */}
+                {filteredEvents.length > 0 && filteredEvents.filter((e) => e.is_active && e.numero_de_vagas).length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold">🤖 Previsão Detalhada de Esgotamento (IA)</h3>
+                    <div className="space-y-4">
+                      <Select value={selectedEventForPrediction || ""} onValueChange={setSelectedEventForPrediction}>
+                        <SelectTrigger className="w-full max-w-md">
+                          <SelectValue placeholder="Selecione um evento para ver a previsão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredEvents
+                            .filter((e) => e.is_active && e.numero_de_vagas)
+                            .map((event) => (
+                              <SelectItem key={event.id} value={event.id}>
+                                {event.title}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedEventForPrediction && (
+                        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                          <SlotExhaustionPrediction
+                            eventId={selectedEventForPrediction}
+                            eventTitle={filteredEvents.find((e) => e.id === selectedEventForPrediction)?.title || ""}
+                          />
+                        </Suspense>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Promoters Ranking - Seletor Único */}
+                {filteredEvents.length > 0 && filteredEvents.filter((e) => e.is_active).length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold">🏆 Ranking de Divulgadoras</h3>
+                    <div className="space-y-4">
+                      <Select value={selectedEventForRanking || ""} onValueChange={setSelectedEventForRanking}>
+                        <SelectTrigger className="w-full max-w-md">
+                          <SelectValue placeholder="Selecione um evento para ver o ranking" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredEvents
+                            .filter((e) => e.is_active)
+                            .map((event) => (
+                              <SelectItem key={event.id} value={event.id}>
+                                {event.title}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedEventForRanking && (
+                        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                          <TopPromotersRanking eventId={selectedEventForRanking} limit={10} />
+                        </Suspense>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Relatório Detalhado de Metas por Tipo */}
+                {profile?.agency_id && (
+                  <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                    <DetailedGoalsReport agencyId={profile.agency_id} />
+                  </Suspense>
+                )}
               </TabsContent>
             </Tabs>
           </TabsContent>
