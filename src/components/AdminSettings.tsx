@@ -79,16 +79,6 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
     }
 
     try {
-      // Atualizar whatsapp (sempre salva, mesmo se vazio)
-      await sb.from("admin_settings").upsert(
-        {
-          setting_key: "whatsapp_number",
-          setting_value: whatsappNumber || "",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "setting_key" },
-      );
-
       // Atualizar custom domain (apenas master admin)
       if (isMasterAdmin) {
         await sb.from("admin_settings").upsert(
@@ -100,11 +90,21 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
           { onConflict: "setting_key" },
         );
 
-        // Atualizar GTM ID
+      // Atualizar GTM ID
         await sb.from("admin_settings").upsert(
           {
             setting_key: "gtm_id",
             setting_value: gtmId.trim(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "setting_key" },
+        );
+
+        // Atualizar WhatsApp Master
+        await sb.from("admin_settings").upsert(
+          {
+            setting_key: "whatsapp_number",
+            setting_value: whatsappNumber || "",
             updated_at: new Date().toISOString(),
           },
           { onConflict: "setting_key" },
@@ -238,8 +238,28 @@ export const AdminSettings = ({ isMasterAdmin = false }: AdminSettingsProps) => 
                 <Switch checked={badgesEnabled} onCheckedChange={setBadgesEnabled} />
               </div>
             </div>
+
+            {/* WhatsApp Master - Only for Master Admin */}
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp">
+                <Phone className="inline mr-2 h-4 w-4" />
+                WhatsApp Master (Suporte para Agências)
+              </Label>
+              <Input
+                id="whatsapp"
+                placeholder="5511999999999"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Este número aparece para os <strong>donos de agência</strong> quando 
+                precisam de suporte. Use formato: 55 + DDD + número
+              </p>
+            </div>
           </>
         )}
+
 
         {/* WhatsApp - Available for all admins */}
         <div className="space-y-2">
