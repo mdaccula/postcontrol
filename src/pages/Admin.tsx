@@ -2805,7 +2805,7 @@ const Admin = () => {
 
           <TabsContent value="statistics" className="space-y-6">
             <Tabs defaultValue="events-stats" className="space-y-6">
-              <TabsList className="grid w-full max-w-2xl grid-cols-1 sm:grid-cols-3 gap-1 h-auto">
+              <TabsList className="grid w-full max-w-3xl grid-cols-1 sm:grid-cols-4 gap-1 h-auto">
                 <TabsTrigger value="events-stats" className="text-xs sm:text-sm whitespace-normal py-2">
                   Estatísticas por Evento
                 </TabsTrigger>
@@ -2814,6 +2814,9 @@ const Admin = () => {
                 </TabsTrigger>
                 <TabsTrigger value="reports" className="text-xs sm:text-sm whitespace-normal py-2">
                   Relatórios
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="text-xs sm:text-sm whitespace-normal py-2">
+                  Analytics
                 </TabsTrigger>
               </TabsList>
 
@@ -2898,7 +2901,10 @@ const Admin = () => {
                   </Suspense>
                 )}
 
-                {/* Analytics de Indicações */}
+              </TabsContent>
+
+              {/* Nova aba Analytics */}
+              <TabsContent value="analytics" className="space-y-6">
                 {profile?.agency_id && (
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold flex items-center gap-2">
