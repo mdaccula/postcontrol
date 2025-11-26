@@ -43,3 +43,40 @@ export const formatPhoneDisplay = (number: string): string => {
   
   return withoutDDI;
 };
+
+/**
+ * Compartilha mensagem via WhatsApp
+ * Usa Web Share API quando disponível, fallback para wa.me
+ * @param message - Mensagem a ser compartilhada
+ * @param phoneNumber - Número opcional (quando informado, abre conversa direta)
+ * @returns Promise<boolean>
+ */
+export const shareViaWhatsApp = async (
+  message: string, 
+  phoneNumber?: string
+): Promise<boolean> => {
+  // Se tem número, usar formato direto (sempre funciona)
+  if (phoneNumber) {
+    const formattedNumber = formatWhatsappNumber(phoneNumber);
+    window.open(`https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    return true;
+  }
+  
+  // Sem número: tentar Web Share API primeiro (mais confiável)
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        text: message,
+      });
+      return true;
+    } catch (error) {
+      // Usuário cancelou ou não suportado
+      console.log('Web Share não disponível, usando fallback wa.me');
+    }
+  }
+  
+  // Fallback: wa.me sem número
+  const encodedMessage = encodeURIComponent(message);
+  window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  return true;
+};

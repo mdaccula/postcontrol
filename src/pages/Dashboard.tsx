@@ -42,6 +42,7 @@ import { PushNotificationSettings } from "@/components/PushNotificationSettings"
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { GoalProgressBadge } from "@/components/GoalProgressBadge";
 import { DashboardWhatsappButton } from "./Dashboard_WhatsappButton";
+import { shareViaWhatsApp } from "@/lib/phoneUtils";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide"));
@@ -743,9 +744,9 @@ const Dashboard = () => {
                   event_id: selectedInviteEvent
                 });
 
-                // Abrir WhatsApp
-                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                window.open(whatsappUrl, '_blank');
+                // Abrir WhatsApp com Web Share API fallback
+                await shareViaWhatsApp(message);
+                
                 toast({
                   title: "WhatsApp aberto!",
                   description: "Selecione o contato para enviar o convite."

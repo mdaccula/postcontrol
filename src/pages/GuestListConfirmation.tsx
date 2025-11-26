@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Instagram, Globe, MessageCircle, Ticket, Share2, CheckCircle, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { shareViaWhatsApp } from "@/lib/phoneUtils";
 interface RegistrationData {
   id: string;
   full_name: string;
@@ -234,9 +235,8 @@ Garanta sua vaga também: ${shareUrl}`;
       console.error("Error tracking share click:", error);
     }
 
-    // Open WhatsApp
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
+    // Open WhatsApp with Web Share API fallback
+    await shareViaWhatsApp(message);
   };
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
