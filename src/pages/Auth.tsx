@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,10 @@ const loginSchema = z.object({
 const signupSchema = loginSchema.extend({
   fullName: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100, "Nome muito longo"),
   gender: z.string().min(1, "Selecione um gênero"),
+  confirmPassword: z.string().min(6, "Confirmação de senha obrigatória"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
 });
 
 const Auth = () => {
@@ -35,6 +39,9 @@ const Auth = () => {
   const [gender, setGender] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const user = useAuthStore((state) => state.user);
   const authLoading = useAuthStore((state) => state.loading);
   const { toast } = useToast();
@@ -225,7 +232,7 @@ const Auth = () => {
         }
       } else {
         try {
-          signupSchema.parse({ email, password, fullName, gender });
+          signupSchema.parse({ email, password, fullName, gender, confirmPassword });
         } catch (error) {
           if (error instanceof z.ZodError) {
             toast({
@@ -321,31 +328,53 @@ const Auth = () => {
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="newPassword">Nova Senha *</Label>
-                <Input 
-                  id="newPassword" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input 
+                    id="newPassword" 
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="••••••••" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirmar Nova Senha *</Label>
-                <Input 
-                  id="confirmPassword" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input 
+                    id="confirmPassword" 
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               <Button 
@@ -455,20 +484,58 @@ const Auth = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Senha *</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {!isLogin && (
                   <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
                 )}
               </div>
+
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPasswordSignup">Confirme sua Senha *</Label>
+                  <div className="relative">
+                    <Input 
+                      id="confirmPasswordSignup" 
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      disabled={loading}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      disabled={loading}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <Button 
                 type="submit" 
