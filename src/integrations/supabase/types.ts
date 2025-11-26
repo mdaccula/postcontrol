@@ -56,6 +56,7 @@ export type Database = {
           custom_domain: string | null
           id: string
           instagram_url: string | null
+          invite_message_template: string | null
           logo_url: string | null
           max_events: number | null
           max_influencers: number | null
@@ -81,6 +82,7 @@ export type Database = {
           custom_domain?: string | null
           id?: string
           instagram_url?: string | null
+          invite_message_template?: string | null
           logo_url?: string | null
           max_events?: number | null
           max_influencers?: number | null
@@ -106,6 +108,7 @@ export type Database = {
           custom_domain?: string | null
           id?: string
           instagram_url?: string | null
+          invite_message_template?: string | null
           logo_url?: string | null
           max_events?: number | null
           max_influencers?: number | null
@@ -1274,6 +1277,45 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
+      }
+      referral_analytics: {
+        Row: {
+          agency_id: string
+          created_at: string | null
+          event_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string | null
+          event_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_analytics_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_analytics_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rejection_templates: {
         Row: {

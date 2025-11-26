@@ -23,6 +23,7 @@ import {
   Send,
   Users, // ✅ ITEM 7: Ícone para Guest Dashboard
   ClipboardCheck, // ✅ R2: Ícone para Análise Manual
+  Share2, // Ícone para indicação
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -98,6 +100,8 @@ const Dashboard = () => {
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const [badgesEnabled, setBadgesEnabled] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [selectedInviteEvent, setSelectedInviteEvent] = useState("");
   const [submissionToDelete, setSubmissionToDelete] = useState<{ id: string; status: string } | null>(null);
   // ✅ B2: Estado para agência selecionada
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
@@ -652,6 +656,113 @@ const Dashboard = () => {
             <BadgeDisplay />
           </Suspense>
         )}
+
+        {/* Botão Convidar Amiga para Divulgação */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <Card className="p-6 bg-gradient-to-r from-[#25D366]/10 to-[#128C7E]/10 border-[#25D366]/20">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Share2 className="h-5 w-5 text-[#25D366]" />
+                  Convidar Amiga para Divulgação
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Indique amigas para participar dos eventos e ganhar cortesias
+                </p>
+              </div>
+              <Button
+                onClick={() => setInviteDialogOpen(true)}
+                className="bg-gradient-to-r from-[#25D366] to-[#128C7E] hover:from-[#128C7E] hover:to-[#25D366] text-white"
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                Convidar Agora
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Dialog de Seleção de Evento */}
+        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Convidar Amiga para Divulgação</DialogTitle>
+              <DialogDescription>
+                Selecione o evento que você deseja indicar para sua amiga participar como divulgadora.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="invite-event">Escolha o Evento</Label>
+                <Select value={selectedInviteEvent} onValueChange={setSelectedInviteEvent}>
+                  <SelectTrigger id="invite-event">
+                    <SelectValue placeholder="Selecione um evento ativo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredEvents.filter(e => e.is_active).map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={async () => {
+                  if (!selectedInviteEvent) {
+                    toast({ title: "Selecione um evento", variant: "destructive" });
+                    return;
+                  }
+
+                  const selectedEvent = filteredEvents.find(e => e.id === selectedInviteEvent);
+                  if (!selectedEvent) return;
+
+                  try {
+                    // Buscar template de mensagem da agência
+                    const { data: agencyData } = await supabase
+                      .from('agencies')
+                      .select('invite_message_template')
+                      .eq('id', selectedAgencyId)
+                      .single();
+
+                    const messageTemplate = agencyData?.invite_message_template || 
+                      'Oi, queria te indicar para ser uma divulgadora da {agencyName}, participar do evento {eventTitle} e ter sua cortesia batendo os requisitos das postagens, chamar o http://bit.ly/Contato_MD para ele te incluir no grupo de Promo';
+
+                    // Substituir placeholders
+                    const message = messageTemplate
+                      .replace('{agencyName}', agencyName)
+                      .replace('{eventTitle}', selectedEvent.title);
+
+                    // Registrar analytics
+                    await supabase.from('referral_analytics').insert({
+                      user_id: user!.id,
+                      agency_id: selectedAgencyId,
+                      event_id: selectedInviteEvent,
+                    });
+
+                    // Abrir WhatsApp
+                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, '_blank');
+
+                    toast({ title: "WhatsApp aberto!", description: "Selecione o contato para enviar o convite." });
+                    setInviteDialogOpen(false);
+                    setSelectedInviteEvent("");
+                  } catch (error) {
+                    console.error("Erro ao processar convite:", error);
+                    toast({ title: "Erro ao abrir WhatsApp", variant: "destructive" });
+                  }
+                }}
+                disabled={!selectedInviteEvent}
+                className="w-full bg-gradient-to-r from-[#25D366] to-[#128C7E] hover:from-[#128C7E] hover:to-[#25D366] text-white"
+              >
+                Abrir WhatsApp
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats Cards e Event Progress */}
         <DashboardStats

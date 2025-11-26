@@ -3,7 +3,8 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Save, Building2, User, Lock, Calendar, CreditCard, Upload, Image as ImageIcon } from "lucide-react";
+import { Textarea } from "./ui/textarea";
+import { Save, Building2, User, Lock, Calendar, CreditCard, Upload, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -47,6 +48,9 @@ export const AgencyAdminSettings = () => {
   // Password Change
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Invite Message Template
+  const [inviteMessageTemplate, setInviteMessageTemplate] = useState("");
 
   useEffect(() => {
     loadData();
@@ -96,7 +100,7 @@ export const AgencyAdminSettings = () => {
         
         const { data: agencyData, error: agencyError } = await sb
           .from('agencies')
-          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url')
+          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url, invite_message_template')
           .eq('id', profileData.agency_id)
           .maybeSingle();
 
@@ -124,6 +128,7 @@ export const AgencyAdminSettings = () => {
           setWebsiteUrl(agencyData.website_url || "");
           setWhatsappGroupUrl(agencyData.whatsapp_group_url || "");
           setTicketsGroupUrl(agencyData.tickets_group_url || "");
+          setInviteMessageTemplate(agencyData.invite_message_template || "");
         } else {
           console.warn('[LOAD] ⚠️ Dados da agência não encontrados');
         }
@@ -319,6 +324,7 @@ export const AgencyAdminSettings = () => {
           website_url: websiteUrl || null,
           whatsapp_group_url: whatsappGroupUrl || null,
           tickets_group_url: ticketsGroupUrl || null,
+          invite_message_template: inviteMessageTemplate || null,
         };
         
         console.log('[SAVE] Salvando dados da agência:', agencyData);
@@ -597,6 +603,39 @@ export const AgencyAdminSettings = () => {
         >
           <Save className="mr-2 h-4 w-4" />
           {saving ? "Salvando..." : "Salvar Dados da Agência"}
+        </Button>
+      </Card>
+
+      {/* Invite Message Template */}
+      <Card className="p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageCircle className="h-5 w-5 text-primary" />
+          <h3 className="text-xl font-bold">Mensagem de Convite para WhatsApp</h3>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="inviteMessage">Mensagem Personalizada</Label>
+          <Textarea
+            id="inviteMessage"
+            value={inviteMessageTemplate}
+            onChange={(e) => setInviteMessageTemplate(e.target.value)}
+            placeholder="Oi, queria te indicar para ser uma divulgadora da {agencyName}, participar do evento {eventTitle} e ter sua cortesia batendo os requisitos das postagens, chamar o http://bit.ly/Contato_MD para ele te incluir no grupo de Promo"
+            rows={6}
+            disabled={saving}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use <code className="bg-muted px-1 rounded">{"{agencyName}"}</code> e <code className="bg-muted px-1 rounded">{"{eventTitle}"}</code> como placeholders que serão substituídos automaticamente.
+          </p>
+        </div>
+
+        <Button 
+          onClick={handleSaveProfile} 
+          disabled={saving}
+          className="w-full"
+        >
+          <Save className="mr-2 h-4 w-4" />
+          {saving ? "Salvando..." : "Salvar Mensagem de Convite"}
         </Button>
       </Card>
 
