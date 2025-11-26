@@ -31,10 +31,18 @@ export const SlotExhaustionPrediction = ({ eventId, eventTitle }: SlotExhaustion
       setLoading(true);
       setError(null);
 
+      // Obter o usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('Usuário não autenticado');
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
       const { data, error: invokeError } = await supabase.functions.invoke(
         'ai-goal-prediction',
         {
-          body: { event_id: eventId },
+          body: { eventId, userId: user.id },
         }
       );
 
