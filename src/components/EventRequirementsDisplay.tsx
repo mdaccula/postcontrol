@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Target, Users } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle, Target, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface EventRequirementsDisplayProps {
   eventId: string;
-  variant?: 'full' | 'compact';
+  variant?: "full" | "compact";
 }
 
 interface Requirement {
@@ -19,19 +19,16 @@ interface Requirement {
   users_achieved?: number;
 }
 
-export const EventRequirementsDisplay = ({ 
-  eventId, 
-  variant = 'full' 
-}: EventRequirementsDisplayProps) => {
+export const EventRequirementsDisplay = ({ eventId, variant = "full" }: EventRequirementsDisplayProps) => {
   const { data: requirements, isLoading } = useQuery({
-    queryKey: ['event-requirements', eventId],
+    queryKey: ["event-requirements", eventId],
     queryFn: async () => {
       // Buscar regras do evento
       const { data: reqs, error: reqError } = await supabase
-        .from('event_requirements')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('display_order');
+        .from("event_requirements")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("display_order");
 
       if (reqError) throw reqError;
 
@@ -39,16 +36,16 @@ export const EventRequirementsDisplay = ({
       const requirementsWithCount = await Promise.all(
         (reqs || []).map(async (req) => {
           const { count } = await supabase
-            .from('user_event_goals')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', eventId)
-            .eq('achieved_requirement_id', req.id);
+            .from("user_event_goals")
+            .select("*", { count: "exact", head: true })
+            .eq("event_id", eventId)
+            .eq("achieved_requirement_id", req.id);
 
           return {
             ...req,
             users_achieved: count || 0,
           };
-        })
+        }),
       );
 
       return requirementsWithCount;
@@ -70,14 +67,10 @@ export const EventRequirementsDisplay = ({
   }
 
   // Verificar se há metas reais definidas (posts > 0 OU vendas > 0)
-  const hasActualRequirements = requirements.some(
-    req => req.required_posts > 0 || req.required_sales > 0
-  );
+  const hasActualRequirements = requirements.some((req) => req.required_posts > 0 || req.required_sales > 0);
 
   // Verificar se há descrições
-  const hasDescriptions = requirements.some(
-    req => req.description && req.description.trim() !== ''
-  );
+  const hasDescriptions = requirements.some((req) => req.description && req.description.trim() !== "");
 
   // Não mostrar nada se não há requisitos nem descrições
   if (!hasActualRequirements && !hasDescriptions) {
@@ -91,28 +84,27 @@ export const EventRequirementsDisplay = ({
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Target className="w-5 h-5" />
-            Informações do Evento
+            Requisitos para a cortesia:
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {requirements.filter(r => r.description).map((req, index) => (
-            <div key={req.id} className="p-3 bg-muted/30 rounded-md">
-              <p className="text-sm">{req.description}</p>
-            </div>
-          ))}
+          {requirements
+            .filter((r) => r.description)
+            .map((req, index) => (
+              <div key={req.id} className="p-3 bg-muted/30 rounded-md">
+                <p className="text-sm">{req.description}</p>
+              </div>
+            ))}
         </CardContent>
       </Card>
     );
   }
 
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
       <div className="space-y-2">
         {requirements.map((req, index) => (
-          <div
-            key={req.id}
-            className="flex items-center justify-between p-2 bg-muted/30 rounded-md text-sm"
-          >
+          <div key={req.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md text-sm">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-primary" />
               <span>
@@ -145,10 +137,7 @@ export const EventRequirementsDisplay = ({
         </p>
 
         {requirements.map((req, index) => (
-          <div
-            key={req.id}
-            className="p-4 border rounded-lg space-y-2 hover:border-primary/50 transition-colors"
-          >
+          <div key={req.id} className="p-4 border rounded-lg space-y-2 hover:border-primary/50 transition-colors">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
@@ -181,11 +170,7 @@ export const EventRequirementsDisplay = ({
                   </div>
                 </div>
 
-                {req.description && (
-                  <p className="text-sm text-muted-foreground italic">
-                    {req.description}
-                  </p>
-                )}
+                {req.description && <p className="text-sm text-muted-foreground italic">{req.description}</p>}
               </div>
             </div>
           </div>
@@ -193,8 +178,8 @@ export const EventRequirementsDisplay = ({
 
         <div className="p-3 bg-blue-500/10 rounded-md border border-blue-500/20">
           <p className="text-xs text-blue-700 dark:text-blue-300">
-            💡 <strong>Dica:</strong> Você só precisa completar UMA das opções acima. 
-            Escolha a que melhor se encaixa no seu perfil!
+            💡 <strong>Dica:</strong> Você só precisa completar UMA das opções acima. Escolha a que melhor se encaixa no
+            seu perfil!
           </p>
         </div>
       </CardContent>
