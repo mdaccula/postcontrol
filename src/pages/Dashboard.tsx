@@ -41,6 +41,7 @@ import { useIsGuest } from "@/hooks/useIsGuest";
 import { PushNotificationSettings } from "@/components/PushNotificationSettings";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { GoalProgressBadge } from "@/components/GoalProgressBadge";
+import { DashboardWhatsappButton } from "./Dashboard_WhatsappButton";
 
 // Lazy loading para componentes pesados
 const TutorialGuide = lazy(() => import("@/components/TutorialGuide"));
@@ -96,6 +97,7 @@ const Dashboard = () => {
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const [badgesEnabled, setBadgesEnabled] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState<string>("");
+  const [agencySupportWhatsapp, setAgencySupportWhatsapp] = useState<string>("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [selectedInviteEvent, setSelectedInviteEvent] = useState("");
   const [submissionToDelete, setSubmissionToDelete] = useState<{
@@ -212,7 +214,25 @@ const Dashboard = () => {
       setBadgesEnabled(adminSettingsData['badges_enabled'] === "true");
       setWhatsappNumber(adminSettingsData['whatsapp_number'] || "");
     }
-  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingSettings]);
+
+    // Buscar WhatsApp da agência selecionada
+    const loadAgencyWhatsapp = async () => {
+      if (selectedAgencyId) {
+        const { data } = await sb
+          .from('agencies')
+          .select('support_whatsapp')
+          .eq('id', selectedAgencyId)
+          .maybeSingle();
+        
+        if (data?.support_whatsapp) {
+          setAgencySupportWhatsapp(data.support_whatsapp);
+        } else {
+          setAgencySupportWhatsapp("");
+        }
+      }
+    };
+    loadAgencyWhatsapp();
+  }, [user, navigate, userAgenciesData, adminSettingsData, isLoadingSettings, selectedAgencyId]);
 
   // ✅ Atualizar estados locais quando perfil carrega
   useEffect(() => {
@@ -852,17 +872,12 @@ const Dashboard = () => {
         </Tabs>
 
         {/* WhatsApp Button */}
-        {whatsappNumber && <motion.div initial={{
-        opacity: 0,
-        scale: 0.8
-      }} animate={{
-        opacity: 1,
-        scale: 1
-      }} className="fixed bottom-8 right-8 z-50">
-            <Button onClick={() => window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`, "_blank")} size="lg" className="rounded-full h-16 w-16 shadow-lg bg-green-500 hover:bg-green-600">
-              <MessageCircle className="h-8 w-8" />
-            </Button>
-          </motion.div>}
+        <DashboardWhatsappButton
+          isMasterAdmin={isMasterAdmin}
+          isAgencyAdmin={isAgencyAdmin}
+          masterWhatsapp={whatsappNumber}
+          agencyWhatsapp={agencySupportWhatsapp}
+        />
 
         {/* Tutorial Guide */}
         <Suspense fallback={null}>

@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { Save, Building2, User, Lock, Calendar, CreditCard, Upload, Image as ImageIcon, MessageCircle } from "lucide-react";
+import { Save, Building2, User, Lock, Calendar, CreditCard, Upload, Image as ImageIcon, MessageCircle, Phone } from "lucide-react";
 import { sb } from "@/lib/supabaseSafe";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ export const AgencyAdminSettings = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [whatsappGroupUrl, setWhatsappGroupUrl] = useState("");
   const [ticketsGroupUrl, setTicketsGroupUrl] = useState("");
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
   
   // Personal Data
   const [fullName, setFullName] = useState("");
@@ -100,7 +101,7 @@ export const AgencyAdminSettings = () => {
         
         const { data: agencyData, error: agencyError } = await sb
           .from('agencies')
-          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url, invite_message_template')
+          .select('name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url, invite_message_template, support_whatsapp')
           .eq('id', profileData.agency_id)
           .maybeSingle();
 
@@ -129,6 +130,7 @@ export const AgencyAdminSettings = () => {
           setWhatsappGroupUrl(agencyData.whatsapp_group_url || "");
           setTicketsGroupUrl(agencyData.tickets_group_url || "");
           setInviteMessageTemplate(agencyData.invite_message_template || "");
+          setSupportWhatsapp(agencyData.support_whatsapp || "");
         } else {
           console.warn('[LOAD] ⚠️ Dados da agência não encontrados');
         }
@@ -325,6 +327,7 @@ export const AgencyAdminSettings = () => {
           whatsapp_group_url: whatsappGroupUrl || null,
           tickets_group_url: ticketsGroupUrl || null,
           invite_message_template: inviteMessageTemplate || null,
+          support_whatsapp: supportWhatsapp || null,
         };
         
         console.log('[SAVE] Salvando dados da agência:', agencyData);
@@ -545,6 +548,24 @@ export const AgencyAdminSettings = () => {
               placeholder="https://chat.whatsapp.com/..."
               disabled={saving}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="supportWhatsapp">
+              <Phone className="inline mr-2 h-4 w-4" />
+              WhatsApp de Suporte (para Promotores)
+            </Label>
+            <Input
+              id="supportWhatsapp"
+              placeholder="5511999999999"
+              value={supportWhatsapp}
+              onChange={(e) => setSupportWhatsapp(e.target.value)}
+              disabled={saving}
+            />
+            <p className="text-xs text-muted-foreground">
+              Este número aparecerá no botão flutuante do WhatsApp para os 
+              promotores da sua agência. Use o formato completo: 55 + DDD + número
+            </p>
           </div>
         </div>
         

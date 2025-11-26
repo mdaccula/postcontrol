@@ -68,6 +68,7 @@ export type Database = {
           slug: string
           subscription_plan: string | null
           subscription_status: string | null
+          support_whatsapp: string | null
           tickets_group_url: string | null
           trial_end_date: string | null
           trial_extended: boolean | null
@@ -94,6 +95,7 @@ export type Database = {
           slug: string
           subscription_plan?: string | null
           subscription_status?: string | null
+          support_whatsapp?: string | null
           tickets_group_url?: string | null
           trial_end_date?: string | null
           trial_extended?: boolean | null
@@ -120,6 +122,7 @@ export type Database = {
           slug?: string
           subscription_plan?: string | null
           subscription_status?: string | null
+          support_whatsapp?: string | null
           tickets_group_url?: string | null
           trial_end_date?: string | null
           trial_extended?: boolean | null
