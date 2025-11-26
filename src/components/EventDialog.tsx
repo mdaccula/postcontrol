@@ -363,10 +363,17 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         console.log('✅ Evento atualizado no banco');
 
         // Delete old requirements
-        await sb
+        console.log('🗑️ Deletando requisitos antigos do evento:', event.id);
+        const { error: deleteReqError } = await sb
           .from('event_requirements')
           .delete()
           .eq('event_id', event.id);
+        
+        if (deleteReqError) {
+          console.error('❌ Erro ao deletar requisitos antigos:', deleteReqError);
+          throw new Error(`Erro ao deletar requisitos antigos: ${deleteReqError.message}`);
+        }
+        console.log('✅ Requisitos antigos deletados');
       } else {
         const { data: newEvent, error } = await sb
           .from('events')
@@ -427,6 +434,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
       }
 
       // Insert new requirements
+      console.log('📝 Inserindo novos requisitos:', requirements.length);
       const requirementsToInsert = requirements.map((req, index) => ({
         event_id: eventId,
         required_posts: req.required_posts,
@@ -435,11 +443,16 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         display_order: index,
       }));
 
+      console.log('📋 Requisitos a inserir:', requirementsToInsert);
       const { error: reqError } = await sb
         .from('event_requirements')
         .insert(requirementsToInsert);
 
-      if (reqError) throw reqError;
+      if (reqError) {
+        console.error('❌ Erro ao inserir requisitos:', reqError);
+        throw reqError;
+      }
+      console.log('✅ Requisitos inseridos com sucesso');
 
       toast({
         title: event ? "Evento atualizado!" : "Evento criado!",
