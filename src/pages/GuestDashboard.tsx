@@ -292,23 +292,23 @@ export const GuestDashboard = () => {
     setEndDate('');
     setSearchTerm('');
   };
-  return <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+  return <div className="min-h-screen bg-background p-3 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
         <div className="space-y-2">
-          <div className="items-center justify-between flex flex-col">
+          <div className="items-center justify-between flex flex-col gap-3 md:flex-row">
             <div>
-              <h1 className="font-bold text-2xl">Dashboard de Convidado</h1>
-              <p className="text-muted-foreground my-[10px]">
+              <h1 className="font-bold text-xl md:text-2xl">Dashboard de Convidado</h1>
+              <p className="text-muted-foreground text-sm md:text-base my-2">
                 Acesso válido até {new Date(guestData.access_end_date).toLocaleDateString('pt-BR')}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                ← Voltar ao Dashboard
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button variant="outline" onClick={() => navigate('/dashboard')} className="flex-1 md:flex-none text-sm h-9">
+                ← Voltar
               </Button>
-              <Badge variant="secondary" className="text-lg py-[4px] px-[8px]">
-                <Eye className="mr-2 h-4 w-4" />
+              <Badge variant="secondary" className="text-sm md:text-base py-1 px-2 md:py-[4px] md:px-[8px]">
+                <Eye className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                 Convidado
               </Badge>
             </div>
@@ -316,14 +316,14 @@ export const GuestDashboard = () => {
         </div>
 
         {/* Seletor de Eventos */}
-        <Card className="p-4">
-          <h3 className="font-semibold mb-3">Eventos com Acesso</h3>
+        <Card className="p-3 md:p-4">
+          <h3 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">Eventos com Acesso</h3>
           <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
             {allowedEventsData.map(event => {
             const level = getPermissionLevel(event.id);
-            return <Button key={event.id} onClick={() => setSelectedEventId(event.id)} variant={selectedEventId === event.id ? 'default' : 'outline'} className="w-full md:w-auto flex items-center justify-between md:justify-start gap-2 text-left">
+            return <Button key={event.id} onClick={() => setSelectedEventId(event.id)} variant={selectedEventId === event.id ? 'default' : 'outline'} className="w-full md:w-auto flex items-center justify-between md:justify-start gap-2 text-left text-sm h-9 md:h-10">
                   <span className="truncate">{event.title}</span>
-                  {level && <Badge variant="secondary" className="shrink-0">
+                  {level && <Badge variant="secondary" className="shrink-0 text-xs">
                       {PERMISSION_LABELS[level]}
                     </Badge>}
                 </Button>;
@@ -332,98 +332,98 @@ export const GuestDashboard = () => {
         </Card>
 
         {selectedEvent && <>
-            {/* Stats - FASE 3: 5 cards incluindo Usuários */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <Trophy className="h-5 w-5 text-primary" />
+            {/* Stats - Grid 2x3 em mobile, 5 em desktop */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
+              <Card className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Trophy className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="text-xl md:text-2xl font-bold">{stats.total}</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-yellow-500/10 rounded-lg">
-                    <Clock className="h-5 w-5 text-yellow-500" />
+              <Card className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-yellow-500/10 rounded-lg">
+                    <Clock className="h-4 w-4 text-yellow-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Pendentes</p>
-                    <p className="text-2xl font-bold">{stats.pending}</p>
+                    <p className="text-xs text-muted-foreground">Pendentes</p>
+                    <p className="text-xl md:text-2xl font-bold">{stats.pending}</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-green-500/10 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+              <Card className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Aprovadas</p>
-                    <p className="text-2xl font-bold">{stats.approved}</p>
+                    <p className="text-xs text-muted-foreground">Aprovadas</p>
+                    <p className="text-xl md:text-2xl font-bold">{stats.approved}</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-red-500/10 rounded-lg">
-                    <XCircle className="h-5 w-5 text-red-500" />
+              <Card className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-red-500/10 rounded-lg">
+                    <XCircle className="h-4 w-4 text-red-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Reprovadas</p>
-                    <p className="text-2xl font-bold">{stats.rejected}</p>
+                    <p className="text-xs text-muted-foreground">Reprovadas</p>
+                    <p className="text-xl md:text-2xl font-bold">{stats.rejected}</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-500/10 rounded-lg">
-                    <Users className="h-5 w-5 text-blue-500" />
+              <Card className="p-3 col-span-2 md:col-span-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <Users className="h-4 w-4 text-blue-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Usuários</p>
-                    <p className="text-2xl font-bold">{stats.uniqueUsers}</p>
+                    <p className="text-xs text-muted-foreground">Usuários</p>
+                    <p className="text-xl md:text-2xl font-bold">{stats.uniqueUsers}</p>
                   </div>
                 </div>
               </Card>
             </div>
 
             {/* Permissões Info */}
-            {permissionLevel && <Card className="p-4 bg-primary/5 border-primary/20">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+            {permissionLevel && <Card className="p-3 md:p-4 bg-primary/5 border-primary/20">
+                <div className="flex items-start gap-2 md:gap-3">
+                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">Nível de Acesso: {PERMISSION_LABELS[permissionLevel]}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {permissionLevel === 'viewer' && 'Você pode visualizar estatísticas e submissões'}
-                      {permissionLevel === 'moderator' && 'Você pode visualizar, aprovar e reprovar submissões'}
-                      {permissionLevel === 'manager' && 'Você tem acesso total: gerenciar posts, editar evento e aprovar submissões'}
+                    <p className="font-medium text-sm md:text-base">Nível: {PERMISSION_LABELS[permissionLevel]}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                      {permissionLevel === 'viewer' && 'Visualizar estatísticas e submissões'}
+                      {permissionLevel === 'moderator' && 'Visualizar, aprovar e reprovar submissões'}
+                      {permissionLevel === 'manager' && 'Acesso total: gerenciar posts e aprovar submissões'}
                     </p>
                   </div>
                 </div>
               </Card>}
 
             {/* ✅ FASE 3: Tabela de Submissões com filtros avançados e paginação */}
-            <Card className="p-6">
-              <div className="space-y-4">
-                <div className="items-center justify-between flex flex-col">
-                  <h3 className="font-semibold text-lg mb-[20px]">Submissões - {selectedEvent.title}</h3>
-                  <Badge variant="outline" className="text-sm">
+            <Card className="p-3 md:p-6">
+              <div className="space-y-3 md:space-y-4">
+                <div className="items-center justify-between flex flex-col md:flex-row gap-2">
+                  <h3 className="font-semibold text-base md:text-lg">Submissões - {selectedEvent.title}</h3>
+                  <Badge variant="outline" className="text-xs md:text-sm">
                     {filteredSubmissions.length} de {submissions.length} submiss{filteredSubmissions.length !== 1 ? 'ões' : 'ão'}
                   </Badge>
                 </div>
 
                 {/* ✅ FASE 3: Filtros Avançados */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-6 gap-2">
                   <Select value={selectedPostId} onValueChange={setSelectedPostId}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Post" />
                     </SelectTrigger>
                     <SelectContent>
@@ -435,11 +435,11 @@ export const GuestDashboard = () => {
                   </Select>
 
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="pending">Pendente</SelectItem>
                       <SelectItem value="approved">Aprovada</SelectItem>
                       <SelectItem value="rejected">Reprovada</SelectItem>
@@ -447,30 +447,30 @@ export const GuestDashboard = () => {
                   </Select>
 
                   <Select value={selectedFollowerRange} onValueChange={setSelectedFollowerRange}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm">
                       <SelectValue placeholder="Seguidores" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todas as faixas</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
                       {uniqueFollowerRanges.map(range => <SelectItem key={range} value={range}>
                           {range}
                         </SelectItem>)}
                     </SelectContent>
                   </Select>
 
-                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="Data inicial" className="text-sm" />
+                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="Início" className="h-9 text-sm" />
 
-                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="Data final" className="text-sm" />
+                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="Fim" className="h-9 text-sm" />
 
-                  <Button variant="outline" onClick={clearAllFilters} className="flex items-center gap-2">
+                  <Button variant="outline" onClick={clearAllFilters} className="h-9 text-sm flex items-center gap-2">
                     <X className="h-4 w-4" />
-                    Limpar
+                    <span className="hidden sm:inline">Limpar</span>
                   </Button>
                 </div>
 
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input type="text" placeholder="Buscar por nome, Instagram ou faixa de seguidores..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
+                  <Input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="h-9 pl-9 text-sm" />
                 </div>
               
                 {loadingSubmissions ? <div className="space-y-2">
@@ -480,7 +480,8 @@ export const GuestDashboard = () => {
                   </div> : filteredSubmissions.length === 0 ? <p className="text-center text-muted-foreground py-8">
                     {submissions.length === 0 ? 'Nenhuma submissão encontrada' : 'Nenhum resultado encontrado para sua busca'}
                   </p> : <>
-                    <div className="border rounded-lg">
+                    {/* Desktop: Tabela completa */}
+                    <div className="border rounded-lg hidden md:block">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -526,7 +527,6 @@ export const GuestDashboard = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
-                                {/* ✅ FASE 2 - Item 2.1: Usar SubmissionImageDisplay */}
                                 <Suspense fallback={<Skeleton className="w-16 h-16" />}>
                                   {submission.profile_screenshot_path && <div className="w-16 h-16 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setZoomedSubmission(submission)}>
                                       <SubmissionImageDisplay screenshotPath={submission.profile_screenshot_path} className="w-full h-full object-cover rounded" />
@@ -554,12 +554,63 @@ export const GuestDashboard = () => {
                       </Table>
                     </div>
 
-                    {/* ✅ FASE 3: Controles de Paginação */}
-                    <div className="items-center justify-between pt-4 flex flex-col">
+                    {/* Mobile: Cards compactos */}
+                    <div className="space-y-3 md:hidden">
+                      {paginatedSubmissions.map((submission: any) => <Card key={submission.id} className="p-3">
+                        <div className="flex gap-3">
+                          {/* Screenshot à esquerda */}
+                          <div className="flex-shrink-0">
+                            <Suspense fallback={<Skeleton className="w-14 h-14" />}>
+                              {(submission.profile_screenshot_path || submission.screenshot_path) && <div className="w-14 h-14 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setZoomedSubmission(submission)}>
+                                  <SubmissionImageDisplay screenshotPath={submission.profile_screenshot_path || submission.screenshot_path} className="w-full h-full object-cover rounded" />
+                                </div>}
+                            </Suspense>
+                          </div>
+
+                          {/* Informações principais */}
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm truncate">{submission.profiles?.full_name || 'N/A'}</p>
+                                {submission.profiles?.instagram && <a href={`https://instagram.com/${submission.profiles.instagram.replace(/^@+/, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate block">
+                                    @{submission.profiles.instagram.replace(/^@+/, '')}
+                                  </a>}
+                              </div>
+                              <Badge variant={submission.status === 'approved' ? 'default' : submission.status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs shrink-0">
+                                {submission.status === 'approved' ? 'Aprovada' : submission.status === 'rejected' ? 'Reprovada' : 'Pendente'}
+                              </Badge>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="font-semibold text-foreground">{getUserApprovedCount(submission.user_id)} posts</span>
+                              <span>•</span>
+                              <span>{format(new Date(submission.submitted_at), 'dd/MM/yy HH:mm')}</span>
+                            </div>
+
+                            {submission.posts?.post_number && <p className="text-xs text-muted-foreground">
+                                Post #{submission.posts.post_number}
+                              </p>}
+
+                            {/* Ações (se tiver permissão e status pendente) */}
+                            {permissionLevel && hasPermission(selectedEventId!, 'moderator') && submission.status === 'pending' && <div className="flex gap-2 pt-1">
+                                <Button size="sm" className="h-7 text-xs" onClick={() => handleApproveSubmission(submission.id)}>
+                                  Aprovar
+                                </Button>
+                                <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => handleRejectWithPrompt(submission.id)}>
+                                  Reprovar
+                                </Button>
+                              </div>}
+                          </div>
+                        </div>
+                      </Card>)}
+                    </div>
+
+                    {/* Controles de Paginação - Responsivo */}
+                    <div className="items-center justify-between pt-4 gap-3 flex flex-col md:flex-row">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Itens por página:</span>
+                        <span className="text-xs md:text-sm text-muted-foreground">Por página:</span>
                         <Select value={itemsPerPage.toString()} onValueChange={value => setItemsPerPage(Number(value))}>
-                          <SelectTrigger className="w-20">
+                          <SelectTrigger className="w-16 h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -571,14 +622,14 @@ export const GuestDashboard = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          Página {currentPage} de {totalPages}
+                        <span className="text-xs md:text-sm text-muted-foreground">
+                          Pág. {currentPage} de {totalPages}
                         </span>
                         <div className="gap-1 flex-row flex items-center justify-center">
-                          <Button variant="outline" size="sm" onClick={previousPage} disabled={!hasPreviousPage}>
+                          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={previousPage} disabled={!hasPreviousPage}>
                             Anterior
                           </Button>
-                          <Button variant="outline" size="sm" onClick={nextPage} disabled={!hasNextPage}>
+                          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={nextPage} disabled={!hasNextPage}>
                             Próxima
                           </Button>
                         </div>
