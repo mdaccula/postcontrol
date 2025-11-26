@@ -362,6 +362,23 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         if (error) throw error;
         console.log('✅ Evento atualizado no banco');
 
+        // Reset user goals that reference old requirements for this event
+        console.log('🔄 Resetando metas dos usuários para este evento antes de atualizar requisitos:', event.id);
+        const { error: resetGoalsError } = await sb
+          .from('user_event_goals')
+          .update({
+            achieved_requirement_id: null,
+            goal_achieved: false,
+            goal_achieved_at: null,
+          })
+          .eq('event_id', event.id);
+
+        if (resetGoalsError) {
+          console.error('❌ Erro ao resetar metas de usuários:', resetGoalsError);
+          throw new Error(`Erro ao resetar metas de usuários: ${resetGoalsError.message}`);
+        }
+        console.log('✅ Metas de usuários resetadas para o evento');
+
         // Delete old requirements
         console.log('🗑️ Deletando requisitos antigos do evento:', event.id);
         const { error: deleteReqError } = await sb
