@@ -105,7 +105,7 @@ export const useDashboard = () => {
 
         sb
           .from("events")
-          .select("id, title, total_required_posts, is_approximate_total")
+          .select("id, title, total_required_posts, is_approximate_total, agency_id")
           .eq("is_active", true)
           .in("agency_id", effectiveAgencyIds)
           .order("event_date", { ascending: false }),

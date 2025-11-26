@@ -136,6 +136,11 @@ const DetailedGoalsReport = lazy(() =>
     default: m.DetailedGoalsReport,
   })),
 );
+const ReferralAnalytics = lazy(() =>
+  import("@/components/ReferralAnalytics").then((m) => ({
+    default: m.ReferralAnalytics,
+  })),
+);
 const GoalNotificationSettings = lazy(() =>
   import("@/components/GoalNotificationSettings").then((m) => ({
     default: m.GoalNotificationSettings,
@@ -2891,6 +2896,19 @@ const Admin = () => {
                   <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                     <DetailedGoalsReport agencyId={profile.agency_id} />
                   </Suspense>
+                )}
+
+                {/* Analytics de Indicações */}
+                {profile?.agency_id && (
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      📊 Analytics de Indicações
+                    </h3>
+                    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                      <ReferralAnalytics agencyId={profile.agency_id} />
+                    </Suspense>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
