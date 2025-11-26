@@ -318,12 +318,12 @@ export const GuestDashboard = () => {
         {/* Seletor de Eventos */}
         <Card className="p-4">
           <h3 className="font-semibold mb-3">Eventos com Acesso</h3>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
             {allowedEventsData.map(event => {
             const level = getPermissionLevel(event.id);
-            return <Button key={event.id} onClick={() => setSelectedEventId(event.id)} variant={selectedEventId === event.id ? 'default' : 'outline'} className="flex items-center justify-start gap-0">
-                  {event.title}
-                  {level && <Badge variant="secondary" className="ml-2">
+            return <Button key={event.id} onClick={() => setSelectedEventId(event.id)} variant={selectedEventId === event.id ? 'default' : 'outline'} className="w-full md:w-auto flex items-center justify-between md:justify-start gap-2 text-left">
+                  <span className="truncate">{event.title}</span>
+                  {level && <Badge variant="secondary" className="shrink-0">
                       {PERMISSION_LABELS[level]}
                     </Badge>}
                 </Button>;
