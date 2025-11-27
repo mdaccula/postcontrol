@@ -276,11 +276,19 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
                 id="entry_only"
                 checked={formData.price_types.includes("entry_only")}
                 onCheckedChange={(checked) => {
+                  const newPriceTypes = checked
+                    ? [...formData.price_types, "entry_only"]
+                    : formData.price_types.filter((t) => t !== "entry_only");
+                  
+                  const newPriceDetails = { ...formData.price_details };
+                  if (checked && !newPriceDetails.entry_only) {
+                    newPriceDetails.entry_only = { female: 0, male: 0 };
+                  }
+                  
                   setFormData({
                     ...formData,
-                    price_types: checked
-                      ? [...formData.price_types, "entry_only"]
-                      : formData.price_types.filter((t) => t !== "entry_only"),
+                    price_types: newPriceTypes,
+                    price_details: newPriceDetails,
                   });
                 }}
               />
@@ -348,11 +356,19 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
                 id="consumable_only"
                 checked={formData.price_types.includes("consumable_only")}
                 onCheckedChange={(checked) => {
+                  const newPriceTypes = checked
+                    ? [...formData.price_types, "consumable_only"]
+                    : formData.price_types.filter((t) => t !== "consumable_only");
+                  
+                  const newPriceDetails = { ...formData.price_details };
+                  if (checked && !newPriceDetails.consumable_only) {
+                    newPriceDetails.consumable_only = { female: 0, male: 0 };
+                  }
+                  
                   setFormData({
                     ...formData,
-                    price_types: checked
-                      ? [...formData.price_types, "consumable_only"]
-                      : formData.price_types.filter((t) => t !== "consumable_only"),
+                    price_types: newPriceTypes,
+                    price_details: newPriceDetails,
                   });
                 }}
               />
@@ -420,11 +436,19 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
                 id="entry_plus_half"
                 checked={formData.price_types.includes("entry_plus_half")}
                 onCheckedChange={(checked) => {
+                  const newPriceTypes = checked
+                    ? [...formData.price_types, "entry_plus_half"]
+                    : formData.price_types.filter((t) => t !== "entry_plus_half");
+                  
+                  const newPriceDetails = { ...formData.price_details };
+                  if (checked && !newPriceDetails.entry_plus_half) {
+                    newPriceDetails.entry_plus_half = { female: 0, male: 0 };
+                  }
+                  
                   setFormData({
                     ...formData,
-                    price_types: checked
-                      ? [...formData.price_types, "entry_plus_half"]
-                      : formData.price_types.filter((t) => t !== "entry_plus_half"),
+                    price_types: newPriceTypes,
+                    price_details: newPriceDetails,
                   });
                 }}
               />
@@ -492,11 +516,19 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
                 id="entry_plus_full"
                 checked={formData.price_types.includes("entry_plus_full")}
                 onCheckedChange={(checked) => {
+                  const newPriceTypes = checked
+                    ? [...formData.price_types, "entry_plus_full"]
+                    : formData.price_types.filter((t) => t !== "entry_plus_full");
+                  
+                  const newPriceDetails = { ...formData.price_details };
+                  if (checked && !newPriceDetails.entry_plus_full) {
+                    newPriceDetails.entry_plus_full = { female: 0, male: 0 };
+                  }
+                  
                   setFormData({
                     ...formData,
-                    price_types: checked
-                      ? [...formData.price_types, "entry_plus_full"]
-                      : formData.price_types.filter((t) => t !== "entry_plus_full"),
+                    price_types: newPriceTypes,
+                    price_details: newPriceDetails,
                   });
                 }}
               />
