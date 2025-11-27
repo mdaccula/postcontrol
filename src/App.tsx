@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,13 +25,12 @@ import GuestListConfirmation from "./pages/GuestListConfirmation";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
-const queryClient = new QueryClient();
+// QueryClient removido - usando instância única de main.tsx
 
 const App = () => {
   useAuth(); // Inicializa o listener de autenticação
   
   return (
-  <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
       <TooltipProvider>
         <Toaster />
@@ -97,7 +95,6 @@ const App = () => {
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
-  </QueryClientProvider>
   );
 };
 
