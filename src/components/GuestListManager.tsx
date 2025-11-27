@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,8 @@ import { GuestListAnalytics } from "./GuestListAnalytics";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EventDialogForm } from "./GuestList/EventDialogForm";
 import { DateDialogForm } from "./GuestList/DateDialogForm";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 
 interface GuestListEvent {
   id: string;
@@ -118,6 +120,10 @@ export default function GuestListManager() {
   const [filterEventId, setFilterEventId] = useState<string>("all");
   const [filterDateId, setFilterDateId] = useState<string>("all");
   const [filterGender, setFilterGender] = useState<string>("all");
+  const [filterDateTimePeriod, setFilterDateTimePeriod] = useState<string>("all");
+  
+  // Filtro para período de datas
+  const [filterDatePeriod, setFilterDatePeriod] = useState<string>("all");
   
   // Seleção múltipla de inscritos
   const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([]);
@@ -331,15 +337,53 @@ export default function GuestListManager() {
     toast.success("Link copiado para clipboard!");
   };
 
-  // Aplicar filtros em cascata
+  // Filtrar datas por período (aba Datas e Valores)
+  const filteredDates = dates?.filter((date) => {
+    if (filterDatePeriod === "all") return true;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDate = parseEventDateBRT(date.event_date);
+    if (filterDatePeriod === "future") return eventDate >= today;
+    if (filterDatePeriod === "past") return eventDate < today;
+    return true;
+  }) || [];
+
+  // Aplicar filtros em cascata (incluindo filtro de período)
   const filteredRegistrations = registrations?.filter((reg) => {
     if (filterEventId !== "all" && reg.event_id !== filterEventId) return false;
     if (filterDateId !== "all" && reg.date_id !== filterDateId) return false;
     if (filterGender !== "all" && reg.gender !== filterGender) return false;
+    
+    // Filtro por período da data do evento
+    if (filterDateTimePeriod !== "all" && reg.guest_list_dates) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const eventDate = parseEventDateBRT(reg.guest_list_dates.event_date);
+      if (filterDateTimePeriod === "future" && eventDate < today) return false;
+      if (filterDateTimePeriod === "past" && eventDate >= today) return false;
+    }
+    
     return true;
   }) || [];
 
-  // Copiar nomes filtrados
+  // Paginação para inscritos
+  const ITEMS_PER_PAGE = 20;
+  const {
+    currentPage,
+    totalPages,
+    paginatedItems: paginatedRegistrations,
+    goToPage,
+    hasNextPage,
+    hasPreviousPage,
+    resetPage,
+  } = usePagination({ items: filteredRegistrations, itemsPerPage: ITEMS_PER_PAGE });
+
+  // Reset página quando filtros mudam
+  useEffect(() => {
+    resetPage();
+  }, [filterEventId, filterDateId, filterGender, filterDateTimePeriod, resetPage]);
+
+  // Copiar nomes filtrados (usa TODOS os filtrados, não só a página atual)
   const copyFilteredNames = () => {
     if (filteredRegistrations.length === 0) {
       toast.error("Nenhum nome para copiar");
@@ -482,6 +526,18 @@ export default function GuestListManager() {
   };
 
   const selectedEventData = events?.find((e) => e.id === selectedEvent);
+
+  // Função para duplicar data
+  const handleDuplicateDate = (originalDate: GuestListDate) => {
+    const duplicatedData = {
+      ...originalDate,
+      id: '',
+      event_date: format(new Date(), "yyyy-MM-dd"),
+      is_active: true,
+    } as GuestListDate;
+    setEditingDate(duplicatedData);
+    setDateDialogOpen(true);
+  };
 
   // Datas filtradas por evento selecionado no filtro
   const datesForFilteredEvent = allDates?.filter((d) => 
@@ -638,33 +694,45 @@ export default function GuestListManager() {
             <TabsContent value="dates" className="space-y-4">
               {selectedEventData && (
                 <>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center flex-wrap gap-4">
                     <h3 className="text-lg font-semibold">
                       Datas e Valores - {selectedEventData.name}
                     </h3>
-                    <Dialog open={dateDialogOpen} onOpenChange={setDateDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button onClick={() => setEditingDate(null)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nova Data
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {editingDate ? "Editar Data" : "Adicionar Nova Data"}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <DateDialogForm
-                          date={editingDate}
-                          onSubmit={(data) => createOrUpdateDateMutation.mutate(data)}
-                          onCancel={() => {
-                            setDateDialogOpen(false);
-                            setEditingDate(null);
-                          }}
-                        />
-                      </DialogContent>
-                    </Dialog>
+                    <div className="flex items-center gap-3">
+                      <Select value={filterDatePeriod} onValueChange={setFilterDatePeriod}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Filtrar período" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as datas</SelectItem>
+                          <SelectItem value="future">Datas futuras</SelectItem>
+                          <SelectItem value="past">Datas retroativas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Dialog open={dateDialogOpen} onOpenChange={setDateDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button onClick={() => setEditingDate(null)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nova Data
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>
+                              {editingDate?.id ? "Editar Data" : editingDate ? "Duplicar Data" : "Adicionar Nova Data"}
+                            </DialogTitle>
+                          </DialogHeader>
+                          <DateDialogForm
+                            date={editingDate}
+                            onSubmit={(data) => createOrUpdateDateMutation.mutate(data)}
+                            onCancel={() => {
+                              setDateDialogOpen(false);
+                              setEditingDate(null);
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
 
                   <Table>
@@ -686,8 +754,8 @@ export default function GuestListManager() {
                             Carregando...
                           </TableCell>
                         </TableRow>
-                      ) : dates && dates.length > 0 ? (
-                        dates.map((date) => (
+                      ) : filteredDates && filteredDates.length > 0 ? (
+                        filteredDates.map((date) => (
                           <TableRow key={date.id}>
                             <TableCell>
                               {(() => {
@@ -716,6 +784,14 @@ export default function GuestListManager() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right space-x-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Duplicar"
+                                onClick={() => handleDuplicateDate(date)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -806,7 +882,7 @@ export default function GuestListManager() {
                   <Card className="p-4">
                     <div className="space-y-2">
                       <Label>Filtros</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div className="space-y-2">
                           <Label htmlFor="filter-event" className="text-xs">Evento</Label>
                           <Select
@@ -865,6 +941,20 @@ export default function GuestListManager() {
                               <SelectItem value="all">Todos</SelectItem>
                               <SelectItem value="feminino">Feminino</SelectItem>
                               <SelectItem value="masculino">Masculino</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="filter-period" className="text-xs">Período</Label>
+                          <Select value={filterDateTimePeriod} onValueChange={setFilterDateTimePeriod}>
+                            <SelectTrigger id="filter-period">
+                              <SelectValue placeholder="Todos os períodos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos os períodos</SelectItem>
+                              <SelectItem value="future">Eventos futuros</SelectItem>
+                              <SelectItem value="past">Eventos passados</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -940,8 +1030,8 @@ export default function GuestListManager() {
                             Carregando...
                           </TableCell>
                         </TableRow>
-                      ) : filteredRegistrations.length > 0 ? (
-                        filteredRegistrations.map((reg) => (
+                      ) : paginatedRegistrations.length > 0 ? (
+                        paginatedRegistrations.map((reg) => (
                           <TableRow key={reg.id}>
                             <TableCell>
                               <Checkbox
@@ -1012,6 +1102,22 @@ export default function GuestListManager() {
                       )}
                     </TableBody>
                   </Table>
+
+                  {/* Paginação */}
+                  {filteredRegistrations.length > 0 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Mostrando {paginatedRegistrations.length} de {filteredRegistrations.length} inscritos
+                      </p>
+                      <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={goToPage}
+                        hasNextPage={hasNextPage}
+                        hasPreviousPage={hasPreviousPage}
+                      />
+                    </div>
+                  )}
             </TabsContent>
           </Tabs>
             </CardContent>
