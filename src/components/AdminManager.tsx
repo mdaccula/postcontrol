@@ -433,6 +433,24 @@ export const AdminManager = () => {
     }
 
     try {
+      // Delete related data in correct order to avoid foreign key constraints
+      
+      // 1. Delete submissions from agency
+      await sb.from('submissions').delete().eq('agency_id', agencyId);
+      
+      // 2. Delete posts from agency
+      await sb.from('posts').delete().eq('agency_id', agencyId);
+      
+      // 3. Delete events from agency
+      await sb.from('events').delete().eq('agency_id', agencyId);
+      
+      // 4. Delete user_agencies associations
+      await sb.from('user_agencies').delete().eq('agency_id', agencyId);
+      
+      // 5. Update profiles to remove agency_id
+      await sb.from('profiles').update({ agency_id: null }).eq('agency_id', agencyId);
+      
+      // 6. Finally, delete the agency itself
       const { error } = await sb.from("agencies").delete().eq("id", agencyId);
 
       if (error) throw error;

@@ -1,7 +1,18 @@
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Settings, ExternalLink, Trash2, Building2, Mail, Phone, Instagram } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  Building2, 
+  User, 
+  Mail, 
+  DollarSign,
+  Users,
+  CalendarDays,
+  Copy,
+  Edit,
+  Trash2,
+  Eye
+} from "lucide-react";
 
 interface AgencyAdminCardProps {
   agency: {
@@ -70,118 +81,111 @@ export const AgencyAdminCard = ({
     return <Badge variant="outline">{planMap[agency.subscription_plan] || agency.subscription_plan}</Badge>;
   };
 
+  const adminName = admin?.full_name || 'Sem admin';
+  const adminEmail = admin?.email || 'N/A';
+  const planPrice = planDetails?.monthly_price?.toFixed(0) || '0';
+  const influencersCount = stats?.totalInfluencers || 0;
+  const maxInfluencers = agency.max_influencers === 99999 ? '∞' : agency.max_influencers;
+  const eventsCount = stats?.totalEvents || 0;
+  const maxEvents = agency.max_events === 99999 ? '∞' : agency.max_events;
+  const agencyUrl = fullUrl;
+
   return (
-    <Card className="p-6 border-2 hover:shadow-glow transition-all">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold">{agency.name}</h3>
-            <div className="flex gap-2 mt-1">
-              {getStatusBadge()}
-              {getPlanBadge()}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Admin Info */}
-      <div className="bg-muted/50 rounded-lg p-4 mb-4">
-        <p className="text-sm font-semibold text-muted-foreground mb-2">👤 Administrador:</p>
-        {admin ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">{admin.full_name || 'Nome não definido'}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="w-4 h-4" />
-              <span>{admin.email || 'Email não definido'}</span>
-            </div>
-            {admin.phone && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="w-4 h-4" />
-                <span>{admin.phone}</span>
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Building2 className="h-5 w-5 text-primary shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-base leading-tight truncate">{agency.name}</h3>
+              <div className="flex items-center gap-1.5 mt-1">
+                {getStatusBadge()}
+                {getPlanBadge()}
               </div>
-            )}
-            {admin.instagram && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Instagram className="w-4 h-4" />
-                <span>@{admin.instagram}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Nenhum admin vinculado</p>
-        )}
-      </div>
-
-      {/* Plan Details */}
-      {planDetails && (
-        <div className="bg-primary/5 rounded-lg p-4 mb-4">
-          <p className="text-sm font-semibold mb-2">📋 Plano: {planDetails.plan_name}</p>
-          <p className="text-lg font-bold text-primary mb-2">
-            R$ {planDetails.monthly_price.toFixed(0)}/mês
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <p className="text-muted-foreground">Divulgadores:</p>
-              <p className="font-semibold">
-                {stats?.totalInfluencers || 0} / {agency.max_influencers === 99999 ? '∞' : agency.max_influencers}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Eventos:</p>
-              <p className="font-semibold">
-                {stats?.totalEvents || 0} / {agency.max_events === 99999 ? '∞' : agency.max_events}
-              </p>
             </div>
           </div>
-          {stats && (
-            <div className="mt-2 pt-2 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                📤 {stats.totalSubmissions} submissões totais
-              </p>
-            </div>
-          )}
+          <div className="flex gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onViewDashboard}
+              title="Ver Dashboard"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onEdit}
+              title="Editar"
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={onDelete}
+              title="Excluir"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
-      )}
+      </CardHeader>
 
-      {/* Agency URL */}
-      <div className="bg-background rounded-lg p-3 mb-4 border space-y-3">
-        <div>
-          <p className="text-xs font-semibold text-foreground mb-1">🔗 URL da Agência:</p>
-          <code className="text-xs break-all font-medium text-primary">{fullUrl}</code>
-        </div>
-        {alternativeUrl && (
-          <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-1">Link alternativo:</p>
-            <code className="text-xs break-all text-muted-foreground">{alternativeUrl}</code>
+      <CardContent className="space-y-3 pt-2">
+        {/* Admin Info - Compact horizontal layout */}
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate max-w-[120px]">{adminName}</span>
           </div>
-        )}
-      </div>
+          <div className="flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate max-w-[150px]">{adminEmail}</span>
+          </div>
+        </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={onCopyLink} className="flex-1">
-          <Copy className="w-4 h-4 mr-2" />
-          Copiar Link
-        </Button>
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Settings className="w-4 h-4 mr-2" />
-          Editar
-        </Button>
-        <Button variant="outline" size="sm" onClick={onViewDashboard}>
-          <ExternalLink className="w-4 h-4 mr-2" />
-          Dashboard
-        </Button>
-        <Button variant="destructive" size="sm" onClick={onDelete}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
+        {/* Compact stats row */}
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>R$ {planPrice}/mês</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>{influencersCount}/{maxInfluencers} divulg.</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>{eventsCount}/{maxEvents} evt</span>
+          </div>
+        </div>
+
+        {/* URL with copy button */}
+        <div className="flex items-center gap-2 pt-2 border-t">
+          <a
+            href={agencyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary hover:underline truncate flex-1"
+            title={agencyUrl}
+          >
+            {agency.slug}
+          </a>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCopyLink}
+            className="h-6 px-2 shrink-0"
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   );
 };

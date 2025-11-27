@@ -44,9 +44,6 @@ const AllUsersManagement = lazy(() =>
   import("@/components/AllUsersManagement").then((m) => ({ default: m.AllUsersManagement })),
 );
 const AdminSettings = lazy(() => import("@/components/AdminSettings").then((m) => ({ default: m.AdminSettings })));
-const ChangelogManager = lazy(() =>
-  import("@/components/ChangelogManager").then((m) => ({ default: m.ChangelogManager })),
-);
 const GuestManager = lazy(() => import("@/components/GuestManager").then((m) => ({ default: m.GuestManager })));
 const MasterPostsManager = lazy(() =>
   import("@/components/MasterPostsManager").then((m) => ({ default: m.MasterPostsManager })),
@@ -91,6 +88,7 @@ const MasterAdmin = () => {
   const [agencyStats, setAgencyStats] = useState<Record<string, AgencyStats>>({});
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedAgencyForEvents, setSelectedAgencyForEvents] = useState<string>("");
+  const [eventsStatusFilter, setEventsStatusFilter] = useState<'all' | 'active' | 'inactive'>('active');
   const [agencyEvents, setAgencyEvents] = useState<any[]>([]);
   const [eventParticipants, setEventParticipants] = useState<Record<string, number>>({});
   const [eventSubmissions, setEventSubmissions] = useState<Record<string, number>>({});
@@ -500,12 +498,11 @@ const MasterAdmin = () => {
               <TabsTrigger value="posts">Postagens</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
             </TabsList>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="guests">Convidados</TabsTrigger>
               <TabsTrigger value="plans">Planos</TabsTrigger>
               <TabsTrigger value="reports">Relatórios</TabsTrigger>
               <TabsTrigger value="settings">Configurações</TabsTrigger>
-              <TabsTrigger value="changelog">Changelog</TabsTrigger>
             </TabsList>
           </div>
 
@@ -537,7 +534,7 @@ const MasterAdmin = () => {
                 <CardDescription>Selecione uma agência para visualizar seus eventos</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <Label htmlFor="agency-select">Agência:</Label>
                   <Select
                     value={selectedAgencyForEvents}
@@ -565,52 +562,76 @@ const MasterAdmin = () => {
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {selectedAgencyForEvents && (
+                    <>
+                      <Label htmlFor="events-status-filter">Status:</Label>
+                      <Select value={eventsStatusFilter} onValueChange={(value: 'all' | 'active' | 'inactive') => setEventsStatusFilter(value)}>
+                        <SelectTrigger id="events-status-filter" className="w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Eventos Ativos</SelectItem>
+                          <SelectItem value="inactive">Eventos Inativos</SelectItem>
+                          <SelectItem value="all">Todos os Eventos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
                 </div>
 
-                {selectedAgencyForEvents && (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Evento</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Usuários Participando</TableHead>
-                        <TableHead>Total Submissões</TableHead>
-                        <TableHead>Data do Evento</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {agencyEvents.length === 0 ? (
+                {selectedAgencyForEvents && (() => {
+                  const filteredEvents = agencyEvents.filter(event => {
+                    if (eventsStatusFilter === 'all') return true;
+                    if (eventsStatusFilter === 'active') return event.is_active;
+                    return !event.is_active;
+                  });
+
+                  return (
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground">
-                            Nenhum evento encontrado
-                          </TableCell>
+                          <TableHead>Evento</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Usuários Participando</TableHead>
+                          <TableHead>Total Submissões</TableHead>
+                          <TableHead>Data do Evento</TableHead>
                         </TableRow>
-                      ) : (
-                        agencyEvents.map((event) => (
-                          <TableRow key={event.id}>
-                            <TableCell className="font-medium">{event.title}</TableCell>
-                            <TableCell>
-                              <Badge variant={event.is_active ? "default" : "secondary"}>
-                                {event.is_active ? "Ativo" : "Inativo"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{eventParticipants[event.id] || 0} usuários</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{eventSubmissions[event.id] || 0} submissões</Badge>
-                            </TableCell>
-                            <TableCell>
-                              {event.event_date
-                                ? new Date(event.event_date).toLocaleDateString("pt-BR")
-                                : "Não definida"}
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEvents.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">
+                              Nenhum evento encontrado
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
+                        ) : (
+                          filteredEvents.map((event) => (
+                            <TableRow key={event.id}>
+                              <TableCell className="font-medium">{event.title}</TableCell>
+                              <TableCell>
+                                <Badge variant={event.is_active ? "default" : "secondary"}>
+                                  {event.is_active ? "Ativo" : "Inativo"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{eventParticipants[event.id] || 0} usuários</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{eventSubmissions[event.id] || 0} submissões</Badge>
+                              </TableCell>
+                              <TableCell>
+                                {event.event_date
+                                  ? new Date(event.event_date).toLocaleDateString("pt-BR")
+                                  : "Não definida"}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -726,11 +747,6 @@ const MasterAdmin = () => {
             </Suspense>
           </TabsContent>
 
-          <TabsContent value="changelog">
-            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              <ChangelogManager />
-            </Suspense>
-          </TabsContent>
         </Tabs>
       </div>
 
