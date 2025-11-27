@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, TrendingDown, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PromoterStats {
   userId: string;
@@ -24,36 +24,23 @@ interface PromoterStats {
 
 interface DetailedGoalsReportProps {
   agencyId: string;
+  eventId: string;
 }
 
-export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
-  const [selectedEventId, setSelectedEventId] = useState<string>('');
-
-  // Buscar eventos da agência
-  const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['events-for-report', agencyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, title')
-        .eq('agency_id', agencyId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-  });
+export const DetailedGoalsReport = ({ agencyId, eventId }: DetailedGoalsReportProps) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Buscar estatísticas detalhadas por promotor
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['detailed-goals-report', selectedEventId],
-    enabled: !!selectedEventId,
+    queryKey: ['detailed-goals-report', eventId],
+    enabled: !!eventId,
     queryFn: async () => {
       // Buscar submissões aprovadas
       const { data: submissions, error: subError } = await supabase
         .from('submissions')
         .select('user_id, submission_type, status')
-        .eq('event_id', selectedEventId)
+        .eq('event_id', eventId)
         .eq('status', 'approved');
 
       if (subError) throw subError;
@@ -72,7 +59,7 @@ export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
       const { data: goals, error: goalsError } = await supabase
         .from('user_event_goals')
         .select('user_id, goal_achieved, required_posts, required_sales')
-        .eq('event_id', selectedEventId);
+        .eq('event_id', eventId);
 
       if (goalsError) throw goalsError;
 
@@ -132,9 +119,10 @@ export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
     },
   });
 
-  if (eventsLoading) {
-    return <Skeleton className="h-96 w-full" />;
-  }
+  // Paginação
+  const totalPages = Math.ceil((stats?.length || 0) / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedStats = stats?.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <Card>
@@ -148,41 +136,34 @@ export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-            <SelectTrigger className="w-full max-w-md">
-              <SelectValue placeholder="Selecione um evento" />
-            </SelectTrigger>
-            <SelectContent>
-              {events?.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {statsLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : stats && stats.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Total: <span className="font-bold text-foreground">{stats.length}</span> promotor(es)
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Página {currentPage} de {totalPages}
+              </p>
+            </div>
 
-        {selectedEventId && (
-          <>
-            {statsLoading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : stats && stats.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Promotor</TableHead>
-                      <TableHead className="text-center">Divulgação</TableHead>
-                      <TableHead className="text-center">Seleção Perfil</TableHead>
-                      <TableHead className="text-center">Vendas</TableHead>
-                      <TableHead className="text-center">Total Posts</TableHead>
-                      <TableHead className="text-center">Meta</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stats.map((promoter) => (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Promotor</TableHead>
+                    <TableHead className="text-center">Divulgação</TableHead>
+                    <TableHead className="text-center">Seleção Perfil</TableHead>
+                    <TableHead className="text-center">Vendas</TableHead>
+                    <TableHead className="text-center">Total Posts</TableHead>
+                    <TableHead className="text-center">Meta</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedStats?.map((promoter) => (
                       <TableRow key={promoter.userId}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -265,13 +246,39 @@ export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
                   </TableBody>
                 </Table>
               </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhum promotor com submissões aprovadas neste evento
-              </div>
-            )}
-          </>
-        )}
+
+              {/* Controles de paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Próximo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhum promotor com submissões aprovadas neste evento
+            </div>
+          )}
       </CardContent>
     </Card>
   );

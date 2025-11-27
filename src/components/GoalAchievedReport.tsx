@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Calendar, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -25,36 +25,27 @@ interface PromoterGoalData {
 
 interface GoalAchievedReportProps {
   agencyId: string;
+  eventId: string;
 }
 
-export const GoalAchievedReport = ({ agencyId }: GoalAchievedReportProps) => {
-  const [selectedEventId, setSelectedEventId] = useState<string>('');
-
-  // Buscar eventos da agência
-  const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['events-for-goal-report', agencyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, title')
-        .eq('agency_id', agencyId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-  });
+export const GoalAchievedReport = ({ agencyId, eventId }: GoalAchievedReportProps) => {
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof PromoterGoalData;
+    direction: 'asc' | 'desc';
+  }>({ key: 'goalAchievedAt', direction: 'desc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Buscar promotores que atingiram a meta
   const { data: promoters, isLoading: promotersLoading } = useQuery({
-    queryKey: ['goal-achieved-promoters', selectedEventId],
-    enabled: !!selectedEventId,
+    queryKey: ['goal-achieved-promoters', eventId],
+    enabled: !!eventId,
     queryFn: async () => {
       // Buscar metas atingidas
       const { data: goals, error: goalsError } = await supabase
         .from('user_event_goals')
         .select('user_id, goal_achieved_at, current_posts, current_sales, required_posts, required_sales')
-        .eq('event_id', selectedEventId)
+        .eq('event_id', eventId)
         .eq('goal_achieved', true)
         .order('goal_achieved_at', { ascending: false });
 
@@ -90,9 +81,63 @@ export const GoalAchievedReport = ({ agencyId }: GoalAchievedReportProps) => {
     },
   });
 
-  if (eventsLoading) {
-    return <Skeleton className="h-96 w-full" />;
-  }
+  // Função de ordenação
+  const handleSort = (key: keyof PromoterGoalData) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+    setCurrentPage(1);
+  };
+
+  // Dados ordenados
+  const sortedPromoters = useMemo(() => {
+    if (!promoters) return [];
+    
+    const sorted = [...promoters].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      return 0;
+    });
+    
+    return sorted;
+  }, [promoters, sortConfig]);
+
+  // Paginação
+  const totalPages = Math.ceil((sortedPromoters?.length || 0) / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedPromoters = sortedPromoters.slice(startIndex, startIndex + itemsPerPage);
+
+  // Componente de header ordenável
+  const SortableHeader = ({ column, children }: { column: keyof PromoterGoalData; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center justify-center gap-1">
+        {children}
+        {sortConfig.key === column && (
+          sortConfig.direction === 'asc' ? 
+            <ArrowUp className="h-3 w-3" /> : 
+            <ArrowDown className="h-3 w-3" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   return (
     <Card>
@@ -106,47 +151,33 @@ export const GoalAchievedReport = ({ agencyId }: GoalAchievedReportProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-            <SelectTrigger className="w-full max-w-md">
-              <SelectValue placeholder="Selecione um evento" />
-            </SelectTrigger>
-            <SelectContent>
-              {events?.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selectedEventId && (
-          <>
-            {promotersLoading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : promoters && promoters.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Total: <span className="font-bold text-foreground">{promoters.length}</span> divulgadora(s) com meta atingida
-                  </p>
-                </div>
-                
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Divulgadora</TableHead>
-                        <TableHead>Instagram</TableHead>
-                        <TableHead className="text-center">Data/Hora da Meta</TableHead>
-                        <TableHead className="text-center">Posts Feitos</TableHead>
-                        <TableHead className="text-center">Vendas Feitas</TableHead>
-                        <TableHead className="text-center">Meta Exigida</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {promoters.map((promoter) => (
+        {promotersLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : sortedPromoters && sortedPromoters.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Total: <span className="font-bold text-foreground">{sortedPromoters.length}</span> divulgadora(s) com meta atingida
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Página {currentPage} de {totalPages}
+              </p>
+            </div>
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <SortableHeader column="fullName">Divulgadora</SortableHeader>
+                    <TableHead>Instagram</TableHead>
+                    <SortableHeader column="goalAchievedAt">Data/Hora da Meta</SortableHeader>
+                    <SortableHeader column="currentPosts">Posts Feitos</SortableHeader>
+                    <SortableHeader column="currentSales">Vendas Feitas</SortableHeader>
+                    <TableHead className="text-center">Meta Exigida</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedPromoters.map((promoter) => (
                         <TableRow key={promoter.userId}>
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -205,17 +236,42 @@ export const GoalAchievedReport = ({ agencyId }: GoalAchievedReportProps) => {
                             {promoter.requiredSales > 0 && `${promoter.requiredSales} vendas`}
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhuma divulgadora atingiu a meta neste evento ainda
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Controles de paginação */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             )}
-          </>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            Nenhuma divulgadora atingiu a meta neste evento ainda
+          </div>
         )}
       </CardContent>
     </Card>

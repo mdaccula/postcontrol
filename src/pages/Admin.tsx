@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { formatPostName } from "@/lib/postNameFormatter";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -229,6 +229,8 @@ const Admin = () => {
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [selectedEventForPrediction, setSelectedEventForPrediction] = useState<string | null>(null);
   const [selectedEventForRanking, setSelectedEventForRanking] = useState<string | null>(null);
+  const [reportEventFilter, setReportEventFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  const [selectedReportEventId, setSelectedReportEventId] = useState<string>('');
   const [suggestionDialogOpen, setSuggestionDialogOpen] = useState(false); // ✅ ITEM 5 FASE 2
   const [addSubmissionDialogOpen, setAddSubmissionDialogOpen] = useState(false);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
@@ -2838,79 +2840,104 @@ const Admin = () => {
               </TabsContent>
 
               <TabsContent value="reports" className="space-y-6">
-                {/* Previsão de Esgotamento (IA) - Seletor Único */}
-                {filteredEvents.length > 0 && filteredEvents.filter((e) => e.is_active && e.numero_de_vagas).length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-bold">🤖 Previsão Detalhada de Esgotamento (IA)</h3>
-                    <div className="space-y-4">
-                      <Select value={selectedEventForPrediction || ""} onValueChange={setSelectedEventForPrediction}>
-                        <SelectTrigger className="w-full max-w-md">
-                          <SelectValue placeholder="Selecione um evento para ver a previsão" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredEvents
-                            .filter((e) => e.is_active && e.numero_de_vagas)
-                            .map((event) => (
-                              <SelectItem key={event.id} value={event.id}>
-                                {event.title}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                {/* Filtros Globais de Relatórios */}
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Filtros</CardTitle>
+                    <CardDescription>Selecione um evento para visualizar todos os relatórios</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex gap-4 flex-wrap">
+                    <Select value={reportEventFilter} onValueChange={(value: 'active' | 'inactive' | 'all') => {
+                      setReportEventFilter(value);
+                      setSelectedReportEventId('');
+                    }}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Status do evento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Eventos Ativos</SelectItem>
+                        <SelectItem value="inactive">Eventos Inativos</SelectItem>
+                        <SelectItem value="all">Todos os Eventos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select value={selectedReportEventId} onValueChange={setSelectedReportEventId}>
+                      <SelectTrigger className="w-80">
+                        <SelectValue placeholder="Selecione um evento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredEvents
+                          .filter((e) => {
+                            if (reportEventFilter === 'active') return e.is_active;
+                            if (reportEventFilter === 'inactive') return !e.is_active;
+                            return true;
+                          })
+                          .map((event) => (
+                            <SelectItem key={event.id} value={event.id}>
+                              {event.title}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
 
-                      {selectedEventForPrediction && (
-                        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                          <SlotExhaustionPrediction
-                            eventId={selectedEventForPrediction}
-                            eventTitle={filteredEvents.find((e) => e.id === selectedEventForPrediction)?.title || ""}
-                          />
-                        </Suspense>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {/* Renderizar relatórios apenas quando evento estiver selecionado */}
+                {selectedReportEventId && (
+                  <div className="space-y-6">
+                    {/* Slot Exhaustion Prediction */}
+                    {filteredEvents.find((e) => e.id === selectedReportEventId)?.numero_de_vagas && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            🤖 Previsão Detalhada de Esgotamento (IA)
+                          </CardTitle>
+                          <CardDescription>
+                            Análise inteligente sobre quando as vagas do evento devem se esgotar
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                            <SlotExhaustionPrediction
+                              eventId={selectedReportEventId}
+                              eventTitle={filteredEvents.find((e) => e.id === selectedReportEventId)?.title || ""}
+                            />
+                          </Suspense>
+                        </CardContent>
+                      </Card>
+                    )}
 
-                {/* Top Promoters Ranking - Seletor Único */}
-                {filteredEvents.length > 0 && filteredEvents.filter((e) => e.is_active).length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-xl font-bold">🏆 Ranking de Divulgadoras</h3>
-                    <div className="space-y-4">
-                      <Select value={selectedEventForRanking || ""} onValueChange={setSelectedEventForRanking}>
-                        <SelectTrigger className="w-full max-w-md">
-                          <SelectValue placeholder="Selecione um evento para ver o ranking" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredEvents
-                            .filter((e) => e.is_active)
-                            .map((event) => (
-                              <SelectItem key={event.id} value={event.id}>
-                                {event.title}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-
-                      {selectedEventForRanking && (
+                    {/* Top Promoters Ranking */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          🏆 Ranking de Divulgadoras
+                        </CardTitle>
+                        <CardDescription>
+                          Top 10 divulgadoras com melhor desempenho neste evento
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
                         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                          <TopPromotersRanking eventId={selectedEventForRanking} limit={10} />
+                          <TopPromotersRanking eventId={selectedReportEventId} limit={10} />
                         </Suspense>
-                      )}
-                    </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Relatório Detalhado de Metas por Tipo */}
+                    {profile?.agency_id && (
+                      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                        <DetailedGoalsReport agencyId={profile.agency_id} eventId={selectedReportEventId} />
+                      </Suspense>
+                    )}
+
+                    {/* Divulgadoras que bateram meta */}
+                    {profile?.agency_id && (
+                      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                        <GoalAchievedReport agencyId={profile.agency_id} eventId={selectedReportEventId} />
+                      </Suspense>
+                    )}
                   </div>
-                )}
-
-                {/* Relatório Detalhado de Metas por Tipo */}
-                {profile?.agency_id && (
-                  <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                    <DetailedGoalsReport agencyId={profile.agency_id} />
-                  </Suspense>
-                )}
-
-                {/* Nova seção: Divulgadoras que bateram meta */}
-                {profile?.agency_id && (
-                  <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                    <GoalAchievedReport agencyId={profile.agency_id} />
-                  </Suspense>
                 )}
 
               </TabsContent>
