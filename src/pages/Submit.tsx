@@ -119,10 +119,16 @@ const Submit = () => {
   const [salesCount, setSalesCount] = useState<number>(0);
   const [postsCount, setPostsCount] = useState<number>(0); // ✅ ITEM 3: Contador de postagens
   const [ticketerEmailRequired, setTicketerEmailRequired] = useState(false);
-  // 🆕 CORREÇÃO #4: Carregar do localStorage ao montar componente
-  const [userTicketerEmail, setUserTicketerEmail] = useState(
-    typeof window !== 'undefined' ? localStorage.getItem('user_ticketer_email') || "" : ""
-  );
+  // 🆕 CORREÇÃO #4: Carregar do localStorage com try-catch
+  const [userTicketerEmail, setUserTicketerEmail] = useState(() => {
+    if (typeof window === 'undefined') return "";
+    try {
+      return localStorage.getItem('user_ticketer_email') || "";
+    } catch (error) {
+      console.error('Erro ao ler localStorage (user_ticketer_email):', error);
+      return "";
+    }
+  });
 
   useEffect(() => {
     loadEvents();

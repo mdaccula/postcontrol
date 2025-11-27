@@ -1989,6 +1989,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_old_push_retries: { Args: never; Returns: undefined }
       convert_to_fixed_timezone: {
         Args: { input_timestamp: string }
         Returns: string

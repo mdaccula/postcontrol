@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { useAuthStore } from "@/stores/authStore";
 import { useGTM } from "@/hooks/useGTM";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Criar instância única do QueryClient
 const queryClient = new QueryClient({
@@ -30,11 +31,13 @@ const AppWrapper = () => {
 };
 
 createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <QueryClientProvider client={queryClient}>
-      <AppWrapper />
-    </QueryClientProvider>
-  </HelmetProvider>
+  <ErrorBoundary>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AppWrapper />
+      </QueryClientProvider>
+    </HelmetProvider>
+  </ErrorBoundary>
 );
 
 // Fallback manual para registro do SW
