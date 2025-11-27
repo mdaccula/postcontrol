@@ -141,6 +141,11 @@ const ReferralAnalytics = lazy(() =>
     default: m.ReferralAnalytics,
   })),
 );
+const GoalAchievedReport = lazy(() =>
+  import("@/components/GoalAchievedReport").then((m) => ({
+    default: m.GoalAchievedReport,
+  })),
+);
 const GoalNotificationSettings = lazy(() =>
   import("@/components/GoalNotificationSettings").then((m) => ({
     default: m.GoalNotificationSettings,
@@ -2898,6 +2903,13 @@ const Admin = () => {
                 {profile?.agency_id && (
                   <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                     <DetailedGoalsReport agencyId={profile.agency_id} />
+                  </Suspense>
+                )}
+
+                {/* Nova seção: Divulgadoras que bateram meta */}
+                {profile?.agency_id && (
+                  <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                    <GoalAchievedReport agencyId={profile.agency_id} />
                   </Suspense>
                 )}
 

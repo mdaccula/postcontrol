@@ -168,19 +168,60 @@ Responda em JSON:
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices?.[0]?.message?.content || "{}";
 
-    let prediction;
+    let aiPrediction;
     try {
-      prediction = JSON.parse(aiContent);
+      aiPrediction = JSON.parse(aiContent);
     } catch {
-      prediction = {
+      aiPrediction = {
         probability: Math.round((approvedPosts / totalPosts) * 100),
-        suggestions: ["Continue enviando posts regularmente"],
+        risks: ["Dados insuficientes para análise detalhada"],
+        recommendations: ["Continue enviando posts regularmente"],
+        insight: "Mantenha o ritmo de postagens para atingir a meta"
       };
     }
 
+    // Calcular data prevista de esgotamento baseado na velocidade atual
+    const postsRemaining = totalPosts - approvedPosts;
+    const avgPostsPerDay = daysRemaining > 0 ? approvedPosts / Math.max(1, 30 - daysRemaining) : 0;
+    const daysToComplete = avgPostsPerDay > 0 ? postsRemaining / avgPostsPerDay : daysRemaining || 7;
+    const predictedDate = new Date();
+    predictedDate.setDate(predictedDate.getDate() + Math.ceil(daysToComplete));
+
+    // Determinar nível de confiança baseado em dados disponíveis
+    let confidenceLevel: 'baixa' | 'média' | 'alta' = 'média';
+    if (approvedPosts < 3 || daysRemaining > 20) {
+      confidenceLevel = 'baixa';
+    } else if (approvedPosts >= 10 && daysRemaining <= 10) {
+      confidenceLevel = 'alta';
+    }
+
+    const confidencePercentage = aiPrediction.probability || 
+                                  Math.min(95, Math.max(20, Math.round((approvedPosts / totalPosts) * 100)));
+
     return new Response(
       JSON.stringify({
-        ...prediction,
+        success: true,
+        message: "Previsão gerada com sucesso",
+        prediction: {
+          predicted_exhaustion_date: predictedDate.toISOString(),
+          confidence_level: confidenceLevel,
+          confidence_percentage: confidencePercentage,
+          hours_until_exhaustion: daysToComplete * 24,
+          factors: aiPrediction.risks || [
+            `${approvedPosts} posts aprovados de ${totalPosts} total`,
+            `${pendingPosts} posts pendentes de aprovação`,
+            `${daysRemaining} dias restantes até o evento`
+          ],
+          recommendations: aiPrediction.recommendations || [
+            "Mantenha frequência constante de postagens",
+            "Acompanhe aprovações diárias",
+            "Engaje com seguidores para aumentar alcance"
+          ],
+          analysis: aiPrediction.insight || 
+                   `Com base no ritmo atual de ${approvedPosts} posts aprovados, você está ${
+                     approvedPosts >= totalPosts * 0.7 ? 'no caminho certo' : 'precisando acelerar'
+                   } para atingir a meta de ${totalPosts} posts até ${event.event_date}.`
+        },
         stats: {
           totalPosts,
           approvedPosts,

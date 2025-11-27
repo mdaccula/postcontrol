@@ -49,22 +49,24 @@ export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
     queryKey: ['detailed-goals-report', selectedEventId],
     enabled: !!selectedEventId,
     queryFn: async () => {
-      // Buscar submissões agrupadas por usuário e tipo
+      // Buscar submissões aprovadas
       const { data: submissions, error: subError } = await supabase
         .from('submissions')
-        .select(`
-          user_id,
-          submission_type,
-          status,
-          profiles:user_id (
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('user_id, submission_type, status')
         .eq('event_id', selectedEventId)
         .eq('status', 'approved');
 
       if (subError) throw subError;
+      if (!submissions || submissions.length === 0) return [];
+
+      // Buscar perfis dos usuários únicos
+      const uniqueUserIds = [...new Set(submissions.map(s => s.user_id))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', uniqueUserIds);
+
+      if (profilesError) throw profilesError;
 
       // Buscar metas dos usuários
       const { data: goals, error: goalsError } = await supabase
@@ -74,17 +76,21 @@ export const DetailedGoalsReport = ({ agencyId }: DetailedGoalsReportProps) => {
 
       if (goalsError) throw goalsError;
 
+      // Criar mapa de perfis para lookup rápido
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
       // Agrupar por usuário
       const userMap = new Map<string, PromoterStats>();
 
-      submissions?.forEach((sub: any) => {
+      submissions.forEach((sub) => {
         const userId = sub.user_id;
+        const profile = profileMap.get(userId);
         
         if (!userMap.has(userId)) {
           userMap.set(userId, {
             userId,
-            fullName: sub.profiles?.full_name || 'Sem nome',
-            avatarUrl: sub.profiles?.avatar_url || null,
+            fullName: profile?.full_name || 'Sem nome',
+            avatarUrl: profile?.avatar_url || null,
             divulgacaoCount: 0,
             selecaoPerfilCount: 0,
             salesCount: 0,
