@@ -20,6 +20,9 @@ const loginSchema = z.object({
 const signupSchema = loginSchema.extend({
   fullName: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(100, "Nome muito longo"),
   gender: z.string().min(1, "Selecione um gênero"),
+  phone: z.string().optional().transform(val => val?.replace(/\D/g, '')),
+  instagram: z.string().optional().transform(val => val?.replace('@', '')),
+  followersRange: z.string().optional(),
   confirmPassword: z.string().min(6, "Confirmação de senha obrigatória"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
@@ -37,6 +40,9 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [gender, setGender] = useState("");
+  const [phone, setPhone] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [followersRange, setFollowersRange] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -232,7 +238,7 @@ const Auth = () => {
         }
       } else {
         try {
-          signupSchema.parse({ email, password, fullName, gender, confirmPassword });
+          signupSchema.parse({ email, password, fullName, gender, phone, instagram, followersRange, confirmPassword });
         } catch (error) {
           if (error instanceof z.ZodError) {
             toast({
@@ -254,6 +260,9 @@ const Auth = () => {
             data: {
               full_name: fullName.trim(),
               gender: gender,
+              phone: phone.replace(/\D/g, ''),
+              instagram: instagram.replace('@', ''),
+              followers_range: followersRange || null,
             }
           }
         });
@@ -464,6 +473,48 @@ const Auth = () => {
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
                       <option value="LGBTQ+">LGBTQ+</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input 
+                      id="phone" 
+                      type="tel"
+                      placeholder="(11) 99999-9999" 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="instagram">Instagram</Label>
+                    <Input 
+                      id="instagram" 
+                      placeholder="@seu_usuario" 
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="followersRange">Faixa de Seguidores</Label>
+                    <select
+                      id="followersRange"
+                      value={followersRange}
+                      onChange={(e) => setFollowersRange(e.target.value)}
+                      disabled={loading}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="0-1k">0 - 1k</option>
+                      <option value="1k-5k">1k - 5k</option>
+                      <option value="5k-10k">5k - 10k</option>
+                      <option value="10k-50k">10k - 50k</option>
+                      <option value="50k-100k">50k - 100k</option>
+                      <option value="100k+">100k+</option>
                     </select>
                   </div>
                 </>
