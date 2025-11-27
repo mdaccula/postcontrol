@@ -78,16 +78,35 @@ export const DateSelector = ({
   };
   
   const getDatePrices = (date: GuestListDate) => {
-    const types = date.price_types || (date.price_type ? [date.price_type] : ['entry_only']);
-    
+    const orderedTypes: string[] = ['entry_only', 'consumable_only', 'entry_plus_half', 'entry_plus_full'];
+
+    // Prioridade: usar explicitamente o que foi marcado em price_types
+    let types = date.price_types && date.price_types.length > 0
+      ? date.price_types
+      : [];
+
+    // Fallback: se não houver price_types (dados antigos ou inconsistentes),
+    // inferir a partir dos tipos que possuem preço configurado em price_details
+    if (types.length === 0 && date.price_details) {
+      types = orderedTypes.filter((type) => {
+        const prices = date.price_details?.[type];
+        return prices && (prices.female > 0 || prices.male > 0);
+      });
+    }
+
+    // Fallback final para dados bem antigos: usar price_type único ou entry_only
+    if (types.length === 0) {
+      types = date.price_type ? [date.price_type] : ['entry_only'];
+    }
+
     return types.map((type) => {
-      const prices = date.price_details?.[type] || { 
-        female: date.female_price, 
-        male: date.male_price 
+      const prices = date.price_details?.[type] || {
+        female: date.female_price,
+        male: date.male_price,
       };
-      
+
       const priceLabel = getPriceTypeLabel(type);
-      
+
       if (userGender === 'feminino') {
         return { label: priceLabel, price: formatPrice(prices.female) };
       } else if (userGender === 'masculino') {
@@ -95,7 +114,7 @@ export const DateSelector = ({
       } else {
         return {
           label: priceLabel,
-          price: `${formatPrice(prices.female)} (F) / ${formatPrice(prices.male)} (M)`
+          price: `${formatPrice(prices.female)} (F) / ${formatPrice(prices.male)} (M)`,
         };
       }
     });
