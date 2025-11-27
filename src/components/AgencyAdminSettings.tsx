@@ -45,6 +45,7 @@ export const AgencyAdminSettings = () => {
   const [whatsappGroupUrl, setWhatsappGroupUrl] = useState("");
   const [ticketsGroupUrl, setTicketsGroupUrl] = useState("");
   const [supportWhatsapp, setSupportWhatsapp] = useState("");
+  const [notificationEmail, setNotificationEmail] = useState(""); // 🆕
 
   // Personal Data
   const [fullName, setFullName] = useState("");
@@ -115,7 +116,7 @@ export const AgencyAdminSettings = () => {
         const { data: agencyData, error: agencyError } = await sb
           .from("agencies")
           .select(
-            "name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url, invite_message_template, support_whatsapp",
+            "name, subscription_plan, plan_expiry_date, subscription_status, logo_url, og_image_url, instagram_url, website_url, whatsapp_group_url, tickets_group_url, invite_message_template, support_whatsapp, notification_email",
           )
           .eq("id", profileData.agency_id)
           .maybeSingle();
@@ -146,6 +147,7 @@ export const AgencyAdminSettings = () => {
           setTicketsGroupUrl(agencyData.tickets_group_url || "");
           setInviteMessageTemplate(agencyData.invite_message_template || "");
           setSupportWhatsapp(agencyData.support_whatsapp || "");
+          setNotificationEmail(agencyData.notification_email || ""); // 🆕
         } else {
           console.warn("[LOAD] ⚠️ Dados da agência não encontrados");
         }
@@ -337,6 +339,7 @@ export const AgencyAdminSettings = () => {
           tickets_group_url: ticketsGroupUrl || null,
           invite_message_template: inviteMessageTemplate || null,
           support_whatsapp: supportWhatsapp || null,
+          notification_email: notificationEmail || null, // 🆕
         };
 
         console.log("[SAVE] Salvando dados da agência:", agencyData);
@@ -560,6 +563,25 @@ export const AgencyAdminSettings = () => {
             <p className="text-xs text-muted-foreground">
               Este número aparecerá no botão flutuante do WhatsApp para os promotores da sua agência. Use o formato
               completo: 55 + DDD + número
+            </p>
+          </div>
+
+          {/* 🆕 Email de Notificação */}
+          <div className="space-y-2">
+            <Label htmlFor="notificationEmail">
+              <MessageCircle className="inline mr-2 h-4 w-4" />
+              Email para Notificações Automáticas
+            </Label>
+            <Input
+              id="notificationEmail"
+              type="email"
+              placeholder="notificacoes@agencia.com.br"
+              value={notificationEmail}
+              onChange={(e) => setNotificationEmail(e.target.value)}
+              disabled={saving}
+            />
+            <p className="text-xs text-muted-foreground">
+              Email que receberá as listas de participantes de eventos da lista VIP automaticamente quando o horário chegar
             </p>
           </div>
         </div>

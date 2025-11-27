@@ -6,6 +6,7 @@ interface SlotStats {
   occupied_slots: number;
   available_slots: number;
   occupancy_percentage: number;
+  total_participants: number; // 🆕 Total de participantes (batendo meta ou não)
 }
 
 export const useEventAvailableSlots = (eventId: string | null) => {

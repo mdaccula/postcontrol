@@ -12,6 +12,7 @@ import { sb } from "@/lib/supabaseSafe";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, Lock, Save, FileText, X, Info, Settings, Users, Sparkles, Target } from "lucide-react";
 import { useEventTemplates } from "@/hooks/useEventTemplates";
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EventDialogProps {
   open: boolean;
@@ -63,6 +64,7 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
   const [templateName, setTemplateName] = useState("");
   const { toast } = useToast();
   const { templates, loadTemplates, saveTemplate, deleteTemplate } = useEventTemplates();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const loadEventData = async () => {
@@ -475,6 +477,10 @@ export const EventDialog = ({ open, onOpenChange, onEventCreated, event }: Event
         title: event ? "Evento atualizado!" : "Evento criado!",
         description: event ? "O evento foi atualizado com sucesso." : "O evento foi criado com sucesso.",
       });
+
+      // 🆕 Forçar atualização do cache de eventos
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+      console.log('✅ Cache de eventos invalidado - eventos serão atualizados automaticamente');
 
       onEventCreated();
       onOpenChange(false);

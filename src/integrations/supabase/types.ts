@@ -61,6 +61,7 @@ export type Database = {
           max_events: number | null
           max_influencers: number | null
           name: string
+          notification_email: string | null
           og_image_url: string | null
           owner_id: string | null
           plan_expiry_date: string | null
@@ -88,6 +89,7 @@ export type Database = {
           max_events?: number | null
           max_influencers?: number | null
           name: string
+          notification_email?: string | null
           og_image_url?: string | null
           owner_id?: string | null
           plan_expiry_date?: string | null
@@ -115,6 +117,7 @@ export type Database = {
           max_events?: number | null
           max_influencers?: number | null
           name?: string
+          notification_email?: string | null
           og_image_url?: string | null
           owner_id?: string | null
           plan_expiry_date?: string | null
@@ -758,9 +761,11 @@ export type Database = {
           male_price: number
           max_capacity: number | null
           name: string | null
+          notification_sent_at: string | null
           price_details: Json | null
           price_type: string | null
           price_types: string[] | null
+          send_notification_email: boolean | null
           show_alternative_after_start: boolean | null
           start_time: string | null
         }
@@ -780,9 +785,11 @@ export type Database = {
           male_price: number
           max_capacity?: number | null
           name?: string | null
+          notification_sent_at?: string | null
           price_details?: Json | null
           price_type?: string | null
           price_types?: string[] | null
+          send_notification_email?: boolean | null
           show_alternative_after_start?: boolean | null
           start_time?: string | null
         }
@@ -802,9 +809,11 @@ export type Database = {
           male_price?: number
           max_capacity?: number | null
           name?: string | null
+          notification_sent_at?: string | null
           price_details?: Json | null
           price_type?: string | null
           price_types?: string[] | null
+          send_notification_email?: boolean | null
           show_alternative_after_start?: boolean | null
           start_time?: string | null
         }
@@ -2033,6 +2042,7 @@ export type Database = {
           available_slots: number
           occupancy_percentage: number
           occupied_slots: number
+          total_participants: number
           total_slots: number
         }[]
       }

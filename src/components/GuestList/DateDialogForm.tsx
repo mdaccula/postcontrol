@@ -32,6 +32,8 @@ interface GuestListDate {
   alternative_link_female?: string | null;
   alternative_link_male?: string | null;
   show_alternative_after_start?: boolean;
+  send_notification_email?: boolean; // 🆕
+  notification_sent_at?: string | null; // 🆕
   created_at?: string;
 }
 
@@ -76,6 +78,7 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
     alternative_link_female: date?.alternative_link_female || "",
     alternative_link_male: date?.alternative_link_male || "",
     show_alternative_after_start: date?.show_alternative_after_start ?? false,
+    send_notification_email: date?.send_notification_email ?? false, // 🆕
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -655,6 +658,25 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
           </div>
           <p className="text-xs text-muted-foreground ml-9">
             Em vez de esconder a data, mostra links alternativos para os usuários
+          </p>
+        </div>
+
+        {/* 🆕 Envio automático de email */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="send_notification_email"
+              checked={formData.send_notification_email}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, send_notification_email: checked })
+              }
+            />
+            <Label htmlFor="send_notification_email">
+              📧 Enviar lista por email automaticamente
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground ml-9">
+            Quando o horário do evento chegar, a lista completa de participantes será enviada para o email de notificação cadastrado na agência
           </p>
         </div>
 

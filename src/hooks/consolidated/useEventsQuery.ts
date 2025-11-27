@@ -81,8 +81,8 @@ export const useEventsQuery = ({
       };
     },
     enabled,
-    staleTime: 10 * 60 * 1000, // ✅ Cache otimizado - 10 minutos
-    gcTime: 20 * 60 * 1000,    // ✅ Cache otimizado - 20 minutos
+    staleTime: 2 * 60 * 1000, // ✅ Cache reduzido para 2 minutos - eventos aparecem mais rápido
+    gcTime: 10 * 60 * 1000,    // ✅ Cache otimizado - 10 minutos
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,

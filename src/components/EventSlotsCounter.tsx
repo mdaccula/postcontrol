@@ -73,6 +73,24 @@ export const EventSlotsCounter = ({ eventId, eventTitle, variant = 'compact' }: 
             <h3 className="font-bold text-lg">{eventTitle}</h3>
           </div>
         )}
+        
+        {/* 🆕 Participantes Totais */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-semibold text-lg">{slots.total_participants}</p>
+              <p className="text-xs text-muted-foreground">Participantes totais</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="font-semibold text-green-600 dark:text-green-400">
+              {slots.occupied_slots} ✅
+            </p>
+            <p className="text-xs text-muted-foreground">Bateram meta</p>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
