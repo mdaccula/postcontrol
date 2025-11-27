@@ -19,6 +19,8 @@ interface GuestListDate {
   start_time?: string | null;
   end_time?: string | null;
   price_type?: string;
+  price_types?: string[];
+  price_details?: Record<string, { female: number; male: number }>;
   important_info?: string | null;
   alternative_link_female?: string | null;
   alternative_link_male?: string | null;
@@ -63,25 +65,40 @@ export const DateSelector = ({
   const getPriceTypeLabel = (priceType?: string) => {
     switch (priceType) {
       case 'entry_only':
-        return 'Entrada';
+        return 'Valor Seco (Apenas Entrada)';
       case 'consumable_only':
-        return 'Consumível';
+        return 'Consumível (Entrada Grátis)';
       case 'entry_plus_half':
         return 'Entrada + Consome Metade';
       case 'entry_plus_full':
         return 'Entrada + Consome Integral';
       default:
-        return 'Entrada';
+        return 'Valor Seco';
     }
   };
   
-  const getDatePrice = (date: GuestListDate) => {
-    const price = userGender === 'feminino' ? date.female_price : userGender === 'masculino' ? date.male_price : null;
-    const priceLabel = getPriceTypeLabel(date.price_type);
-    if (price !== null) {
-      return `${formatPrice(price)} (${priceLabel})`;
-    }
-    return `${formatPrice(date.female_price)} (F) / ${formatPrice(date.male_price)} (M) - ${priceLabel}`;
+  const getDatePrices = (date: GuestListDate) => {
+    const types = date.price_types || (date.price_type ? [date.price_type] : ['entry_only']);
+    
+    return types.map((type) => {
+      const prices = date.price_details?.[type] || { 
+        female: date.female_price, 
+        male: date.male_price 
+      };
+      
+      const priceLabel = getPriceTypeLabel(type);
+      
+      if (userGender === 'feminino') {
+        return { label: priceLabel, price: formatPrice(prices.female) };
+      } else if (userGender === 'masculino') {
+        return { label: priceLabel, price: formatPrice(prices.male) };
+      } else {
+        return {
+          label: priceLabel,
+          price: `${formatPrice(prices.female)} (F) / ${formatPrice(prices.male)} (M)`
+        };
+      }
+    });
   };
 
   return (
@@ -173,11 +190,20 @@ export const DateSelector = ({
                         
                         <div className="pt-1 flex-col flex items-start justify-between my-[20px]">
                           <span className="text-xs text-muted-foreground font-bold py-0 mt-0 my-0">
-                            Valor:
+                            {getDatePrices(date).length > 1 ? 'Valores:' : 'Valor:'}
                           </span>
-                          <span className="font-semibold text-base text-left text-slate-900 px-0 py-0 mt-0 mb-[10px]">
-                            {getDatePrice(date)}
-                          </span>
+                          <div className="space-y-1 w-full">
+                            {getDatePrices(date).map((priceInfo, idx) => (
+                              <div key={idx} className="flex flex-col items-start">
+                                <span className="text-xs text-muted-foreground">
+                                  {priceInfo.label}
+                                </span>
+                                <span className="font-semibold text-base text-left text-slate-900 px-0 py-0">
+                                  {priceInfo.price}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         
                         {date.important_info && (

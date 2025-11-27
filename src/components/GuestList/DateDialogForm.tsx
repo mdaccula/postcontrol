@@ -27,6 +27,7 @@ interface GuestListDate {
   auto_deactivate_after_start?: boolean;
   price_type?: string;
   price_types?: string[];
+  price_details?: Record<string, { female: number; male: number }>;
   important_info?: string | null;
   alternative_link_female?: string | null;
   alternative_link_male?: string | null;
@@ -41,11 +42,23 @@ interface DateDialogFormProps {
 }
 
 export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps) {
+  const initializePriceDetails = () => {
+    if (date?.price_details && Object.keys(date.price_details).length > 0) {
+      return date.price_details;
+    }
+    // Inicializar com valores padrão dos campos antigos
+    const defaultPrice = { female: date?.female_price || 0, male: date?.male_price || 0 };
+    return {
+      entry_only: defaultPrice,
+      consumable_only: defaultPrice,
+      entry_plus_half: defaultPrice,
+      entry_plus_full: defaultPrice,
+    };
+  };
+
   const [formData, setFormData] = useState({
     event_date: date?.event_date || format(new Date(), "yyyy-MM-dd"),
     name: date?.name || "",
-    female_price: date?.female_price || 0,
-    male_price: date?.male_price || 0,
     max_capacity: date?.max_capacity || null,
     is_active: date?.is_active ?? true,
     image_url: date?.image_url || "",
@@ -53,6 +66,7 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
     end_time: date?.end_time?.slice(0, 5) || "",
     auto_deactivate_after_start: date?.auto_deactivate_after_start ?? false,
     price_types: date?.price_types || date?.price_type ? [date.price_type] : ["entry_only"],
+    price_details: initializePriceDetails(),
     important_info: date?.important_info || "",
     alternative_link_female: date?.alternative_link_female || "",
     alternative_link_male: date?.alternative_link_male || "",
@@ -122,16 +136,29 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validar que pelo menos um tipo foi selecionado
+    if (formData.price_types.length === 0) {
+      toast.error("Selecione pelo menos um tipo de valor");
+      return;
+    }
+    
     const imageUrl = await uploadImage();
+    
+    // Calcular female_price e male_price para compatibilidade (usar primeiro tipo selecionado)
+    const firstType = formData.price_types[0];
+    const firstTypePrices = formData.price_details[firstType];
     
     onSubmit({
       ...formData,
+      female_price: firstTypePrices.female,
+      male_price: firstTypePrices.male,
       image_url: imageUrl || null,
       name: formData.name || null,
       start_time: formData.start_time ? `${formData.start_time}:00` : null,
       end_time: formData.end_time ? `${formData.end_time}:00` : null,
       auto_deactivate_after_start: formData.auto_deactivate_after_start,
       price_types: formData.price_types,
+      price_details: formData.price_details,
       important_info: formData.important_info || null,
       alternative_link_female: formData.alternative_link_female || null,
       alternative_link_male: formData.alternative_link_male || null,
@@ -233,114 +260,303 @@ export function DateDialogForm({ date, onSubmit, onCancel }: DateDialogFormProps
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="female_price">Valor Feminino (R$) *</Label>
-          <Input
-            id="female_price"
-            type="number"
-            step="0.01"
-            value={formData.female_price}
-            onChange={(e) =>
-              setFormData({ ...formData, female_price: parseFloat(e.target.value) })
-            }
-            required
-          />
-        </div>
+      {/* Campos de preço removidos - agora são específicos por tipo */}
 
-        <div className="space-y-2">
-          <Label htmlFor="male_price">Valor Masculino (R$) *</Label>
-          <Input
-            id="male_price"
-            type="number"
-            step="0.01"
-            value={formData.male_price}
-            onChange={(e) =>
-              setFormData({ ...formData, male_price: parseFloat(e.target.value) })
-            }
-            required
-          />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <Label>Tipo(s) de Valor *</Label>
-        <div className="space-y-3 pl-1">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="entry_only"
-              checked={formData.price_types.includes("entry_only")}
-              onCheckedChange={(checked) => {
-                setFormData({
-                  ...formData,
-                  price_types: checked
-                    ? [...formData.price_types, "entry_only"]
-                    : formData.price_types.filter((t) => t !== "entry_only"),
-                });
-              }}
-            />
-            <Label htmlFor="entry_only" className="font-normal cursor-pointer">
-              Valor Seco (Apenas Entrada)
-            </Label>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="consumable_only"
-              checked={formData.price_types.includes("consumable_only")}
-              onCheckedChange={(checked) => {
-                setFormData({
-                  ...formData,
-                  price_types: checked
-                    ? [...formData.price_types, "consumable_only"]
-                    : formData.price_types.filter((t) => t !== "consumable_only"),
-                });
-              }}
-            />
-            <Label htmlFor="consumable_only" className="font-normal cursor-pointer">
-              Consumível (Entrada Grátis)
-            </Label>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="entry_plus_half"
-              checked={formData.price_types.includes("entry_plus_half")}
-              onCheckedChange={(checked) => {
-                setFormData({
-                  ...formData,
-                  price_types: checked
-                    ? [...formData.price_types, "entry_plus_half"]
-                    : formData.price_types.filter((t) => t !== "entry_plus_half"),
-                });
-              }}
-            />
-            <Label htmlFor="entry_plus_half" className="font-normal cursor-pointer">
-              Entrada + Consome Metade
-            </Label>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="entry_plus_full"
-              checked={formData.price_types.includes("entry_plus_full")}
-              onCheckedChange={(checked) => {
-                setFormData({
-                  ...formData,
-                  price_types: checked
-                    ? [...formData.price_types, "entry_plus_full"]
-                    : formData.price_types.filter((t) => t !== "entry_plus_full"),
-                });
-              }}
-            />
-            <Label htmlFor="entry_plus_full" className="font-normal cursor-pointer">
-              Entrada + Consome Valor Integral
-            </Label>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Selecione uma ou mais opções de como o valor será cobrado/utilizado no evento
+      <div className="space-y-4">
+        <Label>Tipo(s) de Valor e Preços *</Label>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Selecione os tipos disponíveis e defina os valores para cada um
         </p>
+        
+        <div className="space-y-4">
+          {/* Valor Seco */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="entry_only"
+                checked={formData.price_types.includes("entry_only")}
+                onCheckedChange={(checked) => {
+                  setFormData({
+                    ...formData,
+                    price_types: checked
+                      ? [...formData.price_types, "entry_only"]
+                      : formData.price_types.filter((t) => t !== "entry_only"),
+                  });
+                }}
+              />
+              <Label htmlFor="entry_only" className="font-medium cursor-pointer">
+                Valor Seco (Apenas Entrada)
+              </Label>
+            </div>
+            
+            {formData.price_types.includes("entry_only") && (
+              <div className="grid grid-cols-2 gap-3 ml-6">
+                <div className="space-y-1">
+                  <Label htmlFor="entry_only_female" className="text-xs">Feminino (R$)</Label>
+                  <Input
+                    id="entry_only_female"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.entry_only?.female || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          entry_only: {
+                            ...formData.price_details.entry_only,
+                            female: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="entry_only_male" className="text-xs">Masculino (R$)</Label>
+                  <Input
+                    id="entry_only_male"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.entry_only?.male || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          entry_only: {
+                            ...formData.price_details.entry_only,
+                            male: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Consumível */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="consumable_only"
+                checked={formData.price_types.includes("consumable_only")}
+                onCheckedChange={(checked) => {
+                  setFormData({
+                    ...formData,
+                    price_types: checked
+                      ? [...formData.price_types, "consumable_only"]
+                      : formData.price_types.filter((t) => t !== "consumable_only"),
+                  });
+                }}
+              />
+              <Label htmlFor="consumable_only" className="font-medium cursor-pointer">
+                Consumível (Entrada Grátis)
+              </Label>
+            </div>
+            
+            {formData.price_types.includes("consumable_only") && (
+              <div className="grid grid-cols-2 gap-3 ml-6">
+                <div className="space-y-1">
+                  <Label htmlFor="consumable_only_female" className="text-xs">Feminino (R$)</Label>
+                  <Input
+                    id="consumable_only_female"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.consumable_only?.female || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          consumable_only: {
+                            ...formData.price_details.consumable_only,
+                            female: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="consumable_only_male" className="text-xs">Masculino (R$)</Label>
+                  <Input
+                    id="consumable_only_male"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.consumable_only?.male || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          consumable_only: {
+                            ...formData.price_details.consumable_only,
+                            male: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Entrada + Consome Metade */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="entry_plus_half"
+                checked={formData.price_types.includes("entry_plus_half")}
+                onCheckedChange={(checked) => {
+                  setFormData({
+                    ...formData,
+                    price_types: checked
+                      ? [...formData.price_types, "entry_plus_half"]
+                      : formData.price_types.filter((t) => t !== "entry_plus_half"),
+                  });
+                }}
+              />
+              <Label htmlFor="entry_plus_half" className="font-medium cursor-pointer">
+                Entrada + Consome Metade
+              </Label>
+            </div>
+            
+            {formData.price_types.includes("entry_plus_half") && (
+              <div className="grid grid-cols-2 gap-3 ml-6">
+                <div className="space-y-1">
+                  <Label htmlFor="entry_plus_half_female" className="text-xs">Feminino (R$)</Label>
+                  <Input
+                    id="entry_plus_half_female"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.entry_plus_half?.female || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          entry_plus_half: {
+                            ...formData.price_details.entry_plus_half,
+                            female: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="entry_plus_half_male" className="text-xs">Masculino (R$)</Label>
+                  <Input
+                    id="entry_plus_half_male"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.entry_plus_half?.male || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          entry_plus_half: {
+                            ...formData.price_details.entry_plus_half,
+                            male: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Entrada + Consome Valor Integral */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="entry_plus_full"
+                checked={formData.price_types.includes("entry_plus_full")}
+                onCheckedChange={(checked) => {
+                  setFormData({
+                    ...formData,
+                    price_types: checked
+                      ? [...formData.price_types, "entry_plus_full"]
+                      : formData.price_types.filter((t) => t !== "entry_plus_full"),
+                  });
+                }}
+              />
+              <Label htmlFor="entry_plus_full" className="font-medium cursor-pointer">
+                Entrada + Consome Valor Integral
+              </Label>
+            </div>
+            
+            {formData.price_types.includes("entry_plus_full") && (
+              <div className="grid grid-cols-2 gap-3 ml-6">
+                <div className="space-y-1">
+                  <Label htmlFor="entry_plus_full_female" className="text-xs">Feminino (R$)</Label>
+                  <Input
+                    id="entry_plus_full_female"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.entry_plus_full?.female || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          entry_plus_full: {
+                            ...formData.price_details.entry_plus_full,
+                            female: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="entry_plus_full_male" className="text-xs">Masculino (R$)</Label>
+                  <Input
+                    id="entry_plus_full_male"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.price_details.entry_plus_full?.male || 0}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_details: {
+                          ...formData.price_details,
+                          entry_plus_full: {
+                            ...formData.price_details.entry_plus_full,
+                            male: parseFloat(e.target.value) || 0,
+                          },
+                        },
+                      })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">

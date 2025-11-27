@@ -46,6 +46,7 @@ interface GuestListDate {
   end_time?: string;
   auto_deactivate_after_start?: boolean;
   price_types?: string[];
+  price_details?: Record<string, { female: number; male: number }>;
   important_info?: string | null;
   alternative_link_female?: string | null;
   alternative_link_male?: string | null;
@@ -119,7 +120,7 @@ export default function GuestListRegister() {
       }
 
       // Filtrar datas que devem ser desativadas após início OU mostrar com links alternativos
-      const activeDates = datesData.filter(date => {
+      const activeDates = (datesData as unknown as GuestListDate[]).filter(date => {
         if (!date.auto_deactivate_after_start) return true;
         if (!date.start_time) return true;
         

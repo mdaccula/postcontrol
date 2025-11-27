@@ -84,6 +84,7 @@ interface GuestListDate {
   auto_deactivate_after_start?: boolean;
   price_type?: string;
   price_types?: string[];
+  price_details?: Record<string, { female: number; male: number }>;
   important_info?: string | null;
   created_at?: string;
 }
@@ -168,7 +169,7 @@ export default function GuestListManager() {
         .order("event_date", { ascending: true });
 
       if (error) throw error;
-      return data as GuestListDate[];
+      return data as unknown as GuestListDate[];
     },
     enabled: !!selectedEvent,
   });
@@ -183,7 +184,7 @@ export default function GuestListManager() {
         .order("event_date", { ascending: true });
 
       if (error) throw error;
-      return data as GuestListDate[];
+      return data as unknown as GuestListDate[];
     },
   });
 
@@ -802,9 +803,7 @@ export default function GuestListManager() {
                         <SortableHeader columnKey="event_date">Data</SortableHeader>
                         <SortableHeader columnKey="name">Nome</SortableHeader>
                         <TableHead>Horários</TableHead>
-                        <SortableHeader columnKey="female_price">Valor F</SortableHeader>
-                        <SortableHeader columnKey="male_price">Valor M</SortableHeader>
-                        <TableHead>Tipo(s)</TableHead>
+                        <TableHead>Valores por Tipo</TableHead>
                         <SortableHeader columnKey="is_active">Status</SortableHeader>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -812,7 +811,7 @@ export default function GuestListManager() {
                     <TableBody>
                       {datesLoading ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center">
+                          <TableCell colSpan={6} className="text-center">
                             Carregando...
                           </TableCell>
                         </TableRow>
@@ -838,18 +837,24 @@ export default function GuestListManager() {
                                 "-"
                               )}
                             </TableCell>
-                            <TableCell>R$ {date.female_price.toFixed(2)}</TableCell>
-                            <TableCell>R$ {date.male_price.toFixed(2)}</TableCell>
                             <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {(date.price_types || (date.price_type ? [date.price_type] : ["entry_only"])).map((type) => (
-                                  <Badge key={type} variant="outline" className="text-xs">
-                                    {type === "entry_only" && "Seco"}
-                                    {type === "consumable_only" && "Consumível"}
-                                    {type === "entry_plus_half" && "½ Consome"}
-                                    {type === "entry_plus_full" && "Consome Total"}
-                                  </Badge>
-                                ))}
+                              <div className="text-xs space-y-2">
+                                {(date.price_types || (date.price_type ? [date.price_type] : ["entry_only"])).map((type) => {
+                                  const prices = date.price_details?.[type] || { female: date.female_price, male: date.male_price };
+                                  return (
+                                    <div key={type} className="flex flex-col gap-0.5 border-l-2 border-primary/30 pl-2">
+                                      <div className="font-medium text-foreground">
+                                        {type === "entry_only" && "Valor Seco"}
+                                        {type === "consumable_only" && "Consumível"}
+                                        {type === "entry_plus_half" && "Entrada + ½ Consome"}
+                                        {type === "entry_plus_full" && "Entrada + Consome Total"}
+                                      </div>
+                                      <div className="text-muted-foreground">
+                                        F: R$ {prices.female.toFixed(2)} • M: R$ {prices.male.toFixed(2)}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -894,7 +899,7 @@ export default function GuestListManager() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center text-muted-foreground">
                             Nenhuma data cadastrada
                           </TableCell>
                         </TableRow>

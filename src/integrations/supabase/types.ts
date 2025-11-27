@@ -758,6 +758,7 @@ export type Database = {
           male_price: number
           max_capacity: number | null
           name: string | null
+          price_details: Json | null
           price_type: string | null
           price_types: string[] | null
           show_alternative_after_start: boolean | null
@@ -779,6 +780,7 @@ export type Database = {
           male_price: number
           max_capacity?: number | null
           name?: string | null
+          price_details?: Json | null
           price_type?: string | null
           price_types?: string[] | null
           show_alternative_after_start?: boolean | null
@@ -800,6 +802,7 @@ export type Database = {
           male_price?: number
           max_capacity?: number | null
           name?: string | null
+          price_details?: Json | null
           price_type?: string | null
           price_types?: string[] | null
           show_alternative_after_start?: boolean | null
