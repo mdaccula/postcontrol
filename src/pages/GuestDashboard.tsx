@@ -247,6 +247,11 @@ export const GuestDashboard = () => {
     resetPage();
   }, [selectedPostId, selectedStatus, selectedFollowerRange, startDate, endDate, searchTerm, resetPage]);
 
+  // Limpar seleções ao trocar de evento
+  useEffect(() => {
+    setSelectedSubmissions(new Set());
+  }, [selectedEventId]);
+
   // Contar total de posts aprovados por usuário
   const getUserApprovedCount = (userId: string) => {
     return submissions.filter((s: any) => s.user_id === userId && s.status === 'approved').length;
@@ -363,11 +368,6 @@ export const GuestDashboard = () => {
       toast.error('Erro ao aprovar em massa', { id: 'bulk-approve' });
     }
   };
-
-  // Limpar seleções ao trocar de evento
-  useEffect(() => {
-    setSelectedSubmissions(new Set());
-  }, [selectedEventId]);
   return <div className="min-h-screen bg-background p-3 md:p-6">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
