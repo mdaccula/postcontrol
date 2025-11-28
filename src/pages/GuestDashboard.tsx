@@ -16,8 +16,10 @@ import { Calendar, Users, Trophy, Eye, CheckCircle, XCircle, Clock, AlertCircle,
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { PERMISSION_LABELS } from '@/types/guest';
-import { useEventsQuery, useSubmissionsQuery } from '@/hooks/consolidated';
+import { useEventsQuery, useSubmissionsQuery, useBulkUpdateSubmissionStatusMutation } from '@/hooks/consolidated';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CheckCheck } from 'lucide-react';
 
 // ✅ FASE 2 - Item 2.1 e 2.2: Lazy load dos componentes de imagem
 const SubmissionImageDisplay = lazy(() => import('@/components/SubmissionImageDisplay').then(m => ({
@@ -50,6 +52,10 @@ export const GuestDashboard = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [itemsPerPage, setItemsPerPage] = useState<number>(30);
+
+  // ✅ Bulk approval states
+  const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
+  const bulkUpdateStatusMutation = useBulkUpdateSubmissionStatusMutation();
 
   // ✅ Usar hooks consolidados em vez de fetch manual
   const {
@@ -206,7 +212,8 @@ export const GuestDashboard = () => {
     if (selectedStatus !== 'all' && s.status !== selectedStatus) return false;
 
     // Filtro por faixa de seguidores
-    if (selectedFollowerRange !== 'all' && s.followers_range !== selectedFollowerRange) return false;
+    const effectiveRange = s.followers_range || s.profiles?.followers_range;
+    if (selectedFollowerRange !== 'all' && effectiveRange !== selectedFollowerRange) return false;
 
     // Filtro por período de data
     if (startDate && new Date(s.submitted_at) < new Date(startDate)) return false;
@@ -215,7 +222,8 @@ export const GuestDashboard = () => {
     // Filtro por busca
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
-    return s.profiles?.full_name?.toLowerCase().includes(searchLower) || s.profiles?.instagram?.toLowerCase().includes(searchLower) || s.profiles?.followers_range?.toLowerCase().includes(searchLower);
+    const followerRange = s.followers_range || s.profiles?.followers_range || '';
+    return s.profiles?.full_name?.toLowerCase().includes(searchLower) || s.profiles?.instagram?.toLowerCase().includes(searchLower) || followerRange.toLowerCase().includes(searchLower);
   });
 
   // ✅ FASE 3: Paginação
@@ -281,7 +289,9 @@ export const GuestDashboard = () => {
   };
 
   // ✅ FASE 3: Extrair faixas de seguidores únicas para o filtro
-  const uniqueFollowerRanges = Array.from(new Set(submissions.map((s: any) => s.followers_range).filter(Boolean))).sort();
+  const uniqueFollowerRanges = Array.from(
+    new Set(submissions.map((s: any) => s.followers_range || s.profiles?.followers_range).filter(Boolean))
+  ).sort();
 
   // ✅ FASE 3: Função para limpar todos os filtros
   const clearAllFilters = () => {
@@ -292,6 +302,72 @@ export const GuestDashboard = () => {
     setEndDate('');
     setSearchTerm('');
   };
+
+  // ✅ Bulk approval functions
+  const toggleSubmissionSelection = (submissionId: string) => {
+    const newSet = new Set(selectedSubmissions);
+    if (newSet.has(submissionId)) {
+      newSet.delete(submissionId);
+    } else {
+      newSet.add(submissionId);
+    }
+    setSelectedSubmissions(newSet);
+  };
+
+  const toggleSelectAllPending = () => {
+    const pendingIds = paginatedSubmissions
+      .filter((s: any) => s.status === 'pending')
+      .map((s: any) => s.id);
+    
+    if (selectedSubmissions.size === pendingIds.length && pendingIds.length > 0) {
+      setSelectedSubmissions(new Set());
+    } else {
+      setSelectedSubmissions(new Set(pendingIds));
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    const ids = Array.from(selectedSubmissions);
+    if (ids.length === 0) return;
+    
+    if (!selectedEventId || !hasPermission(selectedEventId, 'moderator')) {
+      toast.error('Você não tem permissão para aprovar submissões');
+      return;
+    }
+    
+    try {
+      toast.loading(`Aprovando ${ids.length} submissões...`, { id: 'bulk-approve' });
+      
+      await bulkUpdateStatusMutation.mutateAsync({
+        submissionIds: ids,
+        status: 'approved',
+        userId: guestData.guest_user_id // ID do guest aprovador
+      });
+      
+      // Log de auditoria para cada submissão
+      for (const id of ids) {
+        await supabase.from('guest_audit_log').insert({
+          guest_id: guestData.id,
+          event_id: selectedEventId,
+          submission_id: id,
+          action: 'bulk_approved_submission',
+          action_data: { status: 'approved', bulk: true }
+        });
+      }
+      
+      toast.success(`${ids.length} submissões aprovadas!`, { id: 'bulk-approve' });
+      confetti({ particleCount: 150, spread: 100 });
+      setSelectedSubmissions(new Set());
+      refetchSubmissions();
+    } catch (err) {
+      toast.error('Erro ao aprovar em massa', { id: 'bulk-approve' });
+    }
+  };
+
+  // Limpar seleções ao trocar de evento
+  useEffect(() => {
+    setSelectedSubmissions(new Set());
+  }, [selectedEventId]);
   return <div className="min-h-screen bg-background p-3 md:p-6">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
@@ -413,11 +489,19 @@ export const GuestDashboard = () => {
             {/* ✅ FASE 3: Tabela de Submissões com filtros avançados e paginação */}
             <Card className="p-3 md:p-6">
               <div className="space-y-3 md:space-y-4">
-                <div className="items-center justify-between flex flex-col md:flex-row gap-2">
+                  <div className="items-center justify-between flex flex-col md:flex-row gap-2">
                   <h3 className="font-semibold text-base md:text-lg">Submissões - {selectedEvent.title}</h3>
-                  <Badge variant="outline" className="text-xs md:text-sm">
-                    {filteredSubmissions.length} de {submissions.length} submiss{filteredSubmissions.length !== 1 ? 'ões' : 'ão'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {selectedSubmissions.size > 0 && hasPermission(selectedEventId!, 'moderator') && (
+                      <Button onClick={handleBulkApprove} className="bg-green-500 hover:bg-green-600 h-9 text-sm">
+                        <CheckCheck className="mr-2 h-4 w-4" />
+                        Aprovar {selectedSubmissions.size}
+                      </Button>
+                    )}
+                    <Badge variant="outline" className="text-xs md:text-sm">
+                      {filteredSubmissions.length} de {submissions.length} submiss{filteredSubmissions.length !== 1 ? 'ões' : 'ão'}
+                    </Badge>
+                  </div>
                 </div>
 
                 {/* ✅ FASE 3: Filtros Avançados */}
@@ -485,6 +569,14 @@ export const GuestDashboard = () => {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            {permissionLevel && hasPermission(selectedEventId!, 'moderator') && (
+                              <TableHead className="w-[40px]">
+                                <Checkbox
+                                  checked={selectedSubmissions.size > 0 && paginatedSubmissions.filter((s: any) => s.status === 'pending').length > 0}
+                                  onCheckedChange={toggleSelectAllPending}
+                                />
+                              </TableHead>
+                            )}
                             <TableHead>Usuário</TableHead>
                             <TableHead>Faixa de Seguidores</TableHead>
                             <TableHead>Total Posts</TableHead>
@@ -497,6 +589,16 @@ export const GuestDashboard = () => {
                         </TableHeader>
                         <TableBody>
                           {paginatedSubmissions.map((submission: any) => <TableRow key={submission.id}>
+                            {permissionLevel && hasPermission(selectedEventId!, 'moderator') && (
+                              <TableCell className="w-[40px]">
+                                {submission.status === 'pending' && (
+                                  <Checkbox
+                                    checked={selectedSubmissions.has(submission.id)}
+                                    onCheckedChange={() => toggleSubmissionSelection(submission.id)}
+                                  />
+                                )}
+                              </TableCell>
+                            )}
                             <TableCell>
                               <div>
                                 <p className="font-medium">{submission.profiles?.full_name || 'N/A'}</p>
@@ -505,7 +607,7 @@ export const GuestDashboard = () => {
                                   </a>}
                               </div>
                             </TableCell>
-                            <TableCell>{submission.followers_range || 'N/A'}</TableCell>
+                            <TableCell>{submission.followers_range || submission.profiles?.followers_range || 'N/A'}</TableCell>
                             <TableCell className="text-center font-semibold">
                               {getUserApprovedCount(submission.user_id)}
                             </TableCell>
@@ -558,6 +660,16 @@ export const GuestDashboard = () => {
                     <div className="space-y-3 md:hidden">
                       {paginatedSubmissions.map((submission: any) => <Card key={submission.id} className="p-3">
                         <div className="flex gap-3">
+                          {/* Checkbox para seleção (se moderador e pendente) */}
+                          {permissionLevel && hasPermission(selectedEventId!, 'moderator') && submission.status === 'pending' && (
+                            <div className="flex-shrink-0 pt-1">
+                              <Checkbox
+                                checked={selectedSubmissions.has(submission.id)}
+                                onCheckedChange={() => toggleSubmissionSelection(submission.id)}
+                              />
+                            </div>
+                          )}
+
                           {/* Screenshot à esquerda */}
                           <div className="flex-shrink-0">
                             <Suspense fallback={<Skeleton className="w-14 h-14" />}>
@@ -586,6 +698,13 @@ export const GuestDashboard = () => {
                               <span>•</span>
                               <span>{format(new Date(submission.submitted_at), 'dd/MM/yy HH:mm')}</span>
                             </div>
+
+                            {/* Faixa de seguidores */}
+                            {(submission.followers_range || submission.profiles?.followers_range) && (
+                              <p className="text-xs text-muted-foreground">
+                                Seguidores: {submission.followers_range || submission.profiles?.followers_range}
+                              </p>
+                            )}
 
                             {submission.posts?.post_number && <p className="text-xs text-muted-foreground">
                                 Post #{submission.posts.post_number}
